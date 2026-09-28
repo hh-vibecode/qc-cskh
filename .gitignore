@@ -1,0 +1,8 @@
+# khoá / token -- KHÔNG BAO GIỜ commit
+*.local.txt
+*keys*.txt
+.env
+.env.*
+# dữ liệu tạm
+node_modules/
+*.log
