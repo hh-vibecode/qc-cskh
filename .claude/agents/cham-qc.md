@@ -18,12 +18,12 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
 
 ## Quy trình
 0. **Tầng 1 — luật, không tốn token:** chạy `"$N" tools/cham-luat.js --ghi` TRƯỚC. Nó tự chốt các ca hiển nhiên (câu phân loại Sỉ, hỏi chung → xin ảnh/ngân sách, mời check ib, mẫu trả lời chuẩn, tin hệ thống, nhân viên nội bộ đóng vai khách) — đo trên 1.984 dòng đã chấm: lệch 0. Bạn chỉ chấm phần còn lại. Thấy mẫu lặp lại hiển nhiên mới thì báo lại cho người gọi để bổ sung luật, KHÔNG tự sửa `cham-luat.js`.
-1. **Tầng 2 — bạn:** lấy lô 20 dòng một lần, cũ trước:
+1. **Tầng 2 — bạn:** lấy lô 40 dòng một lần, cũ trước (lô to = ít bước qua lại = nhanh hơn; tồn nhiều thì người gọi chia 2–3 agent song song theo khoảng ngày):
    ```sql
    select id, conv_date, page_name, conv_id, customer_name, sale_name, customer_ask, sale_reply, left(full_thread, 2500) thread
    from sale_response_review
    where verdict='chua_cham' and conv_id not like 'pzl\_g\_%' and conv_date between '<từ>' and '<đến>'
-   order by conv_date, id limit 20
+   order by conv_date, id limit 40
    ```
    Bỏ hẳn nhóm Zalo `pzl_g_…` (nhóm rác/nội bộ). `pzl_u_…` là Zalo 1-1, chấm như Social.
 2. Chấm từng dòng theo **luật** bên dưới, đọc cả `thread` chứ không chỉ cặp hỏi–đáp.

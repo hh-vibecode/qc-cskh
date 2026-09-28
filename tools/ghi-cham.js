@@ -44,7 +44,12 @@ const sql = soatMiss
        suggestion = case when v.verdict='khong_lien_quan' then null else s.suggestion end,
        cham_boi='sonnet', reviewed_at=now()
      from v where s.id=v.id and s.verdict in ('khong_tra_loi','chi_bot') and s.cham_boi is null returning s.id`
-  : `${v} update sale_response_review s set verdict=v.verdict, severity=v.severity, issue=v.issue,
+  // Nhãn do soat-miss-pancake.js gắn (trả lời muộn / qua tin nhắn) luôn được GIỮ ở đầu issue — 28/9 Sonnet ghi đè mất 21 dòng
+  : `${v} update sale_response_review s set verdict=v.verdict, severity=v.severity,
+       issue = case when s.issue ~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'
+                     and coalesce(v.issue,'') !~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'
+                    then substring(s.issue from '^(Trả lời muộn [0-9,]+ (?:giờ|phút)(?: \\([^)]*\\))?\\.?|Bình luận → tư vấn qua tin nhắn[^.]*\\.)') || coalesce(' ' || v.issue, '')
+                    else v.issue end,
        suggestion=v.suggestion, source_faq=v.source_faq, cham_boi='sonnet', reviewed_at=now()
      from v where s.id=v.id and s.verdict='chua_cham' returning s.id`;
 (async () => {

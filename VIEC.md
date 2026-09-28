@@ -131,7 +131,7 @@
 - **Chạy hằng ngày sau job crawl (anh giao 28/9, tự làm không hỏi):**
   1. `tools/soat-miss-pancake.js` — mở lại Pancake cho mọi dòng miss: Sale trả lời sau lúc job chạy → `chua_cham` + issue "Trả lời muộn N giờ"; bình luận đã tư vấn ở inbox (xuyên ngày) → `tra_loi_inbox`. (Ca Lê Huyền #2443: Vân Ngọc trả lời muộn 36,9 giờ mà bị ghi "Không trả lời".)
   2. `tools/cham-luat.js --ghi` — luật (lời khấn, nội bộ, ca hiển nhiên).
-  3. Agent `cham-qc` (Sonnet): chấm `chua_cham` còn lại + soát miss còn lại là **tương tác (bỏ) hay miss thật** (`ghi-cham.js --soat-miss`).
+  3. Agent `cham-qc` (Sonnet, lô 40; **tồn > 50 dòng thì chia 2–3 agent song song ngay từ đầu** — anh nhắc 28/9): chấm `chua_cham` còn lại + soát miss còn lại là **tương tác (bỏ) hay miss thật** (`ghi-cham.js --soat-miss`).
 - **Chỉ quan tâm tin khách hỏi mua** (anh chốt 28/9): `khong_lien_quan` ẩn hẳn khỏi trang, không tính.
 - **Cấu trúc trang (anh chốt 28/9):** menu trái như app MKT/Sale. Nhóm "Báo cáo" → *Chất lượng phản hồi*. Ghim đáy "Cài đặt" → *Lịch sử báo sai* (chờ xử lý + đã xử lý: trước → sau, cách xử lý) và *Logic xử lý dữ liệu*. Sau này thêm nhóm **Training** và **Chatbot** (anh sẽ dùng luồng này để build training + chatbot). Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý).
 - **Nhân viên nội bộ đóng vai khách** → `khong_lien_quan` (kể cả dòng job gắn `khong_tra_loi`/`chi_bot`): Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458). Danh sách ở `NOI_BO_SDT`/`NOI_BO_TEN` trong `tools/cham-luat.js`.
