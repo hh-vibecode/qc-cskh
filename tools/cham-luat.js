@@ -35,16 +35,22 @@ const MAU_CHUAN = [
 // LỜI KHẤN / TỤNG NIỆM dưới bài đăng (anh Hải 28/9: "tin này miss gì, cái này bỏ qua được") → khong_lien_quan.
 // Bản 1 (đo 28/9) sai 5/9 vì bắt cả "Mô Phật cho e hỏi…" → bản 2 chỉ nhận khi KHÔNG có bất kỳ dấu hiệu hỏi / mua nào.
 // Bản 2 đo lại: "binh an", "quan the am bo tat" là TÊN SẢN PHẨM (nến bơ bình an, tượng Quan Thế Âm) → bỏ; khớp theo nguyên từ.
-const KHAN = /\b(nam mo|a di da phat|adida phat|mo phat|thuong niem|cui dau|con lay|lay me|lay phat|nguyen cau|cau xin|cau cho|phu ho|do tri)\b/;
-const CO_Y_HOI = /\?|\d|\b(dat|lay cho|k|ko|khong|gia|bao nhieu|bn|mua|thinh ve|thinh tuong|size|sz|kich thuoc|cao|ship|dat hang|tu van|inbox|ib|con hang|co khong|co ko|hoi|xem|mau|bo nay|cai nay|dia chi|so dien thoai|sdt|zalo)\b|cho (e|em|minh|toi|chi|anh|co|chu|bac) (hoi|xin|xem)|xin (gia|mau|anh|hinh|thong tin|dia chi|so)/;
+// ("cau cho" bị bỏ: khớp nhầm "nhu cầu cho gia đình")
+const KHAN = /\b(nam mo|a di da phat|adida phat|mo phat|thuong niem|cui dau|con lay|lay me|lay phat|nguyen cau|cau xin|cau nguyen|phu ho|do tri)\b/;
+// Bản 3 (anh báo sai #2485 "Đất Trời", #2486 "gia đình"): KHÔNG dùng từ đơn lẻ (dat, gia, k, cao…) vì lời khấn
+// cũng có — chỉ nhận CỤM có nghĩa mua / hỏi. Anh: "m chỉ quan tâm các tin nhắn khách hỏi mua hàng thôi".
+const CO_Y_HOI = /\?|\d|bao nhieu|\bbn\b|xin gia|bao gia|gia (bao|ban|sao|nhieu|the nao|tuong|bo|cai)|\bmua\b|dat hang|dat mua|lay cho|thinh ve|thinh tuong|\bship\b|size|\bsz\b|kich thuoc|tu van|inbox|\bib\b|con hang|co (ban|ko|khong|k)\b|cho (e|em|minh|toi|chi|anh|co|chu|bac) (hoi|xin|xem)|xin (mau|anh|hinh|thong tin|dia chi|so)|dia chi|so dien thoai|\bsdt\b|zalo|bo nay|cai nay|mau nay|gia thinh|\bntn\b|the nao|shop co|ben (minh|em|shop|ban) co|co mau|\b(k|ko|khong) (vay|a|ah|nhi)\b/;
 
 // NHÂN VIÊN NỘI BỘ đứng ở vị trí "khách" (chat nội bộ, gửi báo cáo) → không phải khách, không tính.
 // Anh Hải báo 28/9/2026: Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm), cùng SĐT 0973763458. Có thêm người thì bổ sung vào đây.
 const NOI_BO_SDT = ['0973763458'];
 const NOI_BO_TEN = ['duc tuan', 'dinh ngoc diep'];
+// Tài khoản mang tên chính các thương hiệu / kho của công ty nhắn nhau (vd "Tổng Kho Sỉ Đồ Thờ Shidai - Chị Huế" ↔ Oanh Bùi, 28/9)
+const NOI_BO_TEN_CHUA = /tong kho si|shidai|chanh tam|hien thuy|thoi dai|tu tai vien|ming ying/;
 const laNoiBo = r => {
   const sdt = (r.phone || '').replace(/\D/g, '').replace(/^84/, '0');
-  return (sdt && NOI_BO_SDT.includes(sdt)) || NOI_BO_TEN.includes(bo(r.customer_name));
+  const ten = bo(r.customer_name);
+  return (sdt && NOI_BO_SDT.includes(sdt)) || NOI_BO_TEN.includes(ten) || NOI_BO_TEN_CHUA.test(ten);
 };
 
 function chamLuat(r) {

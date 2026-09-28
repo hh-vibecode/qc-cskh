@@ -28,6 +28,17 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
    Bỏ hẳn nhóm Zalo `pzl_g_…` (nhóm rác/nội bộ). `pzl_u_…` là Zalo 1-1, chấm như Social.
 2. Chấm từng dòng theo **luật** bên dưới, đọc cả `thread` chứ không chỉ cặp hỏi–đáp.
 3. **Chỉ mở `product_faq` khi câu hỏi là KIẾN THỨC sản phẩm**: chất liệu, kích thước, chính sách giá, lắp đặt, nhận diện tượng hoặc vị thần, bảo hành, chính sách đại lý… Tìm đúng mục bằng `ilike` theo từ khoá, KHÔNG đọc cả bảng. Lần đầu xem tên cột trong `information_schema.columns`.
+3b. **Soát MISS (anh Hải yêu cầu 28/9):** dòng `khong_tra_loi` / `chi_bot` do job tự gắn mà chưa soát (`cham_boi is null`) — xem đó là tin tương tác (bỏ qua) hay khách hỏi mua bị miss thật:
+   ```sql
+   select id, conv_date, page_name, customer_name, verdict, customer_ask, left(full_thread, 1500) thread
+   from sale_response_review
+   where verdict in ('khong_tra_loi','chi_bot') and cham_boi is null and conv_id not like 'pzl\_g\_%'
+   order by conv_date, id limit 30
+   ```
+   - `khong_lien_quan`: KHÔNG hỏi mua — khen ảnh đẹp, tag bạn bè, sticker/emoji, lời khấn, người rao bán / chào dịch vụ, tin mẫu của chính page, nhân viên nội bộ, spam.
+   - `giu`: có bất kỳ ý hỏi mua nào (giá, mẫu, chất liệu, kích thước, còn hàng, xin ảnh, xin số, "em mua…") → miss thật, giữ nguyên.
+   - Phân vân → `giu` (thà báo miss còn hơn giấu miss).
+   Ghi bằng `"$N" tools/ghi-cham.js <file.json> --soat-miss` (chạy `--thu` trước). File: `[{id, verdict: "khong_lien_quan"|"giu", issue?}]` — `issue` với khong_lien_quan là 1 câu ngắn vì sao.
 4. Ghi kết quả ra file JSON `[{id, verdict, severity, issue, suggestion, source_faq}]`, chạy `--thu`, rồi ghi thật.
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 

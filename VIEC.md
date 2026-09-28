@@ -128,13 +128,19 @@
 - **Số liệu khớp trang cũ:** mẫu số "đã chấm" = tất cả − `tra_loi_inbox` − `chua_cham` − `khong_lien_quan`; "Miss" = `chi_bot` + `khong_tra_loi`.
 - **Chấm 2 tầng (anh chốt 28/9):** tầng 1 `tools/cham-luat.js --ghi` chốt ca hiển nhiên không tốn token (đo trên 1.984 dòng đã chấm: chốt 21,5%, lệch 0; mỗi luật mới phải đo `--do` ra lệch 0 mới được thêm); tầng 2 agent Sonnet `cham-qc` chỉ đọc phần còn lại. Cột `cham_boi` = `luat` | `sonnet` | null (chấm tay / job cũ).
 - **Lời khấn "Nam mô…" (anh chốt 28/9):** bỏ qua hết, coi là `khong_lien_quan`, không tính miss (luật `loi_khan`, áp cả dòng job gắn chi_bot/khong_tra_loi). Câu có ý hỏi / mua thì vẫn chấm.
-- **Chạy hằng ngày sau job crawl:** `tools/cham-luat.js --ghi` (sửa luôn miss oan: lời khấn, nội bộ) → agent `cham-qc` cho phần còn lại.
+- **Chạy hằng ngày sau job crawl (anh giao 28/9, tự làm không hỏi):**
+  1. `tools/soat-miss-pancake.js` — mở lại Pancake cho mọi dòng miss: Sale trả lời sau lúc job chạy → `chua_cham` + issue "Trả lời muộn N giờ"; bình luận đã tư vấn ở inbox (xuyên ngày) → `tra_loi_inbox`. (Ca Lê Huyền #2443: Vân Ngọc trả lời muộn 36,9 giờ mà bị ghi "Không trả lời".)
+  2. `tools/cham-luat.js --ghi` — luật (lời khấn, nội bộ, ca hiển nhiên).
+  3. Agent `cham-qc` (Sonnet): chấm `chua_cham` còn lại + soát miss còn lại là **tương tác (bỏ) hay miss thật** (`ghi-cham.js --soat-miss`).
+- **Chỉ quan tâm tin khách hỏi mua** (anh chốt 28/9): `khong_lien_quan` ẩn hẳn khỏi trang, không tính.
+- **Cấu trúc trang (anh chốt 28/9):** menu trái như app MKT/Sale. Nhóm "Báo cáo" → *Chất lượng phản hồi*. Ghim đáy "Cài đặt" → *Lịch sử báo sai* (chờ xử lý + đã xử lý: trước → sau, cách xử lý) và *Logic xử lý dữ liệu*. Sau này thêm nhóm **Training** và **Chatbot** (anh sẽ dùng luồng này để build training + chatbot). Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý).
 - **Nhân viên nội bộ đóng vai khách** → `khong_lien_quan` (kể cả dòng job gắn `khong_tra_loi`/`chi_bot`): Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458). Danh sách ở `NOI_BO_SDT`/`NOI_BO_TEN` trong `tools/cham-luat.js`.
 - **Đẩy mã:** `tools/push.js`.
 - **Công cụ:** `tools/sql.js` (chạy SQL qua Management API), `tools/ghi-cham.js` (ghi kết quả chấm, chỉ vào dòng `chua_cham`), `tools/keys.js` (đọc file khoá của mkt-sale-app, không in).
 - **Job chấm:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app (3 lượt/ngày, 56 lượt chạy đều success tới 28/9). Repo này chưa có job.
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **28/09/2026** — Anh báo 4 dòng chấm sai (lời khấn) → luật `loi_khan` bản 4 + sửa thêm 15 dòng; đóng 4 báo sai. Soát miss bằng Pancake thật (`soat-miss-pancake.js`): 176 dòng miss → 45 trả lời muộn (về chấm nội dung), 14 bình luận đã tư vấn ở inbox, 117 miss thật (đang cho Sonnet soát tương tác hay miss thật). Nội bộ thêm: tài khoản mang tên kho/thương hiệu nhắn nhau (sửa 6 dòng, trong đó 3 dòng Sonnet chấm nhầm "đúng"). Trang: menu trái, Cài đặt (Lịch sử báo sai + Logic xử lý), ngày đẩy phải, icon thẻ số, ẩn không liên quan, nhãn "muộn N giờ".
 - **28/09/2026** — Anh chỉ ra lời khấn "Nam mô…" đang bị tính miss → thêm luật `loi_khan` (đo lệch 0/1.984), sửa 18 dòng `chi_bot` → `khong_lien_quan`.
 - **28/09/2026** — Font trang → Montserrat (anh yêu cầu). Dựng chấm 2 tầng: `tools/cham-luat.js` (6 luật, lệch 0/1.984), cột `cham_boi`. Anh báo Đức Tuấn + Đinh Ngọc Diệp là nhân viên Chánh Tâm → sửa #2385 `khong_tra_loi` → `khong_lien_quan` (3 dòng kia Sonnet đã tự loại). Thừa nhận: đợt chấm tồn 15–27/9 Sonnet đọc hết 773 dòng (~740k token), chưa lọc bằng luật trước.
 - **28/09/2026** — Anh cấp quyền lâu dài (mục 6). Đã tạo repo public hh-vibecode/qc-cskh, push, bật Pages → https://hh-vibecode.github.io/qc-cskh/ (remote không chứa token).

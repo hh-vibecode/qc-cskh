@@ -56,7 +56,10 @@ create or replace function public.qc_ds_bao_sai(p_ma text) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 begin
   perform qc_chan(p_ma);
-  return coalesce((select jsonb_agg(to_jsonb(r) order by r.created_at desc) from sale_review_report r), '[]'::jsonb);
+  -- kèm verdict HIỆN TẠI của lượt chấm (verdict_moi) để trang Lịch sử xử lý thấy "trước → sau"
+  return coalesce((select jsonb_agg(to_jsonb(r) || jsonb_build_object('verdict_moi', s.verdict, 'customer_ask', coalesce(r.customer_ask, s.customer_ask))
+                                    order by r.created_at desc)
+                   from sale_review_report r left join sale_response_review s on s.id = r.review_id), '[]'::jsonb);
 end $$;
 
 -- Báo 1 lượt chấm sai. Ảnh: tối đa 3 data URL đã nén (<= ~250KB mỗi ảnh). Không tự xoá báo cáo cũ.

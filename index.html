@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <title>QC CSKH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&subset=vietnamese&display=swap" rel="stylesheet">
@@ -81,10 +82,40 @@ a{color:var(--accent);font-weight:700;text-decoration:none}
 .modal>div{background:var(--surface);border-radius:16px;max-width:620px;width:100%;max-height:88vh;overflow:auto;padding:18px 20px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:10px;font-weight:700;font-size:12.5px;z-index:60}
 .more{padding:12px;text-align:center}
+/* KHUNG APP: thanh menu trái giống app MKT/Sale (dải màu trên cùng, nhóm mục, cài đặt ghim đáy, mục không icon) */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:228px;flex-shrink:0;position:sticky;top:0;height:100vh;background:var(--surface);border-right:1.5px solid var(--border);display:flex;flex-direction:column}
+.sb-strip{height:4px;background:linear-gradient(90deg,var(--accent),#7c3aed,#0d9488,#16a34a);flex-shrink:0}
+.sb-brand{padding:16px 18px 6px;font-size:15px;font-weight:800;letter-spacing:.01em}
+.sb-section{padding:16px 18px 6px;font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;margin:2px 8px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);border:1.5px solid transparent}
+.nav-item:hover{background:var(--bg2);color:var(--text)}
+.nav-item.active{background:var(--sale-bg);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 18%,transparent)}
+.nav-badge{margin-left:auto;background:var(--bad);color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:20px}
+.sb-bottom{margin-top:auto;border-top:1.5px solid var(--border);padding:8px 0 10px}
+.sb-tools{display:flex;gap:6px;padding:6px 16px 0}
+.sb-tools .btn{flex:1;padding:5px 8px;font-size:11.5px}
+.main{flex:1;min-width:0}
+.bar .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kpi{display:flex;gap:12px;align-items:flex-start}
+.kpi .ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--c) 13%,transparent);color:var(--c)}
+.kpi .ic svg{width:20px;height:20px}
+.late{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:10.5px;font-weight:700;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.doc h3{font-size:14px;margin:18px 0 6px}
+.doc p,.doc li{color:var(--text2);line-height:1.65}
+.doc ol,.doc ul{margin:4px 0;padding-left:20px}
+.doc code{background:var(--bg2);padding:1px 6px;border-radius:5px;font-size:12px}
 @media (max-width:760px){
+  .shell{flex-direction:column}
+  .sidebar{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;border-right:none;border-bottom:1.5px solid var(--border)}
+  .sb-strip{width:100%}
+  .sb-section{display:none}
+  .sb-bottom{margin:0;border:none;padding:0;display:flex;flex-wrap:wrap}
+  .sb-brand{padding:10px 12px}
   .kpi-row{grid-template-columns:1fr}
   .two{grid-template-columns:1fr}
   .kpi .v{font-size:20px}
+  .bar .right{margin-left:0}
 }
 </style>
 </head>
@@ -112,7 +143,30 @@ async function rpc(fn,args){
 
 // ── Trạng thái ────────────────────────────────────────────────────────────
 const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),limit:150,
-  plat:'social',from:'',to:'',brand:'all',page:'all',sale:'all',verdict:'all',q:'',showRep:false};
+  plat:'social',from:'',to:'',brand:'all',page:'all',sale:'all',verdict:'all',q:'',
+  view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
+// Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
+const VIEWS={report:'Chất lượng phản hồi',history:'Lịch sử báo sai',logic:'Logic xử lý dữ liệu'};
+function go(v){S.view=v;ls.set('qc_view',v);render();window.scrollTo(0,0);}
+function shell(content){
+  const open=S.reports.filter(r=>r.status==='open').length;
+  const item=(v,extra='')=>`<div class="nav-item${S.view===v?' active':''}" onclick="go('${v}')">${VIEWS[v]}${extra}</div>`;
+  return`<div class="shell">
+    <aside class="sidebar">
+      <div class="sb-strip"></div>
+      <div class="sb-brand">QC CSKH</div>
+      <div class="sb-section">Báo cáo</div>
+      ${item('report')}
+      <div class="sb-bottom">
+        <div class="sb-section" style="padding-top:8px">Cài đặt</div>
+        ${item('history',open?`<span class="nav-badge">${open}</span>`:'')}
+        ${item('logic')}
+        <div class="sb-tools"><button class="btn" onclick="changeCode()">Đổi mã</button><button class="btn" onclick="lock()">Khoá</button></div>
+      </div>
+    </aside>
+    <main class="main"><div class="wrap">${content}</div></main>
+  </div>`;
+}
 
 // ── Quy ước nghiệp vụ (giữ đúng như trang cũ Dashboard-Meta để số khớp) ───
 const VERDICT={
@@ -185,8 +239,21 @@ function setRange(days){
 }
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.limit=150;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
+// "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
+const lateOf=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
+// Icon SVG cho thẻ số (anh Hải 28/9: "dashboard thêm icon vào")
+const svg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICON={
+  dung:svg('<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/>'),
+  thieu:svg('<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4.5M12 17.5h.01"/>'),
+  sai:svg('<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'),
+  miss:svg('<path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12Z"/><path d="m9.5 9.5 5 5M14.5 9.5l-5 5"/>'),
+  inbox:svg('<path d="M4 5h16v10H13l-4 4v-4H4V5Z"/><path d="m9 10 2 2 4-4"/>'),
+  muon:svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2.5h6"/>'),
+};
 function verdictMatch(r,v){
   if(v==='all')return true;
+  if(v==='muon')return!!lateOf(r);
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
   if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham'].includes(r.verdict);
   return r.verdict===v;
@@ -203,7 +270,10 @@ function tally(list){
 // ── Vẽ ────────────────────────────────────────────────────────────────────
 function render(keepFocus){
   const app=document.getElementById('app');
-  const platRows=S.rows.filter(r=>platOf(r)===S.plat);
+  if(S.view==='history'){app.innerHTML=shell(historyPage());return;}
+  if(S.view==='logic'){app.innerHTML=shell(logicPage());return;}
+  // Chỉ quan tâm tin khách hỏi mua (anh Hải 28/9): dòng "không liên quan" (lời khấn, tương tác, nội bộ) ẩn hẳn, không tính.
+  const platRows=S.rows.filter(r=>platOf(r)===S.plat&&r.verdict!=='khong_lien_quan');
   const dated=platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to));
   const q=noDau(S.q.trim());
   const base=dated.filter(r=>{
@@ -234,8 +304,9 @@ function render(keepFocus){
   const rangeBtn=(d,l)=>{let on=false;if(d===0)on=!S.from&&!S.to;else{const t=new Date();const to=isoDay(t);t.setDate(t.getDate()-d+1);on=S.from===isoDay(t)&&S.to===to;}
     return`<button class="btn${on?' on':''}" onclick="setRange(${d})">${l}</button>`;};
 
-  const kpi=(key,label,val,sub,color)=>`<div class="kpi${S.verdict===key?' on':''}" style="--c:var(--${color})" onclick="toggleVerdict('${key}')">
-    <div class="l">${label}</div><div class="v">${val}</div><div class="s">${sub||'&nbsp;'}</div></div>`;
+  const kpi=(key,label,val,sub,color,icon)=>`<div class="kpi${S.verdict===key?' on':''}" style="--c:var(--${color})" onclick="toggleVerdict('${key}')">
+    <div class="ic">${ICON[icon]}</div>
+    <div><div class="l">${label}</div><div class="v">${val}</div><div class="s">${sub||'&nbsp;'}</div></div></div>`;
 
   // tóm tắt theo thương hiệu + theo Sale
   const sumRow=(name,t,onclick)=>`<tr class="click" onclick="${onclick}">
@@ -259,29 +330,28 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}</td>
+      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Sale trả lời sau lúc job chạy — phát hiện khi soát lại Pancake">muộn ${esc(lateOf(r))}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
   }).join('')||`<tr><td colspan="7" class="muted" style="padding:30px;text-align:center">Không có lượt nào khớp bộ lọc</td></tr>`;
 
-  app.innerHTML=`
+  app.innerHTML=shell(`
     <div class="top">
       <div class="title">Chất Lượng Phản Hồi Sale</div>
       ${upd}
-      ${openRep?`<button class="btn" style="color:var(--bad)" onclick="S.showRep=!S.showRep;render()">${num(openRep)} báo chấm sai</button>`:''}
+      ${openRep?`<button class="btn" style="color:var(--bad)" onclick="go('history')">${num(openRep)} báo chấm sai</button>`:''}
       <button class="btn" onclick="reload()" title="Tải lại">↺</button>
-      <button class="btn" onclick="changeCode()">Đổi mã</button>
-      <button class="btn" onclick="lock()">Khoá</button>
     </div>
     <div class="bar">
       <button class="btn${S.plat==='social'?' on':''}" onclick="setPlat('social')">Social</button>
       <button class="btn${S.plat==='zalo'?' on':''}" onclick="setPlat('zalo')">Zalo</button>
-      <span style="width:10px"></span>
-      ${rangeBtn(7,'7 ngày')}${rangeBtn(30,'30 ngày')}${rangeBtn(0,'Tất cả')}
-      <input type="date" value="${esc(S.from)}" onchange="setF('from',this.value)">
-      <span class="muted">→</span>
-      <input type="date" value="${esc(S.to)}" onchange="setF('to',this.value)">
+      <div class="right">
+        ${rangeBtn(7,'7 ngày')}${rangeBtn(30,'30 ngày')}${rangeBtn(0,'Tất cả')}
+        <input type="date" value="${esc(S.from)}" onchange="setF('from',this.value)">
+        <span class="muted">→</span>
+        <input type="date" value="${esc(S.to)}" onchange="setF('to',this.value)">
+      </div>
     </div>
     <div class="bar">
       <select onchange="setF('brand',this.value)">${opt('all','Tất cả thương hiệu',S.brand)}${brandOpts.map(([b,n])=>opt(b,`${BRANDS[b]||b} (${n})`,S.brand)).join('')}</select>
@@ -289,28 +359,27 @@ function render(keepFocus){
       <select onchange="setF('sale',this.value)">${opt('all','Tất cả Sale',S.sale)}${saleOpts.map(([s,n])=>opt(s,`${s} (${n})`,S.sale)).join('')}</select>
       <input type="search" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)" style="min-width:220px;flex:1">
     </div>
-    ${S.showRep?reportPanel():''}
     <div class="kpi-row">
-      ${kpi('dung','Tư vấn đúng',num(T.dung),`${pct(T.dung,T.den)} / ${num(T.den)} lượt đã chấm`,'ok')}
-      ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn')}
-      ${kpi('sai','Sai kiến thức',num(T.sai),pct(T.sai,T.den),'bad')}
+      ${kpi('dung','Tư vấn đúng',num(T.dung),`${pct(T.dung,T.den)} / ${num(T.den)} lượt đã chấm`,'ok','dung')}
+      ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn','thieu')}
+      ${kpi('sai','Sai kiến thức',num(T.sai),pct(T.sai,T.den),'bad','sai')}
     </div>
     <div class="kpi-row">
-      ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot`,'miss')}
-      ${kpi('tra_loi_inbox','Bình luận → tư vấn ở tin nhắn',num(T.inbox),'không tính lỗi','info')}
-      ${kpi('chua_cham','Chờ chấm',num(T.pend),T.klq?`${num(T.klq)} không liên quan`:'','pend')}
+      ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot`,'miss','miss')}
+      ${kpi('tra_loi_inbox','Bình luận → tư vấn ở tin nhắn',num(T.inbox),'không tính lỗi','info','inbox')}
+      ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
     </div>
     <div class="two">
       <div><div class="sec">Theo thương hiệu</div><div class="card scroll"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div></div>
       <div><div class="sec">Theo Sale</div><div class="card scroll"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div></div>
     </div>
     <div class="sec" style="display:flex;align-items:center;gap:8px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
-      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
+      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
       ${rows.length>S.limit?`<div class="more"><button class="btn" onclick="S.limit+=300;render()">Hiện thêm (${num(rows.length-S.limit)} lượt)</button></div>`:''}
-    </div>`;
+    </div>`);
   if(keepFocus){const b=document.getElementById('qBox');if(b){b.focus();const v=b.value;b.value='';b.value=v;}}
 }
 
@@ -388,16 +457,68 @@ async function sendReport(){
     closeReport();S.reports=await rpc('qc_ds_bao_sai')||[];render();toast('Đã ghi nhận báo chấm sai');}
   catch(e){toast(e.message);btn.disabled=false;btn.textContent='Gửi';}
 }
-function reportPanel(){
-  const open=S.reports.filter(r=>r.status==='open');
-  if(!open.length)return'';
-  return`<div class="card" style="padding:12px 14px;margin-bottom:12px">
-    <div class="sec" style="margin-top:0">Báo chấm sai chờ xử lý</div>
-    ${open.map(r=>`<div style="border-top:1px solid var(--border);padding:8px 0;display:flex;gap:10px;align-items:flex-start">
-      <div style="flex:1"><div class="muted" style="font-size:11px">${esc(fmtDT(r.created_at))} · ${esc(r.reporter||'')} · ${esc(r.page_name||'')} · ${esc(r.customer_name||'')} · ${vb(r.verdict_old)}</div>
-        <div>${esc(r.note)}</div>
-        ${(r.images||[]).map(u=>/^data:image\//.test(u)?`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="height:54px;border-radius:6px;margin:4px 4px 0 0"></a>`:'').join('')}</div>
-      <button class="btn" onclick="resolveReport(${r.id})">✓ Đã xử lý</button></div>`).join('')}
+// ── Cài đặt › Lịch sử báo sai: báo chờ xử lý + nhật ký đã xử lý (trước → sau, cách xử lý) ─────
+function historyPage(){
+  const open=S.reports.filter(r=>r.status==='open'),done=S.reports.filter(r=>r.status!=='open');
+  const imgs=r=>(r.images||[]).map(u=>/^data:image\//.test(u)?`<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" style="height:48px;border-radius:6px;margin:4px 4px 0 0"></a>`:'').join('');
+  const ctx=r=>`<div style="font-weight:700">${esc(r.customer_name||'—')}</div><div class="muted" style="font-size:11px">${esc(r.page_name||'')}</div>`;
+  const openRows=open.map(r=>`<tr>
+      <td class="muted" style="white-space:nowrap">${esc(fmtDT(r.created_at))}</td><td>${esc(r.reporter||'—')}</td><td>${ctx(r)}</td>
+      <td>${vb(r.verdict_old)}</td><td>${esc(r.note)}${imgs(r)}</td>
+      <td class="c"><button class="btn" onclick="resolveReport(${r.id})">✓ Đã xử lý</button></td></tr>`).join('');
+  const doneRows=done.map(r=>`<tr>
+      <td class="muted" style="white-space:nowrap">${esc(fmtDT(r.created_at))}</td><td>${esc(r.reporter||'—')}</td><td>${ctx(r)}</td>
+      <td style="white-space:nowrap">${vb(r.verdict_old)} <span class="muted">→</span> ${r.verdict_moi?vb(r.verdict_moi):'<span class="muted">—</span>'}</td>
+      <td>${esc(r.note)}${imgs(r)}</td><td>${esc(r.resolve_note||'—')}</td>
+      <td class="muted" style="white-space:nowrap">${esc(fmtDT(r.resolved_at))}<div style="font-size:11px">${esc(r.resolved_by||'')}</div></td></tr>`).join('');
+  return`<div class="top"><div class="title">Lịch sử báo sai</div>
+      <span class="badge">${num(open.length)} chờ xử lý</span><span class="badge">${num(done.length)} đã xử lý</span>
+      <button class="btn" onclick="reload()" title="Tải lại">↺</button></div>
+    ${open.length?`<div class="sec">Chờ xử lý</div><div class="card scroll"><table style="min-width:760px">
+      <thead><tr><th>Ngày báo</th><th>Người báo</th><th>Khách</th><th>Đang chấm</th><th>Nội dung báo</th><th class="c"></th></tr></thead>
+      <tbody>${openRows}</tbody></table></div>`:''}
+    <div class="sec">Đã xử lý</div>
+    <div class="card scroll"><table style="min-width:980px">
+      <thead><tr><th>Ngày báo</th><th>Người báo</th><th>Khách</th><th>Kết quả trước → sau</th><th>Nội dung báo</th><th>Cách xử lý</th><th>Xử lý lúc</th></tr></thead>
+      <tbody>${doneRows||'<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Chưa có</td></tr>'}</tbody></table></div>`;
+}
+
+// ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
+function logicPage(){
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div></div>
+  <div class="card doc" style="padding:6px 20px 18px">
+    <h3>1. Nguồn dữ liệu</h3>
+    <ul>
+      <li>Job <code>sync-sale-review</code> (repo mkt-sale-app) kéo hội thoại Pancake lúc 7h05 · 12h05 · 15h05, tách từng lượt khách hỏi – Sale đáp, ghi vào bảng <code>sale_response_review</code> (Supabase dùng chung).</li>
+      <li>Kênh: Facebook, TikTok, Zalo cá nhân nối qua Pancake (Zalo chỉ có dữ liệu từ 15/09/2026 — Pancake không lấy được lịch sử trước lúc nối). Bỏ hẳn nhóm Zalo (<code>pzl_g_</code>).</li>
+      <li>Chỉ giữ tin <b>khách hỏi mua</b>. Lời khấn "Nam mô…", tương tác, chat nội bộ → không liên quan, không hiện, không tính.</li>
+    </ul>
+    <h3>2. Chấm 3 bước</h3>
+    <ol>
+      <li><b>Soát miss với Pancake thật</b> — dòng "không trả lời / chỉ bot" được mở lại hội thoại: Sale trả lời sau lúc job chạy → hết miss, gắn nhãn <i>trả lời muộn N giờ</i> rồi chấm nội dung; bình luận mà Sale đã tư vấn trong tin nhắn (xuyên ngày) → <i>Bình luận → tư vấn ở tin nhắn</i>.</li>
+      <li><b>Luật</b> (không tốn AI) — chốt ca hiển nhiên: câu hỏi phân loại "gia đình hay nhập sỉ", khách hỏi chung → Sale xin ảnh / ngân sách / mời check ib, mẫu trả lời chuẩn, tin hệ thống, lời khấn, nhân viên nội bộ. Mỗi luật phải đo trên toàn bộ dữ liệu đã chấm ra lệch 0 mới được dùng.</li>
+      <li><b>Sonnet</b> — đọc phần còn lại (khách hỏi cụ thể, kiến thức sản phẩm, khiếu nại), chỉ tra <code>product_faq</code> khi là câu hỏi kiến thức; soát miss còn lại là tương tác hay miss thật.</li>
+    </ol>
+    <h3>3. Kết quả chấm</h3>
+    <table style="margin-top:6px">
+      <thead><tr><th>Kết quả</th><th>Nghĩa</th><th>Tính vào tỉ lệ đúng</th></tr></thead>
+      <tbody>
+        <tr><td>${vb('dung')}</td><td>Trả lời đúng, đủ ý; mẫu chung cho câu hỏi chung; hỏi phân loại / ngân sách; chuyển inbox / Zalo</td><td>Có</td></tr>
+        <tr><td>${vb('thieu')}</td><td>Trả lời mẫu bỏ qua câu hỏi cụ thể, thiếu ý, bỏ lỡ khách muốn chốt (mức cao / trung bình / thấp)</td><td>Có</td></tr>
+        <tr><td>${vb('sai')}</td><td>Trái với kiến thức sản phẩm trong FAQ</td><td>Có</td></tr>
+        <tr><td>${vb('khong_tra_loi')} ${vb('chi_bot')}</td><td>Miss — khách hỏi mua mà không có Sale thật trả lời</td><td>Có</td></tr>
+        <tr><td>${vb('tra_loi_inbox')}</td><td>Bình luận, Sale đã tư vấn trong tin nhắn — không tính lỗi</td><td>Không</td></tr>
+        <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − tư vấn ở tin nhắn − chờ chấm − không liên quan). Cùng công thức trang cũ Dashboard-Meta.</p>
+    <h3>4. Loại trừ đặc biệt</h3>
+    <ul>
+      <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau (vd "Tổng Kho Sỉ Shidai – Chị Huế").</li>
+      <li>Tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin" không dùng làm tên Sale, nhưng tin viết tay từ các tài khoản này vẫn tính là người thật trả lời.</li>
+    </ul>
+    <h3>5. Báo sai</h3>
+    <p>Bấm "Báo sai" ở từng dòng → Claude gom lại, sửa kết quả và sửa luật để không lặp lại, ghi cách xử lý vào <b>Lịch sử báo sai</b>.</p>
   </div>`;
 }
 async function resolveReport(id){
