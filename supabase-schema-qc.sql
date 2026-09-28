@@ -7,6 +7,10 @@
 
 create extension if not exists pgcrypto with schema extensions;
 
+-- Ai chấm dòng này: 'luat' (tools/cham-luat.js) | 'sonnet' (agent cham-qc) | null = chấm tay / job cũ.
+-- Thêm 28/9/2026 để soát riêng từng tầng. Job cũ bên mkt-sale-app không ghi cột này (không ảnh hưởng).
+alter table public.sale_response_review add column if not exists cham_boi text;
+
 create table if not exists public.qc_cau_hinh (
   khoa      text primary key,
   gia_tri   text not null,
@@ -36,7 +40,7 @@ begin
     select jsonb_agg(to_jsonb(x) order by x.conv_date desc, x.id)
     from (select id, conv_date, conv_at, page_name, conv_id, customer_name, phone, sale_name,
                  customer_ask, sale_reply, verdict, issue, suggestion, severity, source_faq,
-                 reviewed_at, pancake_url
+                 reviewed_at, pancake_url, cham_boi
           from sale_response_review
           where conv_id not like 'pzl\_g\_%') x), '[]'::jsonb);
 end $$;

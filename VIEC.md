@@ -126,10 +126,17 @@
 ## 7. CƠ CHẾ TỰ CHẠY & CẤU TRÚC APP
 - **Trang:** `index.html` (1 file, GitHub Pages). Gọi RPC `qc_ds_cham`, `qc_hoi_thoai`, `qc_ds_bao_sai`, `qc_bao_sai`, `qc_xu_ly_bao_sai`, `qc_doi_ma` bằng khoá anon + mã truy cập. Hàm định nghĩa ở `supabase-schema-qc.sql` (đã áp 28/9). Hàm tự bỏ nhóm Zalo `pzl_g_`.
 - **Số liệu khớp trang cũ:** mẫu số "đã chấm" = tất cả − `tra_loi_inbox` − `chua_cham` − `khong_lien_quan`; "Miss" = `chi_bot` + `khong_tra_loi`.
+- **Chấm 2 tầng (anh chốt 28/9):** tầng 1 `tools/cham-luat.js --ghi` chốt ca hiển nhiên không tốn token (đo trên 1.984 dòng đã chấm: chốt 21,5%, lệch 0; mỗi luật mới phải đo `--do` ra lệch 0 mới được thêm); tầng 2 agent Sonnet `cham-qc` chỉ đọc phần còn lại. Cột `cham_boi` = `luat` | `sonnet` | null (chấm tay / job cũ).
+- **Lời khấn "Nam mô…" (anh chốt 28/9):** bỏ qua hết, coi là `khong_lien_quan`, không tính miss (luật `loi_khan`, áp cả dòng job gắn chi_bot/khong_tra_loi). Câu có ý hỏi / mua thì vẫn chấm.
+- **Chạy hằng ngày sau job crawl:** `tools/cham-luat.js --ghi` (sửa luôn miss oan: lời khấn, nội bộ) → agent `cham-qc` cho phần còn lại.
+- **Nhân viên nội bộ đóng vai khách** → `khong_lien_quan` (kể cả dòng job gắn `khong_tra_loi`/`chi_bot`): Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458). Danh sách ở `NOI_BO_SDT`/`NOI_BO_TEN` trong `tools/cham-luat.js`.
+- **Đẩy mã:** `tools/push.js`.
 - **Công cụ:** `tools/sql.js` (chạy SQL qua Management API), `tools/ghi-cham.js` (ghi kết quả chấm, chỉ vào dòng `chua_cham`), `tools/keys.js` (đọc file khoá của mkt-sale-app, không in).
 - **Job chấm:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app (3 lượt/ngày, 56 lượt chạy đều success tới 28/9). Repo này chưa có job.
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **28/09/2026** — Anh chỉ ra lời khấn "Nam mô…" đang bị tính miss → thêm luật `loi_khan` (đo lệch 0/1.984), sửa 18 dòng `chi_bot` → `khong_lien_quan`.
+- **28/09/2026** — Font trang → Montserrat (anh yêu cầu). Dựng chấm 2 tầng: `tools/cham-luat.js` (6 luật, lệch 0/1.984), cột `cham_boi`. Anh báo Đức Tuấn + Đinh Ngọc Diệp là nhân viên Chánh Tâm → sửa #2385 `khong_tra_loi` → `khong_lien_quan` (3 dòng kia Sonnet đã tự loại). Thừa nhận: đợt chấm tồn 15–27/9 Sonnet đọc hết 773 dòng (~740k token), chưa lọc bằng luật trước.
 - **28/09/2026** — Anh cấp quyền lâu dài (mục 6). Đã tạo repo public hh-vibecode/qc-cskh, push, bật Pages → https://hh-vibecode.github.io/qc-cskh/ (remote không chứa token).
 - **28/09/2026** — Chấm hết tồn 15–27/9 bằng Sonnet (3 lượt agent): 773 dòng → 750 đúng, 14 thiếu, 2 sai, 9 KLQ, 1 để lại. Soát tay: sửa 3 dòng `chi_bot` → `dung` (1830, 2000, 2001: người thật trả lời từ tài khoản chung PANCAKE THT HOLDING), bổ sung luật vào `cham-qc.md`. Lỗi job cũ thêm vào danh sách sửa: tin chào tự động khi khách bấm quảng cáo / "tin nhắn chào mừng tự động" đang bị tính là Sale.
 - **28/09/2026** — Anh chốt Q1–Q5 (mục 0). Dựng app v1: cổng mã truy cập bằng hàm CSDL (`supabase-schema-qc.sql`, đã áp + thử: mã sai 403, mã đúng ra 2.370 dòng = 2.502 − 132 dòng nhóm Zalo), trang `index.html` theo form cũ + thêm bảng theo Sale, agent Sonnet `cham-qc`. Xác nhận trang cũ Dashboard-Meta hỏng thật: đọc bảng bằng anon bị **401** (không phải mảng rỗng như em đoán trước). Tạo repo hh-vibecode/qc-cskh, bật Pages.

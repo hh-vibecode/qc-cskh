@@ -17,7 +17,8 @@ N="D:/Microsoft VS Code/Code.exe"; export ELECTRON_RUN_AS_NODE=1
 Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — KHÔNG in khoá ra, không chép khoá đi đâu. File tạm (lô dữ liệu, kết quả) để ở thư mục scratchpad của phiên, không để trong repo.
 
 ## Quy trình
-1. Lấy lô 20 dòng một lần, cũ trước:
+0. **Tầng 1 — luật, không tốn token:** chạy `"$N" tools/cham-luat.js --ghi` TRƯỚC. Nó tự chốt các ca hiển nhiên (câu phân loại Sỉ, hỏi chung → xin ảnh/ngân sách, mời check ib, mẫu trả lời chuẩn, tin hệ thống, nhân viên nội bộ đóng vai khách) — đo trên 1.984 dòng đã chấm: lệch 0. Bạn chỉ chấm phần còn lại. Thấy mẫu lặp lại hiển nhiên mới thì báo lại cho người gọi để bổ sung luật, KHÔNG tự sửa `cham-luat.js`.
+1. **Tầng 2 — bạn:** lấy lô 20 dòng một lần, cũ trước:
    ```sql
    select id, conv_date, page_name, conv_id, customer_name, sale_name, customer_ask, sale_reply, left(full_thread, 2500) thread
    from sale_response_review
@@ -43,11 +44,13 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
   - Xử lý khiếu nại hỏng chưa tới nơi.
   - Quên xác nhận đơn.
 - **sai**: thông tin trái với `product_faq`, gồm giá, chất liệu, kích thước, chính sách.
-- **khong_lien_quan**: người rao bán dịch vụ, tụng kinh, bình luận không phải khách hỏi mua. Không tính vào tỉ lệ đúng.
+- **khong_lien_quan**: người rao bán dịch vụ, bình luận không phải khách hỏi mua. Không tính vào tỉ lệ đúng.
+  - **Lời khấn / "Nam mô…" / cầu an / thường niệm → LUÔN `khong_lien_quan`** (anh Hải chốt 28/9), kể cả không ai trả lời. Chỉ khi trong câu có ý hỏi / mua thật thì mới chấm như khách.
 - Nếu "câu trả lời" thực ra chỉ là tin bot hoặc tin hệ thống thì chấm `chi_bot`; nếu không có ai trả lời thì chấm `khong_tra_loi`. Xét theo **NỘI DUNG** tin, KHÔNG theo tên người gửi:
   - Tin tự động gồm: lời chào khi khách bấm quảng cáo ("Xin chào X, bạn đang tìm mẫu…" gửi cùng phút), "đã trả lời tin nhắn chào mừng tự động", "X replied to a post".
   - "PANCAKE THT HOLDING", "Sales Admin" là tài khoản DÙNG CHUNG: không dùng làm tên Sale, nhưng tin viết tay có ngữ cảnh gửi từ tài khoản này VẪN là người thật trả lời, chấm theo nội dung (28/9 đã chấm oan 3 dòng `chi_bot` vì lý do này). Chỉ "Botcake" / "Hệ thống" mới chắc chắn là máy.
 - Khách nhắn sticker, 👍, "ok / vâng / cảm ơn" thì không cần Sale trả lời.
+- "Khách" là **nhân viên nội bộ** (chat nội bộ, gửi báo cáo công việc NVBH, đăng bài) → `khong_lien_quan`. Đã biết: Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458).
 - Page Sỉ luôn hỏi "gia đình hay nhập sỉ". Khách trả lời gia đình hoặc "thỉnh về an vị tại gia" là khách lẻ, tư vấn như khách lẻ là đúng.
 
 ## Cách ghi

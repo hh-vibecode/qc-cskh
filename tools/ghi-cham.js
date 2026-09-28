@@ -31,7 +31,7 @@ const tag = 'qc' + Date.now();   // dollar-quote tag riêng để nội dung kh�
 const sql = `with v as (select * from jsonb_to_recordset($${tag}$${data}$${tag}$::jsonb)
   as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text))
 update sale_response_review s set verdict=v.verdict, severity=v.severity, issue=v.issue,
-  suggestion=v.suggestion, source_faq=v.source_faq, reviewed_at=now()
+  suggestion=v.suggestion, source_faq=v.source_faq, cham_boi='sonnet', reviewed_at=now()
 from v where s.id=v.id and s.verdict='chua_cham' returning s.id`;
 (async () => {
   const r = await fetch(`https://api.supabase.com/v1/projects/${K.ref}/database/query`, {
