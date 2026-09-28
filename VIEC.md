@@ -26,7 +26,9 @@
 
 | # | Việc | Ghi chú |
 |---|---|---|
-| 1 | Chấm tiếp 816 dòng `chua_cham` (15/9 → nay) bằng agent `cham-qc` | anh bảo "dựng xong khung thì chấm tiếp"; chấm theo lô, cũ trước |
+| 1 | Id 2475 còn `chua_cham`: Sale gửi 9 ảnh mẫu, không rõ có giá trong ảnh không | cần người mở Pancake xem ảnh |
+| 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
+| 5 | Tạo repo public hh-vibecode/qc-cskh + bật Pages, push commit `05a3fe3` | bị chặn quyền 28/9 — chờ anh cho phép |
 | 2 | Bước 3 lộ trình: chép job chấm sang repo này, sửa lỗi (bỏ `pzl_g_`, ngày theo giờ VN, quét theo tin nhắn chứ không theo `updated_at`, nối bình luận–inbox xuyên ngày qua search, tên Sale theo luật gộp, thêm `page_id`, severity về `cao/trung/thap`), chạy song song ghi bảng tạm rồi đối chiếu | đặt secrets GitHub khi dựng job |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 
@@ -128,6 +130,7 @@
 - **Job chấm:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app (3 lượt/ngày, 56 lượt chạy đều success tới 28/9). Repo này chưa có job.
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **28/09/2026** — Chấm hết tồn 15–27/9 bằng Sonnet (3 lượt agent): 773 dòng → 750 đúng, 14 thiếu, 2 sai, 9 KLQ, 1 để lại. Soát tay: sửa 3 dòng `chi_bot` → `dung` (1830, 2000, 2001: người thật trả lời từ tài khoản chung PANCAKE THT HOLDING), bổ sung luật vào `cham-qc.md`. Lỗi job cũ thêm vào danh sách sửa: tin chào tự động khi khách bấm quảng cáo / "tin nhắn chào mừng tự động" đang bị tính là Sale.
 - **28/09/2026** — Anh chốt Q1–Q5 (mục 0). Dựng app v1: cổng mã truy cập bằng hàm CSDL (`supabase-schema-qc.sql`, đã áp + thử: mã sai 403, mã đúng ra 2.370 dòng = 2.502 − 132 dòng nhóm Zalo), trang `index.html` theo form cũ + thêm bảng theo Sale, agent Sonnet `cham-qc`. Xác nhận trang cũ Dashboard-Meta hỏng thật: đọc bảng bằng anon bị **401** (không phải mảng rỗng như em đoán trước). Tạo repo hh-vibecode/qc-cskh, bật Pages.
 - **28/09/2026** — Khảo sát bước 1 (chỉ đọc), trình anh. Bảng chấm 2.502 dòng (22/8–27/9); chấm tay dừng sau 14/9 → 816 `chua_cham` (15–27/9); job cũ vẫn ghi hằng ngày. Lỗi thấy: 132 dòng nhóm Zalo `pzl_g_` lọt vào; không có dòng nào mang tên Sale đội Sỉ; 493 dòng trống tên Sale; tên page viết nhiều kiểu, bảng không có `page_id`; severity lẫn 2 hệ (Nghiêm trọng/Nhẹ và cao/trung/thap); `conv_date` theo ngày UTC (59 dòng 0–7h lệch ngày); báo chấm sai tự xoá sau 3 ngày (Edge Function `review-report`, không kiểm đăng nhập). Chờ anh trả lời Q1–Q5.
 - **28/09/2026** — Tạo sổ khởi động (Monsieur Claude, phiên app MKT/Sale). Chép sẵn 16 mục bộ nhớ cần cho QC sang bộ nhớ của thư mục này. Chưa có code, chưa git init.

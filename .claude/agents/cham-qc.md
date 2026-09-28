@@ -44,8 +44,9 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
   - Quên xác nhận đơn.
 - **sai**: thông tin trái với `product_faq`, gồm giá, chất liệu, kích thước, chính sách.
 - **khong_lien_quan**: người rao bán dịch vụ, tụng kinh, bình luận không phải khách hỏi mua. Không tính vào tỉ lệ đúng.
-- Nếu "câu trả lời" thực ra chỉ là tin bot hoặc tin hệ thống thì chấm `chi_bot`; nếu không có ai trả lời thì chấm `khong_tra_loi`.
-  - Tài khoản "PANCAKE THT HOLDING", "Botcake", "Hệ thống", "Sales Admin" KHÔNG phải Sale người thật.
+- Nếu "câu trả lời" thực ra chỉ là tin bot hoặc tin hệ thống thì chấm `chi_bot`; nếu không có ai trả lời thì chấm `khong_tra_loi`. Xét theo **NỘI DUNG** tin, KHÔNG theo tên người gửi:
+  - Tin tự động gồm: lời chào khi khách bấm quảng cáo ("Xin chào X, bạn đang tìm mẫu…" gửi cùng phút), "đã trả lời tin nhắn chào mừng tự động", "X replied to a post".
+  - "PANCAKE THT HOLDING", "Sales Admin" là tài khoản DÙNG CHUNG: không dùng làm tên Sale, nhưng tin viết tay có ngữ cảnh gửi từ tài khoản này VẪN là người thật trả lời, chấm theo nội dung (28/9 đã chấm oan 3 dòng `chi_bot` vì lý do này). Chỉ "Botcake" / "Hệ thống" mới chắc chắn là máy.
 - Khách nhắn sticker, 👍, "ok / vâng / cảm ơn" thì không cần Sale trả lời.
 - Page Sỉ luôn hỏi "gia đình hay nhập sỉ". Khách trả lời gia đình hoặc "thỉnh về an vị tại gia" là khách lẻ, tư vấn như khách lẻ là đúng.
 
