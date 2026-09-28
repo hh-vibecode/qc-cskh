@@ -58,6 +58,8 @@ function chamLuat(r) {
   const ask = bo(r.customer_ask), rep = bo(r.sale_reply), page = bo(r.page_name);
   if (!ask) return null;
   if (KHAN.test(ask) && !CO_Y_HOI.test(ask)) return { verdict: 'khong_lien_quan', luat: 'loi_khan' };
+  // Bình luận → tư vấn qua tin nhắn: phải đọc CẢ đoạn tin nhắn xem Sale tư vấn tới đâu → luôn để Sonnet (28/9)
+  if (/^Bình luận → tư vấn qua tin nhắn/.test(r.issue || '')) return null;
   if (!rep) return null;                                        // không có trả lời: đã do job xử lý (chi_bot/khong_tra_loi)
   // 1) "Câu trả lời" chỉ là tin hệ thống
   if (HE_THONG.test(rep)) return { verdict: 'chi_bot', luat: 'tin_he_thong' };
@@ -76,11 +78,14 @@ function chamLuat(r) {
 module.exports = { chamLuat };
 
 async function sql(q) {
-  const r = await fetch(`https://api.supabase.com/v1/projects/${K.ref}/database/query`, {
-    method: 'POST', headers: { Authorization: 'Bearer ' + K.sbp, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(r.status + ' ' + JSON.stringify(j));
-  return j;
+  for (let i = 0; ; i++) {
+    const r = await fetch(`https://api.supabase.com/v1/projects/${K.ref}/database/query`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + K.sbp, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
+    const j = await r.json().catch(() => null);
+    if (r.status === 429 && i < 8) { await new Promise(s => setTimeout(s, 15000 * (i + 1))); continue; }  // quá hạn mức → đợi, thử lại
+    if (!r.ok) throw new Error(r.status + ' ' + JSON.stringify(j));
+    return j;
+  }
 }
 
 if (require.main === module) (async () => {
@@ -102,7 +107,7 @@ if (require.main === module) (async () => {
   }
   if (a.includes('--ghi')) {
     // chua_cham: áp mọi luật. khong_tra_loi/chi_bot do job tự gắn: chỉ áp luật nội bộ (nhân viên không phải khách → không phải miss)
-    const rows = await sql(`select id, page_name, customer_name, phone, customer_ask, sale_reply, verdict from sale_response_review
+    const rows = await sql(`select id, page_name, customer_name, phone, customer_ask, sale_reply, verdict, issue from sale_response_review
       where verdict in ('chua_cham','khong_tra_loi','chi_bot') and conv_id not like 'pzl\\_g\\_%'`);
     const ra = rows.map(r => ({ id: r.id, cu: r.verdict, ...chamLuat(r) }))
       .filter(x => x.verdict && (x.cu === 'chua_cham' || x.luat === 'noi_bo' || x.luat === 'loi_khan'));
@@ -113,7 +118,9 @@ if (require.main === module) (async () => {
     if (a.includes('--thu') || !ra.length) return;
     const data = JSON.stringify(ra.map(x => ({ id: x.id, verdict: x.verdict })));
     const done = await sql(`with v as (select * from jsonb_to_recordset($q$${data}$q$::jsonb) as x(id bigint, verdict text))
-      update sale_response_review s set verdict=v.verdict, severity=null, issue=null, suggestion=null, source_faq=null,
+      update sale_response_review s set verdict=v.verdict, severity=null, suggestion=null, source_faq=null,
+        -- giữ nhãn do soat-miss-pancake.js gắn (trả lời muộn / tư vấn qua tin nhắn), xoá câu mẫu của job cũ
+        issue = case when s.issue ~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)' then s.issue else null end,
         cham_boi='luat', reviewed_at=now()
       from v where s.id=v.id and s.verdict in ('chua_cham','khong_tra_loi','chi_bot') returning s.id`);
     console.log(`Đã ghi ${done.length} dòng (cham_boi='luat').`);

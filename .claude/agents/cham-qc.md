@@ -65,6 +65,13 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
 - "Khách" là **nhân viên nội bộ** (chat nội bộ, gửi báo cáo công việc NVBH, đăng bài) → `khong_lien_quan`. Đã biết: Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458).
 - Page Sỉ luôn hỏi "gia đình hay nhập sỉ". Khách trả lời gia đình hoặc "thỉnh về an vị tại gia" là khách lẻ, tư vấn như khách lẻ là đúng.
 
+## Bình luận → tư vấn qua tin nhắn (anh Hải chốt 28/9, ca Harri)
+Bình luận và tin nhắn là 2 luồng riêng trên Pancake. Dòng có `issue` bắt đầu bằng "Bình luận → tư vấn qua tin nhắn (Sale nhắn sau N giờ)." là bình luận mà Sale ĐÃ nhắn riêng cho chính khách đó — `thread` đã ghép bình luận + đoạn tin nhắn. Chấm **Sale tư vấn tới đâu** trong đoạn tin nhắn:
+- `dung`: trả lời đúng các câu khách hỏi (giá, mẫu, chi nhánh…) hoặc dẫn tới bước chốt hợp lý (xin SĐT / Zalo để tư vấn tiếp, khách đồng ý, hẹn gửi mẫu).
+- `thieu`: khách hỏi giá / mẫu cụ thể mà Sale né, chỉ xin SĐT rồi bỏ; khách nhắn tiếp mà Sale bỏ lửng; chưa trả lời câu hỏi chính của khách.
+- `sai`: thông tin trái FAQ.
+- GIỮ nguyên câu nhãn ở đầu `issue` rồi nối nhận xét của bạn (với `dung` vẫn ghi lại nhãn).
+
 ## Cách ghi
 - `thieu`/`sai` BẮT BUỘC có:
   - `severity` là `cao` (mất khách / sai giá / sai chính sách), `trung` hoặc `thap`.

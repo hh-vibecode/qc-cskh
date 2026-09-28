@@ -30,12 +30,16 @@ async function pk(path) {
   }
   return null;
 }
+// Management API giới hạn số lần gọi / phút → gặp 429 thì đợi rồi thử lại (28/9 bị đứt giữa chừng khi ghi 163 dòng)
 async function sql(q) {
-  const r = await fetch(`https://api.supabase.com/v1/projects/${K.ref}/database/query`, {
-    method: 'POST', headers: { Authorization: 'Bearer ' + K.sbp, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(r.status + ' ' + JSON.stringify(j));
-  return j;
+  for (let i = 0; ; i++) {
+    const r = await fetch(`https://api.supabase.com/v1/projects/${K.ref}/database/query`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + K.sbp, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) });
+    const j = await r.json().catch(() => null);
+    if (r.status === 429 && i < 8) { await sleep(15000 * (i + 1)); continue; }
+    if (!r.ok) throw new Error(r.status + ' ' + JSON.stringify(j));
+    return j;
+  }
 }
 const clean = t => (t || '').replace(/<br[^>]*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -76,41 +80,62 @@ const fmt = (m, pageId) => {
   return `[${ts}] ${who}: ${clean(m.message) || '(gửi ảnh/tệp)'}`;
 };
 
+// Tên để tìm: search của Pancake KHÔNG khớp khi có emoji ("Harri 🪷" → 0 kết quả, "Harri" → ra) — thử nhiều dạng.
+const tenSach = s => (s || '').replace(/[^\p{L}\p{N}\s.'-]/gu, ' ').replace(/\s+/g, ' ').trim();
+async function timInbox(pageId, g, r) {
+  const qs = [...new Set([g.cust.username, g.conv?.from?.username, tenSach(r.customer_name), tenSach(g.cust.name), r.customer_name]
+    .filter(x => x && x.length >= 2))];
+  for (const q of qs) {
+    const s = await pk(`/pages/${pageId}/conversations/search?q=${encodeURIComponent(q)}`);
+    const ib = (s?.conversations || []).find(c => (c.type || '').toUpperCase() === 'INBOX' &&
+      (c.customers || []).some(x => String(x.id) === String(g.cust.id) || (g.cust.fb_id && String(x.fb_id) === String(g.cust.fb_id))));
+    if (ib) return ib;
+    await sleep(120);
+  }
+  return null;
+}
+const fmtH = h => h < 1 ? Math.round(h * 60) + ' phút' : h.toFixed(1).replace('.', ',') + ' giờ';
+
 async function soat(r) {
   const u = (r.pancake_url || '').match(/pancake\.vn\/([^?]+)\?c_id=(.+)$/);
-  const pageId = u ? u[1] : r.conv_id.split('_')[0], convId = u ? u[2] : r.conv_id;
+  const pageId = u ? u[1] : r.conv_id.split('_')[0];
   const hoi = utc(r.conv_at);
-  const g = await tinNhan(pageId, convId);
+  // Luôn mở hội thoại GỐC theo conv_id (dòng tra_loi_inbox cũ có pancake_url trỏ sang inbox, conv_id vẫn là bình luận)
+  const g = await tinNhan(pageId, r.conv_id);
   if (!g) return { ket: 'khong_mo_duoc' };
+  const laBL = (g.conv?.type || '').toUpperCase() === 'COMMENT';
   // 1) Có Sale thật trả lời sau câu hỏi ngay trong hội thoại gốc?
   const rep = g.msgs.find(m => utc(m.inserted_at) > hoi && tinSale(m, pageId));
-  if (rep) {
+  if (rep && r.verdict !== 'tra_loi_inbox') {
     const h = (utc(rep.inserted_at) - hoi) / 36e5;
     const moi = g.msgs.filter(m => utc(m.inserted_at) >= hoi).map(m => fmt(m, pageId));
     return { ket: 'da_tra_loi', muon: h, sale: rep.from?.admin_name || null, text: clean(rep.message) || '(gửi ảnh/tệp)', them: moi };
   }
-  // 2) Bình luận → tìm inbox của chính khách đó
-  if ((g.conv?.type || '').toUpperCase() === 'COMMENT') {
-    const fb = g.cust.fb_id || g.cust.id;
-    const s = await pk(`/pages/${pageId}/conversations/search?q=${encodeURIComponent(r.customer_name || g.cust.name || '')}`);
-    const ib = (s?.conversations || []).find(c => (c.type || '').toUpperCase() === 'INBOX' &&
-      (c.customers || []).some(x => String(x.fb_id) === String(fb) || String(x.id) === String(g.cust.id)));
+  // 2) BÌNH LUẬN và TIN NHẮN là 2 luồng riêng (anh Hải 28/9, ca Harri): tìm inbox của CHÍNH khách đó.
+  //    Có Sale nhắn riêng sau bình luận → KHÔNG bỏ qua: ghép bình luận + tin nhắn để CHẤM Sale tư vấn tới đâu.
+  //    Không có → mới là miss.
+  if (laBL) {
+    const ib = await timInbox(pageId, g, r);
     if (ib) {
       const gi = await tinNhan(pageId, ib.id);
       const sau = (gi?.msgs || []).filter(m => utc(m.inserted_at) > hoi);
-      const coSale = sau.some(m => tinSale(m, pageId));
-      const khach = sau.filter(m => String(m.from?.id) !== String(pageId) && clean(m.message) && !KHONG_CAN_TRA_LOI.test(bo(clean(m.message))));
-      const cuoi = khach[khach.length - 1];
-      const cuoiDuocTL = !cuoi || sau.some(m => utc(m.inserted_at) > utc(cuoi.inserted_at) && tinSale(m, pageId));
-      if (coSale && cuoiDuocTL) return { ket: 'tra_loi_inbox', inbox: ib.id, url: `https://pancake.vn/${pageId}?c_id=${ib.id}`,
-        them: sau.map(m => fmt(m, pageId)) };
+      const sale = sau.filter(m => tinSale(m, pageId));
+      if (sale.length) {
+        const bl = g.msgs.filter(m => utc(m.inserted_at) >= new Date(hoi.getTime() - 6e4));
+        const them = [...bl, ...sau.slice(0, 40)].sort((a, b) => utc(a.inserted_at) - utc(b.inserted_at)).map(m => fmt(m, pageId));
+        return { ket: 'qua_inbox', url: `https://pancake.vn/${pageId}?c_id=${ib.id}`, muon: (utc(sale[0].inserted_at) - hoi) / 36e5,
+          sale: sale.find(m => m.from?.admin_name)?.from.admin_name || null,
+          text: sale.slice(0, 4).map(m => clean(m.message) || '(gửi ảnh/tệp)').join(' | '), them };
+      }
     }
   }
-  return { ket: 'miss_that' };
+  return { ket: r.verdict === 'tra_loi_inbox' ? 'inbox_khong_thay' : 'miss_that' };
 }
 
 (async () => {
-  const dk = ONE ? `id=${Number(ONE)}` : `verdict in ('khong_tra_loi','chi_bot') and conv_id not like 'pzl\\_g\\_%'
+  // miss + dòng "đã tư vấn ở tin nhắn" cũ (chưa được chấm nội dung tin nhắn). --chi-miss: chỉ miss.
+  const vset = A.includes('--chi-miss') ? `('khong_tra_loi','chi_bot')` : `('khong_tra_loi','chi_bot','tra_loi_inbox')`;
+  const dk = ONE ? `id=${Number(ONE)}` : `verdict in ${vset} and conv_id not like 'pzl\\_g\\_%'
     and conv_at is not null and pancake_url is not null ${TU ? `and conv_date >= '${TU.replace(/[^0-9-]/g, '')}'` : ''}`;
   const rows = await sql(`select id, conv_id, conv_at, conv_date, customer_name, pancake_url, verdict, full_thread from sale_response_review where ${dk} order by conv_at`);
   const dem = {}, ghi = [];
@@ -118,25 +143,27 @@ async function soat(r) {
     let k; try { k = await soat(r); } catch (e) { k = { ket: 'loi', e: e.message }; }
     dem[k.ket] = (dem[k.ket] || 0) + 1;
     if (k.ket === 'da_tra_loi') console.log(`#${r.id} ${r.customer_name}: Sale ${k.sale || '(không tên)'} trả lời muộn ${k.muon.toFixed(1)} giờ — "${k.text.slice(0, 70)}"`);
-    if (k.ket === 'tra_loi_inbox') console.log(`#${r.id} ${r.customer_name}: bình luận → đã tư vấn ở inbox ${k.inbox}`);
-    if (k.ket === 'da_tra_loi' || k.ket === 'tra_loi_inbox') ghi.push({ r, k });
+    if (k.ket === 'qua_inbox' && r.verdict !== 'tra_loi_inbox') console.log(`#${r.id} ${r.customer_name}: [${r.verdict}] bình luận → Sale nhắn riêng sau ${fmtH(k.muon)} — "${k.text.slice(0, 60)}"`);
+    if (k.ket === 'da_tra_loi' || k.ket === 'qua_inbox') ghi.push({ r, k });
     await sleep(150);
   }
-  console.log(`Soát ${rows.length} dòng miss:`, dem);
+  console.log(`Soát ${rows.length} dòng:`, dem);
   if (thu || !ghi.length) return;
   const tag = 'sm' + Date.now(), q = s => `$${tag}$${s}$${tag}$`;
   for (const { r, k } of ghi) {
-    const thread = ((r.full_thread || '') + '\n' + k.them.join('\n')).slice(-4000);
-    if (k.ket === 'da_tra_loi') {
+    await sleep(700);
+    const thread = k.ket === 'qua_inbox' ? k.them.join('\n').slice(0, 6000) : ((r.full_thread || '') + '\n' + k.them.join('\n')).slice(-4000);
+    if (k.ket === 'qua_inbox') {
+      await sql(`update sale_response_review set verdict='chua_cham', sale_reply=${q(k.text.slice(0, 1000))},
+        sale_name=coalesce(${k.sale ? q(k.sale) : 'null'}, sale_name), severity=null, suggestion=null, source_faq=null, cham_boi=null,
+        issue=${q(`Bình luận → tư vấn qua tin nhắn (Sale nhắn sau ${fmtH(k.muon)}).`)},
+        pancake_url=${q(k.url)}, full_thread=${q(thread)}, reviewed_at=now()
+        where id=${r.id} and verdict in ('khong_tra_loi','chi_bot','tra_loi_inbox')`);
+    } else if (k.ket === 'da_tra_loi') {
       await sql(`update sale_response_review set verdict='chua_cham', sale_reply=${q(k.text.slice(0, 1000))},
         sale_name=coalesce(${k.sale ? q(k.sale) : 'null'}, sale_name), severity=null, suggestion=null, source_faq=null, cham_boi=null,
         issue=${q(`Trả lời muộn ${k.muon < 1 ? Math.round(k.muon * 60) + ' phút' : k.muon.toFixed(1).replace('.', ',') + ' giờ'} (soát lại Pancake — lúc job chạy chưa có trả lời)`)},
         full_thread=${q(thread)}, reviewed_at=now()
-        where id=${r.id} and verdict in ('khong_tra_loi','chi_bot')`);
-    } else {
-      await sql(`update sale_response_review set verdict='tra_loi_inbox', severity=null, suggestion=null, cham_boi='luat',
-        issue='Bình luận → Sale đã tư vấn ở tin nhắn (soát lại Pancake, xuyên ngày) — không tính lỗi.',
-        pancake_url=${q(k.url)}, full_thread=${q(thread)}, reviewed_at=now()
         where id=${r.id} and verdict in ('khong_tra_loi','chi_bot')`);
     }
   }

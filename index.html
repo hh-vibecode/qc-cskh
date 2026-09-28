@@ -247,6 +247,10 @@ function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
 const lateOf=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
+// Bình luận mà Sale đã nhắn riêng (2 luồng khác nhau trên Pancake) — nay được CHẤM nội dung tin nhắn, nhãn ở đầu issue.
+// Dòng tra_loi_inbox cũ (chưa chấm nội dung) cũng tính vào nhóm này.
+const inboxOf=r=>r.verdict==='tra_loi_inbox'||/^Bình luận → tư vấn qua tin nhắn/.test(r.issue||'');
+const inboxDelay=r=>{const m=(r.issue||'').match(/^Bình luận → tư vấn qua tin nhắn \(Sale nhắn sau ([\d,]+ (?:giờ|phút))\)/);return m?m[1]:'';};
 // Icon SVG cho thẻ số (anh Hải 28/9: "dashboard thêm icon vào")
 const svg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICON={
@@ -260,6 +264,7 @@ const ICON={
 function verdictMatch(r,v){
   if(v==='all')return true;
   if(v==='muon')return!!lateOf(r);
+  if(v==='qua_inbox')return inboxOf(r);
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
   if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham'].includes(r.verdict);
   return r.verdict===v;
@@ -339,7 +344,7 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Sale trả lời sau lúc job chạy — phát hiện khi soát lại Pancake">muộn ${esc(lateOf(r))}</span>`:''}</td>
+      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Sale trả lời sau lúc job chạy — phát hiện khi soát lại Pancake">muộn ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
@@ -375,7 +380,7 @@ function render(keepFocus){
     </div>
     <div class="kpi-row">
       ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot`,'miss','miss')}
-      ${kpi('tra_loi_inbox','Bình luận → tư vấn ở tin nhắn',num(T.inbox),'không tính lỗi','info','inbox')}
+      ${kpi('qua_inbox','Tư vấn qua tin nhắn',num(base.filter(inboxOf).length),'bình luận → Sale nhắn riêng, đã chấm','info','inbox')}
       ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
     </div>
     <div class="two">
@@ -383,7 +388,7 @@ function render(keepFocus){
       <div><div class="sec">Theo Sale</div><div class="card scroll"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div></div>
     </div>
     <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
-      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
+      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
@@ -518,7 +523,8 @@ function logicPage(){
     </ul>
     <h3>2. Chấm 3 bước</h3>
     <ol>
-      <li><b>Soát miss với Pancake thật</b> — dòng "không trả lời / chỉ bot" được mở lại hội thoại: Sale trả lời sau lúc job chạy → hết miss, gắn nhãn <i>trả lời muộn N giờ</i> rồi chấm nội dung; bình luận mà Sale đã tư vấn trong tin nhắn (xuyên ngày) → <i>Bình luận → tư vấn ở tin nhắn</i>.</li>
+      <li><b>Soát miss với Pancake thật</b> — dòng "không trả lời / chỉ bot" được mở lại hội thoại: Sale trả lời sau lúc job chạy → hết miss, gắn nhãn <i>trả lời muộn N giờ</i> rồi chấm nội dung.</li>
+      <li><b>Bình luận ↔ tin nhắn là 2 luồng riêng</b> — với mỗi bình luận, tìm hội thoại tin nhắn của CHÍNH khách đó (theo mã khách, thử cả tên đăng nhập / tên bỏ emoji). Có Sale nhắn riêng → ghép bình luận + tin nhắn, gắn nhãn <i>qua tin nhắn</i> và <b>chấm Sale tư vấn tới đâu</b>. Không có → mới là miss.</li>
       <li><b>Luật</b> (không tốn AI) — chốt ca hiển nhiên: câu hỏi phân loại "gia đình hay nhập sỉ", khách hỏi chung → Sale xin ảnh / ngân sách / mời check ib, mẫu trả lời chuẩn, tin hệ thống, lời khấn, nhân viên nội bộ. Mỗi luật phải đo trên toàn bộ dữ liệu đã chấm ra lệch 0 mới được dùng.</li>
       <li><b>Sonnet</b> — đọc phần còn lại (khách hỏi cụ thể, kiến thức sản phẩm, khiếu nại), chỉ tra <code>product_faq</code> khi là câu hỏi kiến thức; soát miss còn lại là tương tác hay miss thật.</li>
     </ol>
@@ -530,7 +536,7 @@ function logicPage(){
         <tr><td>${vb('thieu')}</td><td>Trả lời mẫu bỏ qua câu hỏi cụ thể, thiếu ý, bỏ lỡ khách muốn chốt (mức cao / trung bình / thấp)</td><td>Có</td></tr>
         <tr><td>${vb('sai')}</td><td>Trái với kiến thức sản phẩm trong FAQ</td><td>Có</td></tr>
         <tr><td>${vb('khong_tra_loi')} ${vb('chi_bot')}</td><td>Miss — khách hỏi mua mà không có Sale thật trả lời</td><td>Có</td></tr>
-        <tr><td>${vb('tra_loi_inbox')}</td><td>Bình luận, Sale đã tư vấn trong tin nhắn — không tính lỗi</td><td>Không</td></tr>
+        <tr><td>${vb('tra_loi_inbox')}</td><td>Bình luận có tin nhắn riêng nhưng chưa chấm nội dung (dữ liệu cũ, đang được chấm lại) — không tính lỗi</td><td>Không</td></tr>
         <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
       </tbody>
     </table>
