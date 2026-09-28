@@ -35,7 +35,8 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5}
 button,input,select,textarea{font-family:inherit;font-size:12.5px;color:var(--text)}
-.wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
+/* Full màn (anh Hải 28/9: "sao k full màn") — phần nội dung chiếm hết bề ngang còn lại cạnh menu */
+.wrap{padding:22px 28px 60px}
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .title{font-size:20px;font-weight:800;margin-right:auto}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:var(--bg2);color:var(--text2);font-size:11px;font-weight:700;white-space:nowrap}
@@ -59,11 +60,16 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent)}
 table{width:100%;border-collapse:collapse}
 th{background:var(--bg2);padding:9px 10px;font-size:11px;font-weight:800;color:var(--muted);text-align:left;white-space:nowrap;border-bottom:2px solid var(--border)}
 td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+td.name{white-space:nowrap;font-weight:700}
+.bar select{max-width:280px}
+.bar input[type=search]{flex:1;min-width:220px}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
 th.c,td.c{text-align:center}
 tr.click{cursor:pointer}
 tr.click:hover td{background:var(--bg2)}
-.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.two table{min-width:600px;table-layout:fixed}
+.two td.name{overflow:hidden;text-overflow:ellipsis}
 .vb{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap}
 .muted{color:var(--muted)}
 .detail td{background:var(--bg2);padding:12px 16px 14px 30px}
@@ -120,7 +126,7 @@ a{color:var(--accent);font-weight:700;text-decoration:none}
 </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
+<div id="app"></div>
 <script>
 // ── Cấu hình ──────────────────────────────────────────────────────────────
 // Khoá công khai (anon) chỉ gọi được các hàm qc_* — hàm tự kiểm MÃ TRUY CẬP rồi mới trả dữ liệu
@@ -142,7 +148,7 @@ async function rpc(fn,args){
 }
 
 // ── Trạng thái ────────────────────────────────────────────────────────────
-const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),limit:150,
+const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),pg:0,
   plat:'social',from:'',to:'',brand:'all',page:'all',sale:'all',verdict:'all',q:'',
   view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
 // Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
@@ -231,14 +237,14 @@ async function load(){
 async function reload(){try{await load();render();toast('Đã tải lại');}catch(e){toast(e.message);}}
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
-function setF(k,v){S[k]=v;S.limit=150;if(k==='brand')S.page='all';render(k==='q');}
+function setF(k,v){S[k]=v;S.pg=0;if(k==='brand')S.page='all';render(k==='q');}
 function setRange(days){
   if(days===0){S.from='';S.to='';}
   else{const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-days+1);S.from=isoDay(t);}
-  S.limit=150;render();
+  S.pg=0;render();
 }
-function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.limit=150;render();}
-function setPlat(p){if(p!==S.plat){S.plat=p;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
+function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
+function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
 const lateOf=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
 // Icon SVG cho thẻ số (anh Hải 28/9: "dashboard thêm icon vào")
@@ -310,19 +316,22 @@ function render(keepFocus){
 
   // tóm tắt theo thương hiệu + theo Sale
   const sumRow=(name,t,onclick)=>`<tr class="click" onclick="${onclick}">
-    <td style="font-weight:700">${esc(name)}</td><td class="num">${num(t.den)}</td>
+    <td class="name">${esc(name)}</td><td class="num">${num(t.den)}</td>
     <td class="num" style="color:var(--ok);font-weight:700">${num(t.dung)}</td>
     <td class="num" style="color:var(--warn);font-weight:700">${num(t.thieu)}</td>
     <td class="num" style="color:var(--bad);font-weight:700">${num(t.sai)}</td>
     <td class="num" style="color:var(--miss);font-weight:700">${num(t.miss)}</td>
     <td class="num">${num(t.pend)}</td>
     <td class="num" style="font-weight:800;color:${!t.den?'var(--muted)':t.dung/t.den>=.7?'var(--ok)':t.dung/t.den>=.5?'var(--warn)':'var(--bad)'}">${pct(t.dung,t.den)}</td></tr>`;
-  const sumHead=first=>`<thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
+  // cột cố định để 2 bảng đặt cạnh nhau gióng thẳng cột (anh Hải: "lệch à")
+  const sumHead=first=>`<colgroup><col style="width:28%">${'<col style="width:10.28%">'.repeat(7)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
   const byBrand=countBy(base,r=>brandOf(r.page_name)).map(([b])=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r.page_name)===b)),`setF('brand','${b}')`)).join('');
   const bySale=countBy(base,saleOf).map(([s])=>sumRow(s,tally(base.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join('');
 
   // bảng chi tiết
-  const shown=rows.slice(0,S.limit);
+  // 30 dòng / trang (anh Hải 28/9)
+  const nPg=Math.max(1,Math.ceil(rows.length/PER)),pg=Math.min(S.pg,nPg-1);
+  const shown=rows.slice(pg*PER,pg*PER+PER);
   const body=shown.map(r=>{
     const open=S.open.has(r.id),rep=S.reports.some(x=>x.review_id===r.id&&x.status==='open');
     return`<tr class="click" onclick="toggleRow(${r.id})">
@@ -357,7 +366,7 @@ function render(keepFocus){
       <select onchange="setF('brand',this.value)">${opt('all','Tất cả thương hiệu',S.brand)}${brandOpts.map(([b,n])=>opt(b,`${BRANDS[b]||b} (${n})`,S.brand)).join('')}</select>
       <select onchange="setF('page',this.value)">${opt('all','Tất cả page / tài khoản',S.page)}${pageOpts.map(([k,n])=>opt(k,`${pageName[k]} (${n})`,S.page)).join('')}</select>
       <select onchange="setF('sale',this.value)">${opt('all','Tất cả Sale',S.sale)}${saleOpts.map(([s,n])=>opt(s,`${s} (${n})`,S.sale)).join('')}</select>
-      <input type="search" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)" style="min-width:220px;flex:1">
+      <input type="search" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)">
     </div>
     <div class="kpi-row">
       ${kpi('dung','Tư vấn đúng',num(T.dung),`${pct(T.dung,T.den)} / ${num(T.den)} lượt đã chấm`,'ok','dung')}
@@ -373,16 +382,30 @@ function render(keepFocus){
       <div><div class="sec">Theo thương hiệu</div><div class="card scroll"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div></div>
       <div><div class="sec">Theo Sale</div><div class="card scroll"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div></div>
     </div>
-    <div class="sec" style="display:flex;align-items:center;gap:8px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
+    <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
       ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
-      ${rows.length>S.limit?`<div class="more"><button class="btn" onclick="S.limit+=300;render()">Hiện thêm (${num(rows.length-S.limit)} lượt)</button></div>`:''}
+      ${pager(pg,nPg,rows.length)}
     </div>`);
   if(keepFocus){const b=document.getElementById('qBox');if(b){b.focus();const v=b.value;b.value='';b.value=v;}}
 }
 
+const PER=30;
+function toPg(p){S.pg=p;S.open.clear();render();document.getElementById('chiTiet')?.scrollIntoView({block:'start'});}
+function pager(pg,n,total){
+  if(n<=1)return'';
+  // tối đa 7 nút số: đầu, cuối, quanh trang đang xem
+  const set=new Set([0,n-1,pg-2,pg-1,pg,pg+1,pg+2].filter(i=>i>=0&&i<n));
+  const list=[...set].sort((a,b)=>a-b);let out='',prev=-1;
+  for(const i of list){if(prev>=0&&i-prev>1)out+='<span class="muted" style="padding:0 4px">…</span>';
+    out+=`<button class="btn${i===pg?' on':''}" onclick="toPg(${i})">${i+1}</button>`;prev=i;}
+  return`<div class="more" style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">
+    <button class="btn" ${pg===0?'disabled':''} onclick="toPg(${pg-1})">‹</button>${out}
+    <button class="btn" ${pg===n-1?'disabled':''} onclick="toPg(${pg+1})">›</button>
+    <span class="muted" style="margin-left:8px;font-size:12px">${num(pg*PER+1)}–${num(Math.min(total,(pg+1)*PER))} / ${num(total)}</span></div>`;
+}
 function fmtThread(text){
   return text.split('\n').filter(Boolean).map(line=>{
     const m=line.match(/^\[([^\]]+)\]\s+([^:]+):\s?(.*)$/);

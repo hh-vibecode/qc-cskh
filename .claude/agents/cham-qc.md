@@ -36,6 +36,7 @@ Khoá nằm ở file khoá của mkt-sale-app, `tools/keys.js` tự đọc — K
    order by conv_date, id limit 30
    ```
    - `khong_lien_quan`: KHÔNG hỏi mua — khen ảnh đẹp, tag bạn bè, sticker/emoji, lời khấn, người rao bán / chào dịch vụ, tin mẫu của chính page, nhân viên nội bộ, spam.
+   - **Người bán lại / đại lý / cửa hàng xin báo giá, xin mẫu ở page SỈ là KHÁCH MUA SỈ** → không bao giờ `khong_lien_quan` (28/9 đã loại nhầm chị Nhung "E báo giá luôn cho c nhé!" #2350, #2413). Chỉ loại khi họ CHÀO BÁN dịch vụ / hàng của họ cho mình.
    - `giu`: có bất kỳ ý hỏi mua nào (giá, mẫu, chất liệu, kích thước, còn hàng, xin ảnh, xin số, "em mua…") → miss thật, giữ nguyên.
    - Phân vân → `giu` (thà báo miss còn hơn giấu miss).
    Ghi bằng `"$N" tools/ghi-cham.js <file.json> --soat-miss` (chạy `--thu` trước). File: `[{id, verdict: "khong_lien_quan"|"giu", issue?}]` — `issue` với khong_lien_quan là 1 câu ngắn vì sao.
