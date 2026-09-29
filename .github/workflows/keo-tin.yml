@@ -1,0 +1,38 @@
+name: Kéo tin Pancake cho QC
+
+# Không hẹn giờ ở đây: lịch GitHub trễ 5–8 tiếng. pg_cron của Supabase (supabase-lich-keo.sql) gọi workflow_dispatch
+# lúc 6h00 (kéo hôm qua) và 18h00 (kéo hôm nay) giờ VN. Chạy tay được với FROM/TO.
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Từ ngày (YYYY-MM-DD, giờ VN) — trống = hôm qua'
+        required: false
+      to:
+        description: 'Đến ngày (YYYY-MM-DD, giờ VN) — trống = hôm qua'
+        required: false
+      dry_run:
+        description: 'Chạy thử, không ghi (1 = thử)'
+        required: false
+
+concurrency:
+  group: keo-tin
+  cancel-in-progress: false
+
+jobs:
+  keo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Kéo tin + tách lượt hỏi–đáp + ghi Supabase (khoá riêng qc_cskh)
+        env:
+          PANCAKE_SESSION_TOKEN: ${{ secrets.PANCAKE_SESSION_TOKEN }}
+          QC_SUPABASE_KEY: ${{ secrets.QC_SUPABASE_KEY }}
+          FROM: ${{ github.event.inputs.from }}
+          TO: ${{ github.event.inputs.to }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: node scripts/keo-tin.js

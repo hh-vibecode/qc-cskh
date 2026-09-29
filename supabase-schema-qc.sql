@@ -11,6 +11,12 @@ create extension if not exists pgcrypto with schema extensions;
 -- Thêm 28/9/2026 để soát riêng từng tầng. Job cũ bên mkt-sale-app không ghi cột này (không ảnh hưởng).
 alter table public.sale_response_review add column if not exists cham_boi text;
 
+-- page_id (29/9/2026): tên page viết nhiều kiểu (Thuỷ/Thủy, "-"/"|") nên lọc theo tên bị lệch. Job mới của QC ghi thẳng;
+-- dòng cũ lấy từ pancake_url (https://pancake.vn/{page_id}?c_id=...).
+alter table public.sale_response_review add column if not exists page_id text;
+update public.sale_response_review set page_id = substring(pancake_url from 'pancake\.vn/([^?]+)\?')
+ where page_id is null and pancake_url is not null;
+
 create table if not exists public.qc_cau_hinh (
   khoa      text primary key,
   gia_tri   text not null,
