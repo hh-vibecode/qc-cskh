@@ -153,8 +153,20 @@ function tachLuot(page, c, msgs, userMap) {
     for (const c of lay) {
       const custId = c.customers?.[0]?.id;
       if (!custId) continue;
-      const m = await pk(`/pages/${p.id}/conversations/${encodeURIComponent(c.id)}/messages?customer_id=${custId}`);
-      const got = tachLuot(p, c, m?.messages || [], userMap);
+      // Pancake chỉ trả ~25–30 tin mới nhất mỗi lần → hội thoại dài (vd chat nội bộ Zalo) mất tin của ngày cần kéo.
+      // Đọc lùi bằng current_count tới khi chạm đầu ngày FROM (tối đa 10 trang). Thấy 29/9 ở 3 lượt Shidai.
+      const base = `/pages/${p.id}/conversations/${encodeURIComponent(c.id)}/messages?customer_id=${custId}`;
+      let msgs = (await pk(base))?.messages || [];
+      for (let t = 0; t < 10 && msgs.length; t++) {
+        const cuNhat = Math.min(...msgs.map(x => utc(x.inserted_at).getTime()));
+        if (cuNhat < tuUtc.getTime() || (c.message_count && msgs.length >= c.message_count)) break;
+        await sleep(150);
+        const them = (await pk(`${base}&current_count=${msgs.length}`))?.messages || [];
+        const co = new Set(msgs.map(x => x.id)), moi = them.filter(x => !co.has(x.id));
+        if (!moi.length) break;
+        msgs = msgs.concat(moi);
+      }
+      const got = tachLuot(p, c, msgs, userMap);
       pairs.push(...got); n += got.length;
       await sleep(150);
     }

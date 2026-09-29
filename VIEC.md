@@ -30,6 +30,8 @@
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
 | 2 | Bước 3 lộ trình: chép job chấm sang repo này, sửa lỗi (bỏ `pzl_g_`, ngày theo giờ VN, quét theo tin nhắn chứ không theo `updated_at`, nối bình luận–inbox xuyên ngày qua search, tên Sale theo luật gộp, thêm `page_id`, severity về `cao/trung/thap`), chạy song song ghi bảng tạm rồi đối chiếu | đặt secrets GitHub khi dựng job |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
+| 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
+| 8 | Trang: tải theo khoảng ngày thay vì cả bảng (~1,7 MB/lần mở) — tiết kiệm egress | lưu ý quota của phiên MKT/Sale |
 
 ---
 
@@ -114,6 +116,19 @@
 - SQL: Supabase Management API `POST https://api.supabase.com/v1/projects/bcrpxfvvjsjpvbksqzls/database/query` với token sbp_. Đọc bảng qua REST phải phân trang `limit/offset` (PostgREST trả tối đa 1000 dòng/lần).
 - Script tạm để ở thư mục scratchpad của phiên, không để trong repo.
 - Nếu Windows báo "An Application Control policy has blocked this file" khi git push → Smart App Control, không phải git hỏng.
+
+## 5b. DÙNG CHUNG VỚI APP MKT/SALE (lưu ý từ phiên đó, 29/9/2026 — BẮT BUỘC)
+- **Khoá:** QC có secret key riêng `qc_cskh` (file `qc-keys.local.txt`, secret GitHub `QC_SUPABASE_KEY`). **KHÔNG BAO GIỜ tắt / đổi / xoay khoá legacy anon, legacy service_role, JWT secret** — app MKT/Sale + mọi job repo mkt-sale-app đang dùng.
+- **Quota:** Supabase đã lên Pro (29/9) nhưng vẫn: đọc theo phần mới (conv_date / id lớn hơn mốc), không đọc lại cả bảng, không kéo `full_thread` hàng loạt; ghi theo lô (1 lệnh cả lô, `return=minimal`). Nếu dùng bảng `job_moc` thì tên job có tiền tố `qc-`.
+- **Pancake chung token (hết hạn ~1/11/2026 → thay ở CẢ 2 repo):** QC chỉ ĐỌC (không gắn thẻ / tạo / sửa đơn). Nhịp gọi ≥150 ms, 429 thì nghỉ rồi thử lại. Tránh giờ bận của app MKT/Sale: tạo đơn 6h & 18h, phân loại SP 7h & 18h, ngày nhắn cuối phút 0–10 mỗi giờ, đồng bộ đơn mỗi 10 phút → QC kéo lúc **6h20 / 18h35**.
+- **Không sửa cấu trúc / RLS / hàm** của: datahub_orders, saleretail_manual, salesi_crm, sales_users, sales_user_credentials, sale_nhan_su, job_moc, Edge Function dang-nhap, la_quan_tri(). Cần thì hỏi anh.
+- **Không tự sửa repo mkt-sale-app.** Việc bên đó (tắt workflow cũ…) thì báo anh để phiên MKT/Sale làm.
+
+## 5c. CHUYỂN HẲN KÉO TIN + CHẤM SANG QC (anh muốn, 29/9) — thứ tự không hở dữ liệu
+1. Job `keo-tin.yml` (repo qc-cskh) chạy xanh ≥ 1–2 ngày, ghi bảng thử `qc_review_thu` (pg_cron `qc-keo-6h` / `qc-keo-18h` kích).
+2. Đối chiếu với job cũ cùng ngày theo từng page: `tools/doi-chieu.js <ngày>` — khớp hoặc giải thích được lệch.
+3. Báo anh "QC chạy ổn" → **phiên MKT/Sale** tắt `sync-sale-review.yml` bên mkt-sale-app.
+4. Từ lúc tắt: job QC ghi thẳng `sale_response_review` (đặt `BANG=sale_response_review` trong workflow), giữ đúng cột + verdict cũ (dung / thieu / sai / chi_bot / khong_tra_loi / tra_loi_inbox / chua_cham / khong_lien_quan). QC là nơi DUY NHẤT ghi dữ liệu chấm.
 
 ## 6. QUY TẮC LÀM VIỆC (anh đã chốt — đừng hỏi lại)
 - **Quyền lâu dài (28/9/2026):** anh đã Allow `Bash(ELECTRON_RUN_AS_NODE=1 "D:/Microsoft VS Code/Code.exe":*)` và `Bash(git push:*)` cho repo này để Claude **tự xử lý việc định kỳ, không hỏi lại**. Lệnh phải bắt đầu đúng tiền tố đó (không `cd … &&` phía trước); push dùng `git -C C:/Users/HP/Desktop/qc-cskh push`.
