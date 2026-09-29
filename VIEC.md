@@ -1,6 +1,8 @@
 # SỔ VIỆC — app QC CSKH
 
 > **Claude phải đọc file này ĐẦU MỖI PHIÊN.** Xong việc nào thì xoá khỏi mục ĐANG NỢ và ghi 1 dòng vào NHẬT KÝ.
+> **Mọi phiên (máy anh / cloud / tài khoản Claude khác) TỰ GHI SỔ, không đợi anh dặn:** việc mới → ĐANG NỢ, anh chốt → ANH ĐÃ CHỐT,
+> xong → NHẬT KÝ; ghi xong commit + push `main` ngay. Các phiên không đọc được hội thoại của nhau — chỉ đọc được sổ này.
 > Anh đã quyết rồi thì LÀM, đừng xếp lại vào "chờ anh quyết" để hỏi lại.
 > Tạo 28/09/2026 bởi Monsieur Claude (phiên app MKT/Sale), làm sổ khởi động cho luồng QC.
 > Làm việc bằng tiếng Việt, gọi người dùng là **anh** (anh Hải). Mọi thứ Claude tạo ký tên **Monsieur Claude**.

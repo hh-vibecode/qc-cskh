@@ -1,7 +1,14 @@
 # App QC CSKH — hướng dẫn cho mọi phiên Claude (máy anh Hải LẪN phiên cloud)
 
-> **Việc đầu tiên mỗi phiên: đọc `VIEC.md`** (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
-> Xong việc nào: xoá khỏi mục ĐANG NỢ, ghi 1 dòng NHẬT KÝ, commit + push ngay trong phiên.
+> **Việc đầu tiên mỗi phiên: `git pull` rồi đọc `VIEC.md`** (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
+>
+> **TỰ GHI SỔ — KHÔNG ĐỢI ANH DẶN (anh Hải chốt 29/9/2026, áp cho mọi phiên, nhất là phiên cloud):**
+> - Anh giao việc mới → thêm ngay vào mục ĐANG NỢ của `VIEC.md`.
+> - Anh chốt / quyết điều gì → ghi vào mục "ANH ĐÃ CHỐT" hoặc "QUY TẮC"; câu còn chờ anh trả lời → mục "ĐANG CHỜ ANH".
+> - Xong việc → xoá khỏi ĐANG NỢ, ghi 1 dòng NHẬT KÝ (ngày, việc gì, kết quả đo được).
+> - Ghi xong là **commit + push lên `main` ngay** — không để dồn tới cuối phiên (phiên cloud có thể bị dọn bất cứ lúc nào,
+>   và các phiên khác — máy anh, cloud, tài khoản Claude khác — KHÔNG đọc được hội thoại của nhau, chỉ đọc được sổ).
+> - Ngoại lệ: lịch chấm tự động (routine) KHÔNG sửa repo — kết quả của nó nằm trong CSDL.
 > Phiên cloud KHÔNG đọc được bộ nhớ trên máy anh — mọi luật cần nhớ phải nằm trong repo (file này, `VIEC.md`,
 > `.claude/agents/cham-qc.md`, `routine/cham-cloud.md`). Học được luật mới từ anh thì ghi vào đây / VIEC.md, đừng chỉ nhớ trong phiên.
 
