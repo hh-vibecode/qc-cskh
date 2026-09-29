@@ -230,18 +230,29 @@ async function login(){
 }
 function lock(){ls.del(LS_MA);S.ma='';S.rows=[];renderGate();}
 
+// Chỉ tải đúng khoảng ngày đang xem (29/9: quota egress chung với app MKT/Sale — trước đây mỗi lần mở tải cả bảng ~1,5 MB).
+// S.tai = khoảng đã tải ({tu,den}, '' = không giới hạn). Khoảng mới nằm trong khoảng đã tải thì lọc tại chỗ, không gọi lại.
 async function load(){
-  const [rows,reps]=await Promise.all([rpc('qc_ds_cham'),rpc('qc_ds_bao_sai')]);
-  S.rows=rows||[];S.reports=reps||[];
+  const [rows,reps]=await Promise.all([rpc('qc_ds_cham',{p_tu:S.from||null,p_den:S.to||null}),rpc('qc_ds_bao_sai')]);
+  S.rows=rows||[];S.reports=reps||[];S.tai={tu:S.from,den:S.to};
+}
+const nam=(a,b)=>!b.tu||(a.tu&&a.tu>=b.tu);                 // khoảng a bắt đầu không sớm hơn b
+const trongKhoang=()=>S.tai&&nam({tu:S.from},{tu:S.tai.tu})&&(!S.tai.den||(S.to&&S.to<=S.tai.den));
+async function ensureRange(){
+  if(trongKhoang())return;
+  document.getElementById('app').style.opacity='.55';
+  try{S.rows=await rpc('qc_ds_cham',{p_tu:S.from||null,p_den:S.to||null})||[];S.tai={tu:S.from,den:S.to};}
+  catch(e){toast(e.message);}
+  document.getElementById('app').style.opacity='';
 }
 async function reload(){try{await load();render();toast('Đã tải lại');}catch(e){toast(e.message);}}
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
-function setF(k,v){S[k]=v;S.pg=0;if(k==='brand')S.page='all';render(k==='q');}
-function setRange(days){
+async function setF(k,v){S[k]=v;S.pg=0;if(k==='brand')S.page='all';if(k==='from'||k==='to')await ensureRange();render(k==='q');}
+async function setRange(days){
   if(days===0){S.from='';S.to='';}
   else{const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-days+1);S.from=isoDay(t);}
-  S.pg=0;render();
+  S.pg=0;await ensureRange();render();
 }
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
@@ -562,7 +573,8 @@ async function changeCode(){
 
 // ── Khởi động ────────────────────────────────────────────────────────────
 (async()=>{
-  {const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-29);S.from=isoDay(t);}   // mặc định 30 ngày
+  // mặc định 7 ngày (29/9: ~48 KB đã nén, so với ~355 KB khi tải cả bảng — quota egress chung với app MKT/Sale)
+  {const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-6);S.from=isoDay(t);}
   if(!S.ma){renderGate();return;}
   document.getElementById('app').innerHTML='<div class="muted" style="padding:60px;text-align:center">Đang tải…</div>';
   try{await load();render();}catch(e){if(e.status===403){ls.del(LS_MA);S.ma='';}renderGate(e.status===403?'Mã đã đổi, nhập lại':e.message);}

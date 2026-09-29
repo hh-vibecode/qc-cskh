@@ -38,7 +38,10 @@ begin
 end $$;
 
 -- Danh sách lượt chấm (KHÔNG kèm full_thread cho nhẹ — mở từng dòng mới tải). Bỏ nhóm Zalo pzl_g_.
-create or replace function public.qc_ds_cham(p_ma text) returns jsonb
+-- 29/9/2026: nhận khoảng ngày (trang mặc định 30 ngày; null = tất cả) và bỏ luôn dòng khong_lien_quan (trang vốn ẩn)
+-- → mỗi lần mở trang không còn tải cả bảng ~1,5 MB (quota egress chung với app MKT/Sale).
+drop function if exists public.qc_ds_cham(text);
+create or replace function public.qc_ds_cham(p_ma text, p_tu date default null, p_den date default null) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 begin
   perform qc_chan(p_ma);
@@ -48,7 +51,8 @@ begin
                  customer_ask, sale_reply, verdict, issue, suggestion, severity, source_faq,
                  reviewed_at, pancake_url, cham_boi
           from sale_response_review
-          where conv_id not like 'pzl\_g\_%') x), '[]'::jsonb);
+          where conv_id not like 'pzl\_g\_%' and verdict <> 'khong_lien_quan'
+            and (p_tu is null or conv_date >= p_tu) and (p_den is null or conv_date <= p_den)) x), '[]'::jsonb);
 end $$;
 
 create or replace function public.qc_hoi_thoai(p_ma text, p_id bigint) returns text
@@ -116,10 +120,10 @@ end $$;
 
 -- Quyền: chỉ các hàm có kiểm mã được gọi từ trang (anon); qc_chan là hàm nội bộ.
 revoke execute on function public.qc_chan(text) from public, anon, authenticated;
-revoke execute on function public.qc_ds_cham(text), public.qc_hoi_thoai(text, bigint),
+revoke execute on function public.qc_ds_cham(text, date, date), public.qc_hoi_thoai(text, bigint),
   public.qc_ds_bao_sai(text), public.qc_bao_sai(text, bigint, text, text[], text),
   public.qc_xu_ly_bao_sai(text, bigint, text, text), public.qc_doi_ma(text, text) from public;
-grant execute on function public.qc_ds_cham(text), public.qc_hoi_thoai(text, bigint),
+grant execute on function public.qc_ds_cham(text, date, date), public.qc_hoi_thoai(text, bigint),
   public.qc_ds_bao_sai(text), public.qc_bao_sai(text, bigint, text, text[], text),
   public.qc_xu_ly_bao_sai(text, bigint, text, text), public.qc_doi_ma(text, text) to anon, authenticated;
 
