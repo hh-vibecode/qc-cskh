@@ -32,6 +32,10 @@
 - Không sửa cấu trúc / RLS / hàm các bảng chung (datahub_orders, saleretail_manual, salesi_crm, sales_users, sales_user_credentials, sale_nhan_su, job_moc, dang-nhap, la_quan_tri). Bảng mới BẮT BUỘC bật RLS.
 - Pancake: 1 token chung (hết hạn ~1/11/2026 → thay ở CẢ 2 repo). Nhịp ≥150 ms; tránh 6h/18h, 7h/18h, phút 0–10 mỗi giờ.
 - Quota: đọc phần mới, không kéo `full_thread` hàng loạt, ghi theo lô `return=minimal`.
+- **Chung project, tách phần xử lý (anh chốt 29/9: giữ 1 project, không tách — tách thêm ~10 USD/tháng máy chủ):** QC chỉ ghi bảng
+  của QC (`sale_response_review`, `sale_review_report`, `qc_*`), hàm `qc_*`, lịch `qc-keo-*`. Mọi hàm `qc_*` có
+  `statement_timeout` (20s, `qc_keo_tin` 5s) để lỗi / truy vấn nặng của QC không chiếm máy chủ làm chậm app MKT/Sale —
+  hàm mới thêm thì chạy lại `supabase-gioi-han-qc.sql`.
 
 ## Giao diện (anh đã chốt — áp cho mọi trang / báo cáo / email)
 - Font **Montserrat** (Google Fonts, subset vietnamese).
