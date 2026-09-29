@@ -11,6 +11,12 @@
 //  5. Tin tự động (lời chào khi bấm quảng cáo, "tin nhắn chào mừng tự động", "followed your page") không tính là Sale.
 //  6. Ghi bằng khoá Supabase RIÊNG của QC (qc_cskh) qua REST, gộp lô — không đi cổng quản trị (hết lỗi 429).
 //  7. Chống trùng theo (conv_id, 160 ký tự đầu câu hỏi) — không theo ngày, để không đẻ trùng với dòng job cũ đã ghi.
+//  8. Chỉ kéo tin của hội thoại có KHÁCH nhắn từ FROM (last_customer_interactive_at): job MKT/Sale gắn thẻ / tạo đơn
+//     cũng làm đổi updated_at (đo 29/9: 1.439 hội thoại Chánh Tâm "cập nhật" trong 1 ngày) — kéo hết sẽ đè token Pancake chung.
+//
+// DÙNG CHUNG VỚI APP MKT/SALE (lưu ý của phiên đó, 29/9): chỉ ĐỌC Pancake; nhịp gọi ≥150 ms, 429 thì nghỉ rồi thử lại;
+// tránh 6h/18h (tạo đơn), 7h & 18h (phân loại SP), phút 0–10 mỗi giờ; ghi theo lô, return=minimal.
+// Đang chạy song song với job cũ → ghi bảng RIÊNG qc_review_thu (BANG). Chuyển hẳn thì đặt BANG=sale_response_review.
 //
 // Biến môi trường: FROM, TO (YYYY-MM-DD giờ VN, mặc định hôm qua) · DRY_RUN=1 (không ghi, in thống kê + ghi file)
 //                  QC_SUPABASE_KEY, PANCAKE_SESSION_TOKEN (secrets của repo) · OUT (file JSON kết quả, tuỳ chọn)
@@ -24,6 +30,7 @@ const vnDay = (d = new Date()) => new Date(d.getTime() + 7 * 36e5).toISOString()
 const homQua = vnDay(new Date(Date.now() - 864e5));
 const FROM = process.env.FROM || homQua, TO = process.env.TO || homQua;
 const DRY = !!process.env.DRY_RUN;
+const BANG = process.env.BANG || 'qc_review_thu';
 const tuUtc = new Date(FROM + 'T00:00:00+07:00'), denUtc = new Date(TO + 'T23:59:59.999+07:00');
 const utc = s => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -133,8 +140,9 @@ function tachLuot(page, c, msgs, userMap) {
       if (!cs.length) break;
       let moi = 0;
       for (const c of cs) {
+        if (utc(c.updated_at || '1970-01-01') >= tuUtc) moi++;           // mốc dừng quét: theo thứ tự danh sách (updated_at)
         if (String(c.id).startsWith('pzl_g_')) continue;                 // nhóm Zalo: bỏ
-        if (utc(c.updated_at || '1970-01-01') >= tuUtc) { lay.push(c); moi++; }
+        if (utc(c.last_customer_interactive_at || c.updated_at || '1970-01-01') >= tuUtc) lay.push(c);   // chỉ hội thoại khách có nhắn
       }
       cuLien = moi ? 0 : cuLien + 1;
       count += cs.length; lastId = cs[cs.length - 1].id;
@@ -148,10 +156,10 @@ function tachLuot(page, c, msgs, userMap) {
       const m = await pk(`/pages/${p.id}/conversations/${encodeURIComponent(c.id)}/messages?customer_id=${custId}`);
       const got = tachLuot(p, c, m?.messages || [], userMap);
       pairs.push(...got); n += got.length;
-      await sleep(120);
+      await sleep(150);
     }
     dem[p.name] = n;
-    console.log(`${p.name}: ${lay.length} hội thoại cập nhật từ ${FROM} (quét ${count}) → ${n} lượt`);
+    console.log(`${p.name}: ${lay.length} hội thoại khách nhắn từ ${FROM} (quét ${count}) → ${n} lượt`);
   }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
   console.log(`Tổng ${pairs.length} lượt:`, theoV);
@@ -162,10 +170,10 @@ function tachLuot(page, c, msgs, userMap) {
   const convs = [...new Set(pairs.map(x => x.conv_id))], co = new Set();
   for (let i = 0; i < convs.length; i += 80) {
     const ds = convs.slice(i, i + 80).map(x => `"${x.replace(/"/g, '\\"')}"`).join(',');
-    const rows = await rest('GET', `sale_response_review?select=conv_id,customer_ask&conv_id=in.(${encodeURIComponent(ds)})&limit=5000`);
+    const rows = await rest('GET', `${BANG}?select=conv_id,customer_ask&conv_id=in.(${encodeURIComponent(ds)})&limit=5000`);
     rows.forEach(r => co.add(r.conv_id + '|' + (r.customer_ask || '').slice(0, 160)));
   }
   const moi = pairs.filter(x => { const k = x.conv_id + '|' + x.customer_ask.slice(0, 160); if (co.has(k)) return false; co.add(k); return true; });
-  for (let i = 0; i < moi.length; i += 100) await rest('POST', 'sale_response_review', moi.slice(i, i + 100));
-  console.log(`Đã thêm ${moi.length} lượt mới (bỏ ${pairs.length - moi.length} lượt đã có).`);
+  for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
+  console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới (bỏ ${pairs.length - moi.length} lượt đã có).`);
 })().catch(e => { console.error('LỖI', e.message); process.exit(1); });
