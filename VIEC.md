@@ -31,12 +31,11 @@
 
 | # | Việc | Ghi chú |
 |---|---|---|
-| 1 | Id 2475 còn `chua_cham`: Sale gửi 9 ảnh mẫu, không rõ có giá trong ảnh không | cần người mở Pancake xem ảnh |
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 9 | Đưa soát miss với Pancake + tầng luật vào job `keo-tin.yml` (chạy bằng khoá `qc_cskh` qua REST/RPC, không dùng Management API) | để chấm cloud nhận dữ liệu đã soát |
-| 10 | Chuyển việc làm hằng ngày sang phiên cloud (anh đã nối GitHub 29/9): gom bộ nhớ máy vào repo, liệt kê biến môi trường cho env `QC`, mở thêm mạng pancake.vn / api.supabase.com / api.github.com | anh hỏi 29/9 |
+| 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
 ---
 
