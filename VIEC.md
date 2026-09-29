@@ -35,6 +35,7 @@
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 9 | Đưa soát miss với Pancake + tầng luật vào job `keo-tin.yml` (chạy bằng khoá `qc_cskh` qua REST/RPC, không dùng Management API) | để chấm cloud nhận dữ liệu đã soát |
+| 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
 ---
@@ -128,6 +129,14 @@
 - **Không sửa cấu trúc / RLS / hàm** của: datahub_orders, saleretail_manual, salesi_crm, sales_users, sales_user_credentials, sale_nhan_su, job_moc, Edge Function dang-nhap, la_quan_tri(). Cần thì hỏi anh.
 - **Không tự sửa repo mkt-sale-app.** Việc bên đó (tắt workflow cũ…) thì báo anh để phiên MKT/Sale làm.
 
+## 5d. PHỤ THUỘC CHÉO (theo QUY-UOC-DUNG-CHUNG-SUPABASE.md mục 5 — việc cần app khác làm / báo anh chuyển lời)
+| # | Việc | Cần ai | Trạng thái |
+|---|---|---|---|
+| X1 | Tắt workflow `sync-sale-review.yml` (job cũ ghi `sale_response_review`) | phiên MKT/Sale | chờ QC đối chiếu xong (E4) |
+| X2 | Quy ước mục 3.5/3.6 bảo "dữ liệu khách chỉ mở cho người đăng nhập, đăng nhập qua `dang-nhap`" — QC theo quyết định riêng của anh (28/9): KHÔNG tài khoản, trang + lịch chấm cloud gọi hàm `qc_*` bằng khoá anon + **mã truy cập / mã chấm** (băm trong `qc_cau_hinh`) | anh xác nhận để ghi ngoại lệ vào bản quy ước | chờ anh |
+| X3 | Edge Function cũ `review-report` (Dashboard-Meta) vẫn có thể GHI + tự xoá > 3 ngày trong `sale_review_report` (bảng của QC) — trang cũ đã hỏng nên thực tế không ai gọi | để nguyên (Dashboard-Meta chỉ đọc) | ghi nhận |
+| X4 | Lịch `qc-keo-gio` (phút :25) có thể trùng lúc app MKT/Sale quét toàn bộ Pancake 12h30 · 18h00 và tạo đơn / phân loại 18h | theo dõi 429; cần thì bỏ lượt 12h25 / 18h25 | theo dõi |
+
 ## 5c. CHUYỂN HẲN KÉO TIN + CHẤM SANG QC (anh muốn, 29/9) — thứ tự không hở dữ liệu
 1. Job `keo-tin.yml` (repo qc-cskh) chạy xanh ≥ 1–2 ngày, ghi bảng thử `qc_review_thu` (pg_cron `qc-keo-6h` / `qc-keo-18h` kích).
 2. Đối chiếu với job cũ cùng ngày theo từng page: `tools/doi-chieu.js <ngày>` — khớp hoặc giải thích được lệch.
@@ -162,6 +171,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **29/09/2026** — Áp QUY-UOC-DUNG-CHUNG-SUPABASE.md (bản gốc repo mkt-sale-app): link + tóm tắt vào CLAUDE.md; kiểm lại: 4 bảng QC đều bật RLS, tên đều tiền tố `qc_`/`qc-`, không ghi bảng lõi MKT/Sale. Lệch → mục nợ #11 + Phụ thuộc chéo (mục 5d). Tạo `qc_sao_luu` + `qc_chup_sao_luu()` (bản đầu: 2.617 dòng, 621 KB).
 - **29/09/2026** — Anh lên Supabase Pro (tổ chức). Anh chốt **giữ chung 1 project** (tách project thêm ~10 USD/tháng máy chủ) nhưng **tách phần xử lý**: đặt `statement_timeout` cho 13 hàm `qc_*` (`supabase-gioi-han-qc.sql`); trang vẫn tải bình thường (7 ngày ~0,9 s).
 - **29/09/2026** — Anh chốt **4 thương hiệu: Chánh Tâm · Tự Tại Viên · Hiền Thủy · Shidai**, xếp theo MÃ PAGE (`BRAND_PAGE` trong index.html; Hoàng Dương - Ming Ying → Chánh Tâm; Zalo "Siêu Thị Đồ Thờ Cao Cấp" → Hiền Thủy — em xếp, chờ anh xác nhận). **Có page mới trên Pancake thì thêm vào `BRAND_PAGE`.** Bỏ ô lọc page (anh yêu cầu). Vá `page_id`: FB theo tên page (conv_id bình luận FB là mã BÀI ĐĂNG, không phải mã page), TikTok/Zalo theo conv_id. Đối chiếu bảng thương hiệu với SQL: khớp từng số.
 - **29/09/2026** — Đặt lịch kéo tin 6h/18h bằng pg_cron (thử gọi GitHub 204). Chấm hằng ngày 27–28/9: luật 16 (8 nội bộ, 5 lời khấn), Sonnet 37 (29 đúng / 5 thiếu / 3 KLQ), soát miss 5 (3 lời khấn, 2 miss thật #2556, #2506). Tồn 0.

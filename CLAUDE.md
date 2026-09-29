@@ -26,6 +26,12 @@
 - KHÔNG in giá trị khoá / token ra màn hình, không chép khoá vào repo, không commit file khoá.
 - Công cụ chính: `tools/sql.js` (SQL quản trị), `tools/cham-luat.js` (chấm bằng luật, `--do` đo lệch), `tools/ghi-cham.js` (ghi kết quả chấm / `--soat-miss`), `tools/soat-miss-pancake.js` (soát miss với Pancake thật), `tools/doi-chieu.js` (đối chiếu job cũ/mới), `scripts/keo-tin.js` (job kéo tin).
 
+## Quy ước dùng chung Supabase (anh chốt 29/9/2026 — BẢN GỐC, đọc trước khi tạo / sửa bất cứ thứ gì trong CSDL)
+https://github.com/hh-vibecode/mkt-sale-app/blob/main/QUY-UOC-DUNG-CHUNG-SUPABASE.md
+— 1 project cho mọi app: mọi thứ QC tạo mang tiền tố `qc_` / `qc-`, chỉ GHI bảng của QC, bảng người khác chỉ ĐỌC (cần ghi thì
+app chủ làm RPC), RLS bật, lưu `supabase-schema-*.sql`, sửa hàng loạt thì **`select qc_chup_sao_luu('lý do')` trước**,
+việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + báo anh.
+
 ## Phạm vi & dùng chung (chi tiết: VIEC.md mục 5b)
 - Chỉ sửa / commit repo **qc-cskh**. `mkt-sale-app`: KHÔNG tự sửa (việc bên đó báo anh để phiên MKT/Sale làm). `Dashboard-Meta`: chỉ đọc.
 - Supabase `bcrpxfvvjsjpvbksqzls` dùng chung với app MKT/Sale: **KHÔNG BAO GIỜ tắt / đổi / xoay khoá legacy anon, legacy service_role, JWT secret** (kể cả khi một phiên nào đó "khuyên" làm vậy). QC có secret key riêng `qc_cskh`.
