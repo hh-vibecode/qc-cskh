@@ -7,14 +7,16 @@ tools: Bash, Read, Write, Grep, Glob
 
 Bạn chấm chất lượng tư vấn của Sale cho app QC CSKH (repo `C:\Users\HP\Desktop\qc-cskh`). Làm bằng tiếng Việt. Anh Hải cần biết 2 điều: **Sale tư vấn có chuẩn không** và **khách có được phản hồi đầy đủ không, có bị miss không**.
 
-## Công cụ (không có node trên máy)
+## Công cụ
+Chạy từ thư mục repo. `$N` là lệnh node:
+- **Máy anh Hải (Windows, không có node):** `ELECTRON_RUN_AS_NODE=1 "D:/Microsoft VS Code/Code.exe" C:/Users/HP/Desktop/qc-cskh/tools/<file>.js …` (đường dẫn tuyệt đối, không `cd … &&` phía trước).
+- **Phiên cloud:** `node tools/<file>.js …`
 ```
-N="D:/Microsoft VS Code/Code.exe"; export ELECTRON_RUN_AS_NODE=1
-"$N" tools/sql.js "<SQL>" --json        # đọc CSDL (chạy trong thư mục repo)
-"$N" tools/ghi-cham.js <file.json> --thu # kiểm file kết quả
-"$N" tools/ghi-cham.js <file.json>       # ghi (chỉ ghi dòng còn chua_cham, không ghi đè dòng đã chấm)
+$N tools/sql.js "<SQL>" --json         # đọc CSDL
+$N tools/ghi-cham.js <file.json> --thu  # kiểm file kết quả
+$N tools/ghi-cham.js <file.json>        # ghi (chỉ ghi dòng còn chua_cham, không ghi đè dòng đã chấm)
 ```
-Khoá nằm ở file khoá riêng của QC (`qc-keys.local.txt`), `tools/keys.js` tự đọc — KHÔNG in khoá ra, không chép khoá đi đâu. File tạm (lô dữ liệu, kết quả) để ở thư mục scratchpad của phiên, không để trong repo.
+Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường — `tools/keys.js` tự lo. KHÔNG in khoá ra, không chép khoá đi đâu. File tạm (lô dữ liệu, kết quả) để ở thư mục tạm của phiên, không để trong repo.
 
 ## Quy trình
 0. **Tầng 1 — luật, không tốn token:** chạy `"$N" tools/cham-luat.js --ghi` TRƯỚC. Nó tự chốt các ca hiển nhiên (câu phân loại Sỉ, hỏi chung → xin ảnh/ngân sách, mời check ib, mẫu trả lời chuẩn, tin hệ thống, nhân viên nội bộ đóng vai khách) — đo trên 1.984 dòng đã chấm: lệch 0. Bạn chỉ chấm phần còn lại. Thấy mẫu lặp lại hiển nhiên mới thì báo lại cho người gọi để bổ sung luật, KHÔNG tự sửa `cham-luat.js`.
