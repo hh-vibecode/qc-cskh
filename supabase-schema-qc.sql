@@ -14,8 +14,20 @@ alter table public.sale_response_review add column if not exists cham_boi text;
 -- page_id (29/9/2026): tên page viết nhiều kiểu (Thuỷ/Thủy, "-"/"|") nên lọc theo tên bị lệch. Job mới của QC ghi thẳng;
 -- dòng cũ lấy từ pancake_url (https://pancake.vn/{page_id}?c_id=...).
 alter table public.sale_response_review add column if not exists page_id text;
-update public.sale_response_review set page_id = substring(pancake_url from 'pancake\.vn/([^?]+)\?')
- where page_id is null and pancake_url is not null;
+-- KHÔNG lấy từ pancake_url (job cũ có lúc trỏ link sang inbox ở PAGE KHÁC cùng thương hiệu → sai page).
+-- TikTok "ttm_<page>_<...>" và Zalo "pzl_u_<số>_<...>" → lấy từ conv_id.
+-- Facebook: conv_id bình luận là "<mã BÀI ĐĂNG>_<mã bình luận>" (không phải mã page) → lấy theo TÊN page (mỗi page FB tên riêng).
+-- Job mới (scripts/keo-tin.js) ghi thẳng page_id đúng; câu dưới chỉ để vá dữ liệu cũ.
+update public.sale_response_review set page_id = case
+    when conv_id like 'pzl\_u\_%' or conv_id like 'pzl\_g\_%' then 'pzl_' || split_part(conv_id, '_', 3)
+    when conv_id like 'ttm\_%' then regexp_replace(conv_id, '_[^_]*$', '')
+    when page_name = 'Chánh Tâm - Không Gian Tâm Linh Phật Giáo' then '107224335550589'
+    when page_name = 'Nến Bơ - Tự Tại Viên' then '100667699549693'
+    when page_name = 'Siêu Thị Phật Giáo Hiền Thuỷ' then '105133802417722'
+    when page_name = 'Thời Đại - Tổng Kho Sỉ Đồ Thờ Miền Bắc' then '506247572578559'
+    when page_name like 'Hiền Thủy - Siêu Thị Đồ Thờ%' then '107792638827892'
+    else page_id end
+ where conv_id is not null;
 
 create table if not exists public.qc_cau_hinh (
   khoa      text primary key,
@@ -49,7 +61,7 @@ begin
     select jsonb_agg(to_jsonb(x) order by x.conv_date desc, x.id)
     from (select id, conv_date, conv_at, page_name, conv_id, customer_name, phone, sale_name,
                  customer_ask, sale_reply, verdict, issue, suggestion, severity, source_faq,
-                 reviewed_at, pancake_url, cham_boi
+                 reviewed_at, pancake_url, cham_boi, page_id
           from sale_response_review
           where conv_id not like 'pzl\_g\_%' and verdict <> 'khong_lien_quan'
             and (p_tu is null or conv_date >= p_tu) and (p_den is null or conv_date <= p_den)) x), '[]'::jsonb);

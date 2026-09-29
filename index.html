@@ -149,7 +149,7 @@ async function rpc(fn,args){
 
 // ── Trạng thái ────────────────────────────────────────────────────────────
 const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),pg:0,
-  plat:'social',from:'',to:'',brand:'all',page:'all',sale:'all',verdict:'all',q:'',
+  plat:'social',from:'',to:'',brand:'all',sale:'all',verdict:'all',q:'',
   view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
 // Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
 const VIEWS={report:'Chất lượng phản hồi',history:'Lịch sử báo sai',logic:'Logic xử lý dữ liệu'};
@@ -180,17 +180,26 @@ const VERDICT={
   chi_bot:{l:'Chỉ bot trả lời',c:'miss'},khong_tra_loi:{l:'Không trả lời',c:'grey'},
   tra_loi_inbox:{l:'Đã tư vấn ở tin nhắn',c:'info'},khong_lien_quan:{l:'Không liên quan',c:'grey'},
   chua_cham:{l:'Chưa chấm',c:'pend'}};
-const BRANDS={CT:'Chánh Tâm',HT:'Hiền Thuỷ',Shidai:'Shidai',TTV:'Tự Tại Viên',Khac:'Khác'};
-function brandOf(p){const n=p||'';
+// 4 thương hiệu (anh Hải 29/9: "xếp vào cho đủ 4 thương hiệu: Chánh Tâm, Tự Tại Viên, Hiền Thủy, Shidai").
+// Xếp theo MÃ PAGE (14 page trên Pancake); tên page chỉ dùng dự phòng khi page mới chưa có trong bảng này.
+const BRANDS={CT:'Chánh Tâm',TTV:'Tự Tại Viên',HT:'Hiền Thủy',Shidai:'Shidai',Khac:'Khác'};
+const BRAND_PAGE={
+  '107224335550589':'CT','ttm_-000fnwmEFDETu8kL8prpYMAbgrdue0Cc0hG':'CT','pzl_355233102341719971':'CT',
+  'pzl_357024678860117283':'CT','ttm_-000wff5HiYIrt76uNDUJiL1kfVVtVkiURi-':'CT',          // Hoàng Dương - Ming Ying (Zalo, TikTok)
+  '100667699549693':'TTV',                                                                  // Nến Bơ - Tự Tại Viên
+  '105133802417722':'HT','107792638827892':'HT','ttm_-000uG5lXadOZHV4VWlMRAHc5FZGkQtuyxY3':'HT',
+  'pzl_1927214341338004925':'HT','pzl_716330578937743406':'HT',                            // … + Siêu Thị Đồ Thờ Cao Cấp (Zalo)
+  '506247572578559':'Shidai','pzl_421283811192749346':'Shidai','pzl_636053762312360623':'Shidai',
+};
+function brandTen(p){const n=p||'';
   if(/tự tại viên|tu tai vien|nến bơ|nen bo/i.test(n))return'TTV';
-  if(/hiền thu[ỷyủ]|hien thuy/i.test(n))return'HT';
-  if(/shidai|thời đại|thoi dai/i.test(n))return'Shidai';
-  if(/chánh tâm|chanh tam|hoàng dương|hoang duong/i.test(n))return'CT';
+  if(/hiền thu[ỷyủ]|hien thuy|đồ thờ cao cấp|đồ mã/i.test(n))return'HT';
+  if(/shidai|thời đại|thoi dai|tổng kho sỉ/i.test(n))return'Shidai';
+  if(/chánh tâm|chanh tam|hoàng dương|hoang duong|ming ying/i.test(n))return'CT';
   return'Khac';}
+const brandOf=r=>BRAND_PAGE[r.page_id]||brandTen(r.page_name);
 const platOf=r=>/^pzl_/.test(r.conv_id||'')?'zalo':'social';
 const noDau=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
-// Tên page bị viết nhiều kiểu (Thuỷ/Thủy, "-" và "|") — gộp theo khoá bỏ dấu
-const pageKey=p=>noDau(p).replace(/[|\-–]+/g,' ').replace(/\s+/g,' ').trim();
 const NOT_SALE=/^(pancake tht holding|botcake|hệ thống|he thong|sales admin)$/i;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 const saleOf=r=>{const s=(r.sale_name||'').trim();return(!s||NOT_SALE.test(s)||UUID.test(s))?'(chưa rõ)':s;};
@@ -248,14 +257,14 @@ async function ensureRange(){
 async function reload(){try{await load();render();toast('Đã tải lại');}catch(e){toast(e.message);}}
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
-async function setF(k,v){S[k]=v;S.pg=0;if(k==='brand')S.page='all';if(k==='from'||k==='to')await ensureRange();render(k==='q');}
+async function setF(k,v){S[k]=v;S.pg=0;if(k==='from'||k==='to')await ensureRange();render(k==='q');}
 async function setRange(days){
   if(days===0){S.from='';S.to='';}
   else{const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-days+1);S.from=isoDay(t);}
   S.pg=0;await ensureRange();render();
 }
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
-function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.page=S.sale=S.verdict='all';S.q='';}render();}
+function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
 const lateOf=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
 // Bình luận mà Sale đã nhắn riêng (2 luồng khác nhau trên Pancake) — nay được CHẤM nội dung tin nhắn, nhãn ở đầu issue.
@@ -299,8 +308,7 @@ function render(keepFocus){
   const dated=platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to));
   const q=noDau(S.q.trim());
   const base=dated.filter(r=>{
-    if(S.brand!=='all'&&brandOf(r.page_name)!==S.brand)return false;
-    if(S.page!=='all'&&pageKey(r.page_name)!==S.page)return false;
+    if(S.brand!=='all'&&brandOf(r)!==S.brand)return false;
     if(S.sale!=='all'&&saleOf(r)!==S.sale)return false;
     if(q&&!noDau([r.customer_name,r.phone,r.sale_name,r.customer_ask,r.sale_reply,r.issue].join(' ')).includes(q))return false;
     return true;
@@ -318,10 +326,10 @@ function render(keepFocus){
   // lựa chọn lọc
   const opt=(v,l,cur)=>`<option value="${esc(v)}"${cur===v?' selected':''}>${esc(l)}</option>`;
   const countBy=(list,f)=>{const m=new Map();for(const r of list){const k=f(r);m.set(k,(m.get(k)||0)+1);}return[...m].sort((a,b)=>b[1]-a[1]);};
-  const brandOpts=countBy(dated,r=>brandOf(r.page_name));
-  const pageSrc=dated.filter(r=>S.brand==='all'||brandOf(r.page_name)===S.brand);
-  const pageName={};pageSrc.forEach(r=>{const k=pageKey(r.page_name);if(!pageName[k])pageName[k]=r.page_name;});
-  const pageOpts=countBy(pageSrc,r=>pageKey(r.page_name));
+  // 4 thương hiệu luôn hiện đủ, thứ tự cố định (Khác chỉ hiện nếu có page lạ chưa xếp)
+  const THU_TU=['CT','TTV','HT','Shidai'];
+  const demB=Object.fromEntries(countBy(dated,r=>brandOf(r)));
+  const brandOpts=[...THU_TU,...(demB.Khac?['Khac']:[])].map(b=>[b,demB[b]||0]);
   const saleOpts=countBy(dated,saleOf);
   const rangeBtn=(d,l)=>{let on=false;if(d===0)on=!S.from&&!S.to;else{const t=new Date();const to=isoDay(t);t.setDate(t.getDate()-d+1);on=S.from===isoDay(t)&&S.to===to;}
     return`<button class="btn${on?' on':''}" onclick="setRange(${d})">${l}</button>`;};
@@ -341,7 +349,7 @@ function render(keepFocus){
     <td class="num" style="font-weight:800;color:${!t.den?'var(--muted)':t.dung/t.den>=.7?'var(--ok)':t.dung/t.den>=.5?'var(--warn)':'var(--bad)'}">${pct(t.dung,t.den)}</td></tr>`;
   // cột cố định để 2 bảng đặt cạnh nhau gióng thẳng cột (anh Hải: "lệch à")
   const sumHead=first=>`<colgroup><col style="width:28%">${'<col style="width:10.28%">'.repeat(7)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
-  const byBrand=countBy(base,r=>brandOf(r.page_name)).map(([b])=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r.page_name)===b)),`setF('brand','${b}')`)).join('');
+  const byBrand=[...THU_TU,...(base.some(r=>brandOf(r)==='Khac')?['Khac']:[])].map(b=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r)===b)),`setF('brand','${b}')`)).join('');
   const bySale=countBy(base,saleOf).map(([s])=>sumRow(s,tally(base.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join('');
 
   // bảng chi tiết
@@ -380,7 +388,6 @@ function render(keepFocus){
     </div>
     <div class="bar">
       <select onchange="setF('brand',this.value)">${opt('all','Tất cả thương hiệu',S.brand)}${brandOpts.map(([b,n])=>opt(b,`${BRANDS[b]||b} (${n})`,S.brand)).join('')}</select>
-      <select onchange="setF('page',this.value)">${opt('all','Tất cả page / tài khoản',S.page)}${pageOpts.map(([k,n])=>opt(k,`${pageName[k]} (${n})`,S.page)).join('')}</select>
       <select onchange="setF('sale',this.value)">${opt('all','Tất cả Sale',S.sale)}${saleOpts.map(([s,n])=>opt(s,`${s} (${n})`,S.sale)).join('')}</select>
       <input type="search" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)">
     </div>
