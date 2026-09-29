@@ -27,11 +27,18 @@ const TOK = K.pancake, SBK = K.qc, SB = K.url;
 if (!TOK || !SBK) { console.error('Thiếu PANCAKE_SESSION_TOKEN hoặc QC_SUPABASE_KEY'); process.exit(1); }
 
 const vnDay = (d = new Date()) => new Date(d.getTime() + 7 * 36e5).toISOString().slice(0, 10);
-const homQua = vnDay(new Date(Date.now() - 864e5));
-const FROM = process.env.FROM || homQua, TO = process.env.TO || homQua;
 const DRY = !!process.env.DRY_RUN;
 const BANG = process.env.BANG || 'qc_review_thu';
-const tuUtc = new Date(FROM + 'T00:00:00+07:00'), denUtc = new Date(TO + 'T23:59:59.999+07:00');
+// 2 chế độ (29/9/2026, anh Hải: "kéo tin và chấm cùng lúc, mỗi giờ 1 lần"):
+//  - KHOẢNG: có FROM/TO (giờ VN) → kéo trọn các ngày đó (lượt 6h20 quét lại hôm qua, chạy tay, chạy bù).
+//  - MỐC (mặc định, pg_cron mỗi giờ): chỉ kéo hội thoại khách nhắn TỪ lượt trước (mốc lưu ở qc_cau_hinh 'moc_keo:<bảng>'),
+//    lùi 30 phút cho khỏi hở. Nhẹ cho token Pancake dùng chung với app MKT/Sale.
+const CHE_DO = (process.env.FROM || process.env.TO) ? 'khoang' : 'moc';
+const FROM = process.env.FROM || process.env.TO, TO = process.env.TO || process.env.FROM;
+let tuUtc = CHE_DO === 'khoang' ? new Date(FROM + 'T00:00:00+07:00') : null;
+let denUtc = CHE_DO === 'khoang' ? new Date(TO + 'T23:59:59.999+07:00') : new Date(Date.now() + 36e5);
+const BAT_DAU = new Date();
+const KHOA_MOC = 'moc_keo:' + BANG;
 const utc = s => new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -103,8 +110,9 @@ function tachLuot(page, c, msgs, userMap) {
     const ask = t.ms.map(x => clean(x.m.message)).filter(Boolean).join(' ').trim();
     if (ask.length <= 8 || !INTENT.test(ask)) return;
     const nxt = turns[i + 1];
-    let reply = null, sale = null;
+    let reply = null, sale = null, repAt = null;
     if (nxt && nxt.side === 'sale') {
+      repAt = nxt.ms[0].at.toISOString();
       reply = nxt.ms.map(x => clean(x.m.message)).filter(Boolean).join(' | ').trim() || null;
       if (!reply && nxt.ms.some(x => coTep(x.m))) reply = '(gửi ảnh/tệp)';
       sale = nxt.ms.find(x => x.m.from?.admin_name)?.m.from.admin_name || null;
@@ -120,13 +128,19 @@ function tachLuot(page, c, msgs, userMap) {
       issue: verdict === 'chi_bot' ? 'Chỉ có bot trả lời tự động, không có sale nào vào tư vấn.'
         : verdict === 'khong_tra_loi' ? 'Khách có nhu cầu thật nhưng không ai trả lời (kể cả bot).' : null,
       full_thread: thread, pancake_url: `https://pancake.vn/${page.id}?c_id=${c.id}`,
+      _rep_at: repAt,   // giờ Sale trả lời — chỉ dùng để tính "trả lời muộn", không ghi vào bảng
     });
   });
   return out;
 }
 
 (async () => {
-  console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
+  if (CHE_DO === 'moc') {
+    const r = await rest('GET', `qc_cau_hinh?select=gia_tri&khoa=eq.${encodeURIComponent(KHOA_MOC)}`);
+    const moc = r?.[0]?.gia_tri ? new Date(r[0].gia_tri) : new Date(vnDay(new Date(Date.now() - 864e5)) + 'T00:00:00+07:00');
+    tuUtc = new Date(moc.getTime() - 30 * 6e4);
+    console.log(`Chế độ MỐC: kéo hội thoại khách nhắn từ ${tuUtc.toISOString()} (mốc lượt trước ${moc.toISOString()})${DRY ? ' · THỬ (không ghi)' : ''}`);
+  } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
   const pages = (await pk('/pages'))?.categorized?.activated || [];
   console.log('pages:', pages.length);
   const pairs = [], dem = {};
@@ -171,21 +185,42 @@ function tachLuot(page, c, msgs, userMap) {
       await sleep(150);
     }
     dem[p.name] = n;
-    console.log(`${p.name}: ${lay.length} hội thoại khách nhắn từ ${FROM} (quét ${count}) → ${n} lượt`);
+    console.log(`${p.name}: ${lay.length} hội thoại khách nhắn (quét ${count}) → ${n} lượt`);
   }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
   console.log(`Tổng ${pairs.length} lượt:`, theoV);
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(pairs, null, 1));
-  if (DRY || !pairs.length) return;
+  if (DRY) return;
 
-  // chống trùng theo (conv_id, 160 ký tự đầu câu hỏi) — đọc các dòng đã có của những hội thoại này
-  const convs = [...new Set(pairs.map(x => x.conv_id))], co = new Set();
+  // Chống trùng theo 2 khoá: (conv_id, 160 ký tự đầu câu hỏi) và (conv_id, giờ khách bắt đầu hỏi) — kéo theo giờ thì
+  // khách nhắn nối thêm vào cùng lượt làm câu hỏi dài ra, khoá thứ 2 giữ không đẻ dòng trùng.
+  const convs = [...new Set(pairs.map(x => x.conv_id))], co = new Set(), cu = new Map();
+  const kGio = (id, at) => id + '@' + (at ? new Date(at).toISOString().slice(0, 19) : '');
   for (let i = 0; i < convs.length; i += 80) {
     const ds = convs.slice(i, i + 80).map(x => `"${x.replace(/"/g, '\\"')}"`).join(',');
-    const rows = await rest('GET', `${BANG}?select=conv_id,customer_ask&conv_id=in.(${encodeURIComponent(ds)})&limit=5000`);
-    rows.forEach(r => co.add(r.conv_id + '|' + (r.customer_ask || '').slice(0, 160)));
+    const rows = await rest('GET', `${BANG}?select=id,conv_id,customer_ask,conv_at,verdict&conv_id=in.(${encodeURIComponent(ds)})&limit=5000`);
+    rows.forEach(r => { co.add(r.conv_id + '|' + (r.customer_ask || '').slice(0, 160)); co.add(kGio(r.conv_id, r.conv_at)); cu.set(kGio(r.conv_id, r.conv_at), r); });
   }
-  const moi = pairs.filter(x => { const k = x.conv_id + '|' + x.customer_ask.slice(0, 160); if (co.has(k)) return false; co.add(k); return true; });
+  // Dòng đang MISS mà lượt này thấy Sale đã trả lời (kéo theo giờ: lượt trước chạy khi Sale chưa kịp trả lời) → cập nhật
+  // chính dòng đó về chua_cham. Trả lời sau ≥ 1 giờ thì gắn nhãn "Trả lời muộn N giờ" (dưới 1 giờ coi là bình thường).
+  const capNhat = pairs.filter(x => x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(cu.get(kGio(x.conv_id, x.conv_at))?.verdict));
+  for (const x of capNhat) {
+    const h = x._rep_at ? (new Date(x._rep_at) - new Date(x.conv_at)) / 36e5 : 0;
+    await rest('PATCH', `${BANG}?id=eq.${cu.get(kGio(x.conv_id, x.conv_at)).id}&verdict=in.(khong_tra_loi,chi_bot)`, {
+      verdict: 'chua_cham', sale_reply: x.sale_reply, sale_name: x.sale_name, full_thread: x.full_thread,
+      severity: null, suggestion: null, cham_boi: null,
+      issue: h >= 1 ? `Trả lời muộn ${h.toFixed(1).replace('.', ',')} giờ.` : null });
+  }
+  const moi = pairs.filter(x => {
+    const k1 = x.conv_id + '|' + x.customer_ask.slice(0, 160), k2 = kGio(x.conv_id, x.conv_at);
+    if (co.has(k1) || co.has(k2)) return false;
+    co.add(k1); co.add(k2); return true;
+  }).map(({ _rep_at, ...x }) => x);
   for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
-  console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới (bỏ ${pairs.length - moi.length} lượt đã có).`);
+  console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
+  if (CHE_DO === 'moc') {   // lưu mốc = lúc lượt này BẮT ĐẦU (tin tới trong lúc chạy sẽ được lượt sau lấy)
+    const r = await fetch(`${SB}/rest/v1/qc_cau_hinh`, { method: 'POST', body: JSON.stringify({ khoa: KHOA_MOC, gia_tri: BAT_DAU.toISOString() }),
+      headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
+    console.log('mốc mới:', BAT_DAU.toISOString(), r.ok ? 'ok' : 'LỖI ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  }
 })().catch(e => { console.error('LỖI', e.message); process.exit(1); });

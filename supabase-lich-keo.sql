@@ -26,15 +26,16 @@ begin
     url := format('https://api.github.com/repos/%s/actions/workflows/%s/dispatches', c_repo, c_wf),
     headers := jsonb_build_object('Authorization', 'Bearer ' || v_token, 'Accept', 'application/vnd.github+json',
                                   'User-Agent', 'qc-cskh', 'Content-Type', 'application/json'),
-    body := jsonb_build_object('ref', 'main', 'inputs', jsonb_build_object('from', p_tu::text, 'to', p_den::text))
+    body := jsonb_build_object('ref', 'main', 'inputs', jsonb_build_object('from', coalesce(p_tu::text, ''), 'to', coalesce(p_den::text, '')))
   ) into v_id;
   return v_id;
 end $$;
 revoke execute on function public.qc_keo_tin(date, date) from public, anon, authenticated;
 
--- 6h20 VN (23:20 UTC hôm trước): kéo trọn ngày hôm qua.  18h35 VN (11:35 UTC): kéo tin hôm nay tới lúc đó.
-select cron.unschedule(jobid) from cron.job where jobname in ('qc-keo-6h', 'qc-keo-18h');
+-- 6h20 VN (23:20 UTC hôm trước): quét lại TRỌN ngày hôm qua (lưới an toàn).
+-- Mỗi giờ phút :25 (anh Hải 29/9: "kéo tin và chấm cùng lúc, mỗi giờ 1 lần"): p_tu/p_den = null → job chạy chế độ MỐC,
+-- chỉ kéo hội thoại khách nhắn từ lượt trước. Phiên chấm trên cloud chạy phút :50 cùng giờ.
+select cron.unschedule(jobid) from cron.job where jobname in ('qc-keo-6h', 'qc-keo-18h', 'qc-keo-gio');
 select cron.schedule('qc-keo-6h',  '20 23 * * *',
   $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date - 1, (now() at time zone 'Asia/Ho_Chi_Minh')::date - 1)$$);
-select cron.schedule('qc-keo-18h', '35 11 * * *',
-  $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date, (now() at time zone 'Asia/Ho_Chi_Minh')::date)$$);
+select cron.schedule('qc-keo-gio', '25 * * * *', $$select public.qc_keo_tin(null, null)$$);
