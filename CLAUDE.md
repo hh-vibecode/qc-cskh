@@ -49,4 +49,7 @@
 
 ## Git
 - Trước mỗi commit: `git diff --cached --stat`, chỉ commit đúng file mình sửa. Commit xong push ngay.
+- **Luôn đưa lên nhánh `main`** — trang GitHub Pages, workflow kéo tin và lịch chấm cloud đều chạy theo `main`. Phiên cloud
+  thường tự mở nhánh riêng (`claude/...`): làm xong phải `git pull --rebase origin main` rồi gộp vào `main` và push `main`
+  (hoặc push thẳng `HEAD:main`). Việc để trên nhánh riêng = chưa có tác dụng và phiên khác không thấy.
 - Kết commit bằng dòng `Co-Authored-By` theo nhắc của hệ thống.
