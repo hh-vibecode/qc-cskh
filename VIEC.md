@@ -21,6 +21,9 @@
 | # | Việc | Ghi chú |
 |---|---|---|
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
+| E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
+| E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
+| E4 | Báo phiên MKT/Sale tắt `sync-sale-review.yml` | sau khi em đối chiếu xong (sáng 30/9) |
 
 ## 2. CLAUDE ĐANG NỢ
 
@@ -28,10 +31,8 @@
 |---|---|---|
 | 1 | Id 2475 còn `chua_cham`: Sale gửi 9 ảnh mẫu, không rõ có giá trong ảnh không | cần người mở Pancake xem ảnh |
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
-| 2 | Bước 3 lộ trình: chép job chấm sang repo này, sửa lỗi (bỏ `pzl_g_`, ngày theo giờ VN, quét theo tin nhắn chứ không theo `updated_at`, nối bình luận–inbox xuyên ngày qua search, tên Sale theo luật gộp, thêm `page_id`, severity về `cao/trung/thap`), chạy song song ghi bảng tạm rồi đối chiếu | đặt secrets GitHub khi dựng job |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
-| 8 | Trang: tải theo khoảng ngày thay vì cả bảng (~1,7 MB/lần mở) — tiết kiệm egress | lưu ý quota của phiên MKT/Sale |
 | 9 | Đưa soát miss với Pancake + tầng luật vào job `keo-tin.yml` (chạy bằng khoá `qc_cskh` qua REST/RPC, không dùng Management API) | để chấm cloud nhận dữ liệu đã soát |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud (anh đã nối GitHub 29/9): gom bộ nhớ máy vào repo, liệt kê biến môi trường cho env `QC`, mở thêm mạng pancake.vn / api.supabase.com / api.github.com | anh hỏi 29/9 |
 
