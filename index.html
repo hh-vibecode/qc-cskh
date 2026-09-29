@@ -102,7 +102,16 @@ a{color:var(--accent);font-weight:700;text-decoration:none}
 .sb-tools{display:flex;gap:6px;padding:6px 16px 0}
 .sb-tools .btn{flex:1;padding:5px 8px;font-size:11.5px}
 .main{flex:1;min-width:0}
-.bar .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar .right,.top .right{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+/* ô chọn gọn kiểu app MKT/Sale */
+.sel{height:30px;box-sizing:border-box;padding:3px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;font-weight:700;font-family:var(--font);outline:none;cursor:pointer}
+.sel.on{border-color:var(--accent);color:var(--accent)}
+.sel:focus{border-color:var(--accent)}
+input.sel{font-weight:600;cursor:text}
+.sel.tim{flex:1;min-width:200px;max-width:380px}
+.seg{display:inline-flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{border:none;padding:5px 14px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--surface);color:var(--text2)}
+.seg button.on{background:var(--accent);color:var(--accent-fg)}
 .kpi{display:flex;gap:12px;align-items:flex-start}
 .kpi .ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--c) 13%,transparent);color:var(--c)}
 .kpi .ic svg{width:20px;height:20px}
@@ -258,6 +267,16 @@ async function reload(){try{await load();render();toast('Đã tải lại');}cat
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
 async function setF(k,v){S[k]=v;S.pg=0;if(k==='from'||k==='to')await ensureRange();render(k==='q');}
+// Chọn nhanh ngày (1 ô, kiểu app MKT/Sale)
+const QUICK=[['today','Hôm nay'],['yesterday','Hôm qua'],['7','7 ngày qua'],['30','30 ngày qua'],['all','Tất cả']];
+function quickRange(k){
+  const t=new Date(),d=n=>{const x=new Date(t);x.setDate(x.getDate()-n);return isoDay(x);};
+  if(k==='today')return{from:d(0),to:d(0)};
+  if(k==='yesterday')return{from:d(1),to:d(1)};
+  if(k==='all')return{from:'',to:''};
+  return{from:d(Number(k)-1),to:d(0)};
+}
+async function setQuick(k){if(!k)return;const r=quickRange(k);S.from=r.from;S.to=r.to;S.pg=0;await ensureRange();render();}
 async function setRange(days){
   if(days===0){S.from='';S.to='';}
   else{const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-days+1);S.from=isoDay(t);}
@@ -331,8 +350,10 @@ function render(keepFocus){
   const demB=Object.fromEntries(countBy(dated,r=>brandOf(r)));
   const brandOpts=[...THU_TU,...(demB.Khac?['Khac']:[])].map(b=>[b,demB[b]||0]);
   const saleOpts=countBy(dated,saleOf);
-  const rangeBtn=(d,l)=>{let on=false;if(d===0)on=!S.from&&!S.to;else{const t=new Date();const to=isoDay(t);t.setDate(t.getDate()-d+1);on=S.from===isoDay(t)&&S.to===to;}
-    return`<button class="btn${on?' on':''}" onclick="setRange(${d})">${l}</button>`;};
+  // Bộ lọc gọn kiểu app MKT/Sale: ô chọn nhỏ "Brand: tất cả", ô đang lọc viền màu nhấn; chọn nhanh ngày gom 1 ô.
+  const sel=(k,label,cur,opts)=>`<select class="sel${cur!=='all'?' on':''}" onchange="setF('${k}',this.value)">
+    ${opt('all',`${label}: tất cả`,cur)}${opts.map(([v,l])=>opt(v,l,cur)).join('')}</select>`;
+  const quickNow=QUICK.find(([k])=>{const r=quickRange(k);return r.from===S.from&&r.to===S.to;});
 
   const kpi=(key,label,val,sub,color,icon)=>`<div class="kpi${S.verdict===key?' on':''}" style="--c:var(--${color})" onclick="toggleVerdict('${key}')">
     <div class="ic">${ICON[icon]}</div>
@@ -371,25 +392,25 @@ function render(keepFocus){
 
   app.innerHTML=shell(`
     <div class="top">
-      <div class="title">Chất Lượng Phản Hồi Sale</div>
-      ${upd}
-      ${openRep?`<button class="btn" style="color:var(--bad)" onclick="go('history')">${num(openRep)} báo chấm sai</button>`:''}
-      <button class="btn" onclick="reload()" title="Tải lại">↺</button>
-    </div>
-    <div class="bar">
-      <button class="btn${S.plat==='social'?' on':''}" onclick="setPlat('social')">Social</button>
-      <button class="btn${S.plat==='zalo'?' on':''}" onclick="setPlat('zalo')">Zalo</button>
+      <div class="title" style="margin-right:6px">Chất Lượng Phản Hồi Sale</div>
+      <span class="seg"><button class="${S.plat==='social'?'on':''}" onclick="setPlat('social')">Social</button><button class="${S.plat==='zalo'?'on':''}" onclick="setPlat('zalo')">Zalo</button></span>
       <div class="right">
-        ${rangeBtn(7,'7 ngày')}${rangeBtn(30,'30 ngày')}${rangeBtn(0,'Tất cả')}
-        <input type="date" value="${esc(S.from)}" onchange="setF('from',this.value)">
-        <span class="muted">→</span>
-        <input type="date" value="${esc(S.to)}" onchange="setF('to',this.value)">
+        ${upd}
+        ${openRep?`<button class="sel" style="color:var(--bad);border-color:var(--bad)" onclick="go('history')">${num(openRep)} báo chấm sai</button>`:''}
+        <button class="sel" onclick="reload()" title="Tải lại">↺</button>
       </div>
     </div>
     <div class="bar">
-      <select onchange="setF('brand',this.value)">${opt('all','Tất cả thương hiệu',S.brand)}${brandOpts.map(([b,n])=>opt(b,`${BRANDS[b]||b} (${n})`,S.brand)).join('')}</select>
-      <select onchange="setF('sale',this.value)">${opt('all','Tất cả Sale',S.sale)}${saleOpts.map(([s,n])=>opt(s,`${s} (${n})`,S.sale)).join('')}</select>
-      <input type="search" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)">
+      <input type="search" class="sel tim" id="qBox" placeholder="Tìm khách / SĐT / nội dung" value="${esc(S.q)}" oninput="setF('q',this.value)">
+      <div class="right">
+        ${sel('brand','Brand',S.brand,brandOpts.map(([b,n])=>[b,`${BRANDS[b]||b} (${n})`]))}
+        ${sel('sale','Sales',S.sale,saleOpts.map(([s,n])=>[s,`${s} (${n})`]))}
+        <select class="sel" onchange="setQuick(this.value)">
+          <option value="">${quickNow?'':'Chọn nhanh…'}</option>${QUICK.map(([k,l])=>`<option value="${k}"${quickNow&&quickNow[0]===k?' selected':''}>${l}</option>`).join('')}</select>
+        <input type="date" class="sel" value="${esc(S.from)}" onchange="setF('from',this.value)">
+        <span class="muted">→</span>
+        <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
+      </div>
     </div>
     <div class="kpi-row">
       ${kpi('dung','Tư vấn đúng',num(T.dung),`${pct(T.dung,T.den)} / ${num(T.den)} lượt đã chấm`,'ok','dung')}
