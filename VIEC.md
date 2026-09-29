@@ -32,6 +32,8 @@
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 8 | Trang: tải theo khoảng ngày thay vì cả bảng (~1,7 MB/lần mở) — tiết kiệm egress | lưu ý quota của phiên MKT/Sale |
+| 9 | Đưa soát miss với Pancake + tầng luật vào job `keo-tin.yml` (chạy bằng khoá `qc_cskh` qua REST/RPC, không dùng Management API) | để chấm cloud nhận dữ liệu đã soát |
+| 10 | Chuyển việc làm hằng ngày sang phiên cloud (anh đã nối GitHub 29/9): gom bộ nhớ máy vào repo, liệt kê biến môi trường cho env `QC`, mở thêm mạng pancake.vn / api.supabase.com / api.github.com | anh hỏi 29/9 |
 
 ---
 
@@ -153,7 +155,9 @@
 - **Đẩy mã:** `tools/push.js`.
 - **Công cụ:** `tools/sql.js` (chạy SQL qua Management API), `tools/ghi-cham.js` (ghi kết quả chấm, chỉ vào dòng `chua_cham`), `tools/keys.js` (đọc file khoá của mkt-sale-app, không in).
 - **Job kéo tin:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app. Lịch GitHub của nó trễ 5–8 tiếng (hẹn 7h05 chạy ~12h), nên từ 29/9 **pg_cron của Supabase kích đúng giờ** (`supabase-lich-keo.sql`, hàm `qc_keo_tin`, token trong Vault tên `qc_gh_token`): `qc-keo-6h` 6h00 VN kéo trọn hôm qua · `qc-keo-18h` 18h00 VN kéo hôm nay tới lúc đó (anh chốt 29/9: "6-7h và 18-19h"). Lịch cũ của GitHub vẫn chạy thêm (trùng không sao, job tự bỏ dòng đã có).
-- **Chấm:** cần máy anh bật (Sonnet chạy trong phiên Claude trên máy, khoá ở máy). Anh chốt 29/9: **kéo tự động, còn chấm thì anh mở máy bảo chấm**. Khi anh bảo "chấm": `soat-miss-pancake.js --tu <2 ngày trước>` → `cham-luat.js --ghi` → agent `cham-qc` (chấm) + agent `cham-qc` (soát miss 3b) song song.
+- **Chấm TỰ ĐỘNG trên cloud (từ 29/9, máy tắt vẫn chạy):** Claude Code routine **"QC CSKH - cham tu dong 7h15 & 19h15"** (`trig_016fSohzMtudxRE1Y3th5S4R`, cron `15 0,12 * * *` UTC = 7h15 & 19h15 VN, model Sonnet) chạy trên môi trường cloud **`QC`** (`env_01FVVTyA1x1FKSrpn5QNpUFW`, mạng Custom chỉ mở `bcrpxfvvjsjpvbksqzls.supabase.co`). Lấy repo về, đọc **`routine/cham-cloud.md`** (sửa luật chấm cloud = sửa file này rồi push, không cần đặt lại lịch). Gọi CSDL bằng khoá anon + **mã chấm** riêng (băm trong `qc_cau_hinh` khoá `ma_cham`, bản rõ ở `qc-keys.local.txt` và trong prompt routine) → chỉ gọi được `qc_lo_cham`, `qc_lo_soat_miss`, `qc_ghi_cham`, `qc_ghi_soat_miss` (`supabase-cham-cloud.sql`). Chạy xong tự gửi thông báo tóm tắt về điện thoại anh. Xem lượt chạy: https://claude.ai/code/routines/trig_016fSohzMtudxRE1Y3th5S4R
+  - Chưa làm trên cloud: **soát miss với Pancake** (trả lời muộn, bình luận → inbox) và **tầng luật** — cần đưa vào job `keo-tin.yml` (mục nợ #9). Tạm thời khi anh mở máy bảo "chấm" thì chạy `soat-miss-pancake.js --tu <2 ngày trước>` → `cham-luat.js --ghi` như cũ.
+  - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
 - **29/09/2026** — Đặt lịch kéo tin 6h/18h bằng pg_cron (thử gọi GitHub 204). Chấm hằng ngày 27–28/9: luật 16 (8 nội bộ, 5 lời khấn), Sonnet 37 (29 đúng / 5 thiếu / 3 KLQ), soát miss 5 (3 lời khấn, 2 miss thật #2556, #2506). Tồn 0.
