@@ -137,7 +137,8 @@
 - **Nhân viên nội bộ đóng vai khách** → `khong_lien_quan` (kể cả dòng job gắn `khong_tra_loi`/`chi_bot`): Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458). Danh sách ở `NOI_BO_SDT`/`NOI_BO_TEN` trong `tools/cham-luat.js`.
 - **Đẩy mã:** `tools/push.js`.
 - **Công cụ:** `tools/sql.js` (chạy SQL qua Management API), `tools/ghi-cham.js` (ghi kết quả chấm, chỉ vào dòng `chua_cham`), `tools/keys.js` (đọc file khoá của mkt-sale-app, không in).
-- **Job chấm:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app (3 lượt/ngày, 56 lượt chạy đều success tới 28/9). Repo này chưa có job.
+- **Job kéo tin:** vẫn là job cũ `sync-sale-review.yml` bên mkt-sale-app. Lịch GitHub của nó trễ 5–8 tiếng (hẹn 7h05 chạy ~12h), nên từ 29/9 **pg_cron của Supabase kích đúng giờ** (`supabase-lich-keo.sql`, hàm `qc_keo_tin`, token trong Vault tên `qc_gh_token`): `qc-keo-6h` 6h00 VN kéo trọn hôm qua · `qc-keo-18h` 18h00 VN kéo hôm nay tới lúc đó (anh chốt 29/9: "6-7h và 18-19h"). Lịch cũ của GitHub vẫn chạy thêm (trùng không sao, job tự bỏ dòng đã có).
+- **Chấm:** cần máy anh bật (Sonnet chạy trong phiên Claude trên máy, khoá ở máy). Anh chốt 29/9: **kéo tự động, còn chấm thì anh mở máy bảo chấm**. Khi anh bảo "chấm": `soat-miss-pancake.js --tu <2 ngày trước>` → `cham-luat.js --ghi` → agent `cham-qc` (chấm) + agent `cham-qc` (soát miss 3b) song song.
 
 ## 8. NHẬT KÝ (mới nhất trước)
 - **28/09/2026** — Sonnet xong: 46 dòng trả lời muộn (7 luật + 29 đúng / 8 thiếu / 2 KLQ) và soát 129 miss (117 miss thật, 12 tương tác). Soát tay sửa 2 dòng Sonnet loại nhầm: chị Nhung xin báo giá ở page Sỉ là khách sỉ thật (#2350 → đúng, #2413 → miss thật) — thêm luật vào `cham-qc.md`. Tồn: 0 `chua_cham`, 0 miss chưa soát (ngoài nhóm `pzl_g_`). Trang: full màn, 2 bảng tóm tắt gióng cột, ô tìm kiếm cùng hàng, chi tiết 30 dòng/trang có phân trang.
