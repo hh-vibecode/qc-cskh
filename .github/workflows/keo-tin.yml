@@ -35,4 +35,6 @@ jobs:
           FROM: ${{ github.event.inputs.from }}
           TO: ${{ github.event.inputs.to }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
+          # 30/9/2026: chuyển hẳn — anh Hải đồng ý đóng job cũ bên mkt-sale-app, QC là nơi DUY NHẤT ghi dữ liệu chấm
+          BANG: sale_response_review
         run: node scripts/keo-tin.js
