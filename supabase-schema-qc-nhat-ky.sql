@@ -39,6 +39,10 @@ create or replace function public.qc_ghi_nhat_ky_cham(p_ma text, p_so_cham int, 
 language plpgsql security definer set search_path = public, extensions as $$
 begin
   perform qc_chan_cham(p_ma);
+  -- lịch chấm đôi khi gọi 2 lần (30/9 16:53 ghi trùng) → bỏ nếu 5 phút qua đã có dòng y hệt
+  if exists (select 1 from qc_nhat_ky_chay where loai = 'cham' and bat_dau > now() - interval '5 minutes'
+             and so_cham is not distinct from p_so_cham and miss_soat is not distinct from p_so_soat
+             and khoang is not distinct from left(p_ghi_chu, 300) and loi is not distinct from left(p_loi, 1000)) then return; end if;
   insert into qc_nhat_ky_chay (loai, bat_dau, ket_thuc, trang_thai, so_cham, miss_soat, loi, lien_ket, khoang)
   values ('cham', now(), now(), case when coalesce(p_loi, '') = '' then 'thanh_cong' else 'loi' end,
           p_so_cham, p_so_soat, left(p_loi, 1000), left(p_lien_ket, 300), left(p_ghi_chu, 300));
