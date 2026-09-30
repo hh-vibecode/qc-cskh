@@ -369,7 +369,7 @@ function render(keepFocus){
     <td class="num">${num(t.pend)}</td>
     <td class="num" style="font-weight:800;color:${!t.den?'var(--muted)':t.dung/t.den>=.7?'var(--ok)':t.dung/t.den>=.5?'var(--warn)':'var(--bad)'}">${pct(t.dung,t.den)}</td></tr>`;
   // cột cố định để 2 bảng đặt cạnh nhau gióng thẳng cột (anh Hải: "lệch à")
-  const sumHead=first=>`<colgroup><col style="width:28%">${'<col style="width:10.28%">'.repeat(7)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
+  const sumHead=first=>`<colgroup><col style="width:28%">${'<col style="width:10.28%">'.repeat(7)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ chấm</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
   const byBrand=[...THU_TU,...(base.some(r=>brandOf(r)==='Khac')?['Khac']:[])].map(b=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r)===b)),`setF('brand','${b}')`)).join('');
   const bySale=countBy(base,saleOf).map(([s])=>sumRow(s,tally(base.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join('');
 
