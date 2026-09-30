@@ -25,7 +25,8 @@
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
 | E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
-| E4 | Báo phiên MKT/Sale tắt `sync-sale-review.yml` | sau khi em đối chiếu xong (sáng 30/9) |
+| E4 | Báo phiên MKT/Sale tắt `sync-sale-review.yml` | 30/9 đối chiếu xong (mới ⊇ cũ, còn thêm 27 lượt) — **anh báo phiên MKT/Sale tắt**; job QC đã ghi thẳng bảng chính từ 30/9 |
+| E5 | Người báo sai 30/9 ký tên **"Lệ"** (26 báo). Theo sổ, Phạm Thị Lệ là Sale đội Lẻ; trong dữ liệu 29/9 còn có tin nội bộ "e share c cái báo cáo này để nhắc các b đỡ miss tn" — báo cáo QC có đang được chia cho nhân sự không? (anh chốt 28/9: luồng ngầm, chỉ anh + GĐ) | anh xác nhận; cần thì em đổi mã truy cập |
 
 ## 2. CLAUDE ĐANG NỢ
 
@@ -34,7 +35,7 @@
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
-| 9 | Đưa soát miss với Pancake + tầng luật vào job `keo-tin.yml` (chạy bằng khoá `qc_cskh` qua REST/RPC, không dùng Management API) | để chấm cloud nhận dữ liệu đã soát |
+| 9 | Đưa **tầng luật** vào job `keo-tin.yml` (soát miss ĐÃ đưa vào 30/9 qua `tools/soat-lib.js`) — cần viết lại `cham-luat.js` chạy bằng khoá `qc_cskh` (REST) thay Management API | để chấm cloud đỡ tốn |
 | 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
@@ -171,6 +172,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **30/09/2026** — **Chuyển hẳn kéo tin sang QC:** đối chiếu 29/9 job mới bắt 43/45 lượt job cũ (2 lượt lệch là bài đăng của page) + 27 lượt job cũ bỏ sót → job QC ghi thẳng `sale_response_review` (workflow `BANG`), đưa lượt ở `qc_review_thu` sang bảng chính (hôm nay 56 lượt lên trang), nối mốc. Anh chốt: **lúc kéo phải soát lại miss, Sale trả lời bổ sung thì gỡ miss** → job mỗi giờ soát miss 3 ngày (6h20: 30 ngày), thư viện `tools/soat-lib.js`. Soát toàn bộ 126 miss: gỡ 31 (Sale trả lời muộn tới 324 giờ — phần lớn trả lời bổ sung hôm nay sau khi xem báo cáo), còn 95 miss thật. 26 báo sai của "Lệ" đã đóng (16 miss → gỡ; 10 thiếu ý → kéo lại hội thoại có phần bổ sung, chấm lại). Bỏ nhãn "muộn" cho trả lời < 1 giờ (4 dòng).
 - **29/09/2026** — Áp QUY-UOC-DUNG-CHUNG-SUPABASE.md (bản gốc repo mkt-sale-app): link + tóm tắt vào CLAUDE.md; kiểm lại: 4 bảng QC đều bật RLS, tên đều tiền tố `qc_`/`qc-`, không ghi bảng lõi MKT/Sale. Lệch → mục nợ #11 + Phụ thuộc chéo (mục 5d). Tạo `qc_sao_luu` + `qc_chup_sao_luu()` (bản đầu: 2.617 dòng, 621 KB).
 - **29/09/2026** — Anh lên Supabase Pro (tổ chức). Anh chốt **giữ chung 1 project** (tách project thêm ~10 USD/tháng máy chủ) nhưng **tách phần xử lý**: đặt `statement_timeout` cho 13 hàm `qc_*` (`supabase-gioi-han-qc.sql`); trang vẫn tải bình thường (7 ngày ~0,9 s).
 - **29/09/2026** — Anh chốt **4 thương hiệu: Chánh Tâm · Tự Tại Viên · Hiền Thủy · Shidai**, xếp theo MÃ PAGE (`BRAND_PAGE` trong index.html; Hoàng Dương - Ming Ying → Chánh Tâm; Zalo "Siêu Thị Đồ Thờ Cao Cấp" → Hiền Thủy — em xếp, chờ anh xác nhận). **Có page mới trên Pancake thì thêm vào `BRAND_PAGE`.** Bỏ ô lọc page (anh yêu cầu). Vá `page_id`: FB theo tên page (conv_id bình luận FB là mã BÀI ĐĂNG, không phải mã page), TikTok/Zalo theo conv_id. Đối chiếu bảng thương hiệu với SQL: khớp từng số.
