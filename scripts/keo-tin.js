@@ -23,6 +23,7 @@
 // Monsieur Claude
 const fs = require('fs');
 const K = require('../tools/keys.js');
+const { taoSoat } = require('../tools/soat-lib.js');
 const TOK = K.pancake, SBK = K.qc, SB = K.url;
 if (!TOK || !SBK) { console.error('Thiếu PANCAKE_SESSION_TOKEN hoặc QC_SUPABASE_KEY'); process.exit(1); }
 
@@ -218,6 +219,25 @@ function tachLuot(page, c, msgs, userMap) {
   }).map(({ _rep_at, ...x }) => x);
   for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
   console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
+  // Soát lại các dòng MISS còn mở với Pancake thật (anh Hải 30/9: "lúc kéo thì phải xem lại các data miss, họ clear xong
+  // rồi thì clear hết"). Sale trả lời bổ sung (dù muộn) / nhắn riêng cho khách bình luận → gỡ khỏi miss, chuyển chấm nội dung,
+  // gắn nhãn "Trả lời muộn N giờ" (≥ 1 giờ) hoặc "Bình luận → tư vấn qua tin nhắn". Lượt mỗi giờ soát 3 ngày, lượt 6h20 soát 30 ngày.
+  const soatNgay = Number(process.env.SOAT_NGAY || (CHE_DO === 'moc' ? 3 : 30));
+  const misses = await rest('GET', `${BANG}?select=id,conv_id,conv_at,pancake_url,page_id,customer_name,verdict`
+    + `&verdict=in.(khong_tra_loi,chi_bot)&conv_id=not.like.pzl_g_*&conv_at=not.is.null`
+    + `&conv_date=gte.${vnDay(new Date(Date.now() - soatNgay * 864e5))}&order=conv_at&limit=500`);
+  const { soat, capNhat: capNhatMiss } = taoSoat(pk, sleep);
+  let go = 0; const demS = {};
+  for (const r of misses) {
+    let k; try { k = await soat(r); } catch (e) { k = { ket: 'loi' }; }
+    demS[k.ket] = (demS[k.ket] || 0) + 1;
+    if (k.ket === 'da_tra_loi' || k.ket === 'qua_inbox') {
+      await rest('PATCH', `${BANG}?id=eq.${r.id}&verdict=in.(khong_tra_loi,chi_bot)`, capNhatMiss(k)); go++;
+    }
+    await sleep(150);
+  }
+  console.log(`Soát ${misses.length} dòng miss (${soatNgay} ngày gần nhất): gỡ ${go} dòng Sale đã trả lời`, demS);
+
   if (CHE_DO === 'moc') {   // lưu mốc = lúc lượt này BẮT ĐẦU (tin tới trong lúc chạy sẽ được lượt sau lấy)
     const r = await fetch(`${SB}/rest/v1/qc_cau_hinh`, { method: 'POST', body: JSON.stringify({ khoa: KHOA_MOC, gia_tri: BAT_DAU.toISOString() }),
       headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
