@@ -161,8 +161,8 @@ const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),pg:0,
   plat:'social',from:'',to:'',brand:'all',sale:'all',verdict:'all',q:'',
   view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
 // Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
-const VIEWS={report:'Chất lượng phản hồi',history:'Lịch sử báo sai',logic:'Logic xử lý dữ liệu'};
-function go(v){S.view=v;ls.set('qc_view',v);render();window.scrollTo(0,0);}
+const VIEWS={report:'Chất lượng phản hồi',history:'Lịch sử báo sai',nhatky:'Nhật ký chạy',logic:'Logic xử lý dữ liệu'};
+async function go(v){S.view=v;ls.set('qc_view',v);if(v==='nhatky')await taiNhatKy();render();window.scrollTo(0,0);}
 function shell(content){
   const open=S.reports.filter(r=>r.status==='open').length;
   const item=(v,extra='')=>`<div class="nav-item${S.view===v?' active':''}" onclick="go('${v}')">${VIEWS[v]}${extra}</div>`;
@@ -175,6 +175,7 @@ function shell(content){
       <div class="sb-bottom">
         <div class="sb-section" style="padding-top:8px">Cài đặt</div>
         ${item('history',open?`<span class="nav-badge">${open}</span>`:'')}
+        ${item('nhatky',nkLoiGan()?'<span class="nav-badge">!</span>':'')}
         ${item('logic')}
         <div class="sb-tools"><button class="btn" onclick="changeCode()">Đổi mã</button><button class="btn" onclick="lock()">Khoá</button></div>
       </div>
@@ -263,7 +264,7 @@ async function ensureRange(){
   catch(e){toast(e.message);}
   document.getElementById('app').style.opacity='';
 }
-async function reload(){try{await load();render();toast('Đã tải lại');}catch(e){toast(e.message);}}
+async function reload(){try{await load();if(S.view==='nhatky')await taiNhatKy();render();toast('Đã tải lại');}catch(e){toast(e.message);}}
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
 async function setF(k,v){S[k]=v;S.pg=0;if(k==='from'||k==='to')await ensureRange();render(k==='q');}
@@ -322,6 +323,7 @@ function render(keepFocus){
   const app=document.getElementById('app');
   if(S.view==='history'){app.innerHTML=shell(historyPage());return;}
   if(S.view==='logic'){app.innerHTML=shell(logicPage());return;}
+  if(S.view==='nhatky'){app.innerHTML=shell(nhatKyPage());return;}
   // Chỉ quan tâm tin khách hỏi mua (anh Hải 28/9): dòng "không liên quan" (lời khấn, tương tác, nội bộ) ẩn hẳn, không tính.
   const platRows=S.rows.filter(r=>platOf(r)===S.plat&&r.verdict!=='khong_lien_quan');
   const dated=platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to));
@@ -550,6 +552,57 @@ function historyPage(){
       <tbody>${doneRows||'<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Chưa có</td></tr>'}</tbody></table></div>`;
 }
 
+// ── Cài đặt › Nhật ký chạy (anh Hải 30/9: "ghi lại lịch xử lý m kéo, cái nào kéo lỗi t còn biết để hỏi") ────────
+// Mỗi lượt kéo tin (GitHub job) / chấm (lịch cloud) ghi 1 dòng vào qc_nhat_ky_chay. Đọc 14 ngày qua qc_ds_nhat_ky.
+const NK_LOAI={'keo-gio':'Kéo tin mỗi giờ','keo-quet':'Quét lớn','keo-tay':'Kéo tay',cham:'Chấm (cloud)'};
+const NK_TT={thanh_cong:{l:'Thành công',c:'ok'},loi:{l:'Lỗi',c:'bad'},dang_chay:{l:'Đang chạy',c:'pend'}};
+async function taiNhatKy(){try{S.nk=await rpc('qc_ds_nhat_ky',{p_ngay:14})||[];}catch(e){S.nk=S.nk||[];toast(e.message);}}
+// Có lỗi trong 24 giờ qua, hoặc đã hơn 90 phút không có lượt kéo nào → báo trên menu
+function nkLoiGan(){const nk=S.nk||[];if(!nk.length)return false;
+  if(nk.some(x=>x.trang_thai==='loi'&&Date.now()-new Date(x.bat_dau)<864e5))return true;
+  const keo=nk.find(x=>x.loai!=='cham');return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
+function nhatKyPage(){
+  const nk=S.nk||[],f=S.nkLoc||'all';
+  const list=nk.filter(x=>f==='all'?true:f==='loi'?x.trang_thai==='loi':f==='cham'?x.loai==='cham':x.loai!=='cham');
+  const homNay=isoDay(new Date()),tuan=Date.now()-7*864e5;
+  const keoCuoi=nk.find(x=>x.loai!=='cham'),chamCuoi=nk.find(x=>x.loai==='cham');
+  const phutTruoc=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<60?`${m} phút trước`:`${Math.floor(m/60)} giờ ${m%60} phút trước`;};
+  const ngung=!keoCuoi||Date.now()-new Date(keoCuoi.bat_dau)>90*6e4;
+  const kpi=(label,val,sub,color,icon)=>`<div class="kpi" style="--c:var(--${color});cursor:default">
+    <div class="ic">${ICON[icon]}</div><div><div class="l">${label}</div><div class="v">${val}</div><div class="s">${sub||'&nbsp;'}</div></div></div>`;
+  const chip=(v,l)=>`<button class="sel${f===v?' on':''}" onclick="S.nkLoc='${v}';S.nkPg=0;render()">${l}</button>`;
+  const soLuong=v=>v==null?'<span class="muted">—</span>':num(v);
+  const nPg=Math.max(1,Math.ceil(list.length/PER)),pg=Math.min(S.nkPg||0,nPg-1);
+  const rows=list.slice(pg*PER,pg*PER+PER).map(x=>{
+    const t=NK_TT[x.trang_thai]||{l:x.trang_thai,c:'grey'};
+    const dai=x.ket_thuc?Math.max(0,Math.round((new Date(x.ket_thuc)-new Date(x.bat_dau))/1000)):null;
+    return`<tr>
+      <td class="muted" style="white-space:nowrap">${esc(fmtDT(x.bat_dau))}</td>
+      <td class="name">${esc(NK_LOAI[x.loai]||x.loai)}</td>
+      <td>${esc(x.khoang||'')}</td>
+      <td class="num">${soLuong(x.luot_tim)}</td><td class="num">${soLuong(x.luot_them)}</td>
+      <td class="num">${x.miss_go==null&&x.miss_soat==null?'<span class="muted">—</span>':`${x.miss_go==null?'—':num(x.miss_go)}<span class="muted"> / ${num(x.miss_soat)}</span>`}</td>
+      <td class="num">${soLuong(x.so_cham)}</td>
+      <td class="num">${dai==null?'<span class="muted">—</span>':dai<60?dai+' giây':(dai/60).toFixed(1).replace('.',',')+' phút'}</td>
+      <td><span class="vb" style="background:var(--${t.c}-bg);color:var(--${t.c})">${t.l}</span>${x.loi?`<div style="font-size:11px;color:var(--bad);margin-top:3px;max-width:340px">${esc(x.loi)}</div>`:''}</td>
+      <td class="c">${x.lien_ket?`<a href="${esc(x.lien_ket)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td></tr>`;}).join('');
+  return`<div class="top"><div class="title">Nhật ký chạy</div>
+      <div class="right"><span class="badge">14 ngày gần nhất</span><button class="sel" onclick="reload()" title="Tải lại">↺</button></div></div>
+    ${ngung?`<div class="box" style="background:var(--bad-bg);color:var(--bad);margin:0 0 12px;font-weight:700">Đã hơn 90 phút không có lượt kéo tin nào${keoCuoi?` (lượt cuối ${esc(phutTruoc(keoCuoi.bat_dau))})`:''} — lịch kéo có thể đang ngừng.</div>`:''}
+    <div class="kpi-row">
+      ${kpi('Lượt chạy hôm nay',num(nk.filter(x=>isoDay(new Date(x.bat_dau))===homNay).length),`${num(nk.filter(x=>x.loai!=='cham'&&isoDay(new Date(x.bat_dau))===homNay).length)} kéo tin · ${num(nk.filter(x=>x.loai==='cham'&&isoDay(new Date(x.bat_dau))===homNay).length)} chấm`,'info','inbox')}
+      ${kpi('Lượt lỗi 7 ngày',num(nk.filter(x=>x.trang_thai==='loi'&&new Date(x.bat_dau)>=tuan).length),'bấm "Chỉ lỗi" để xem','bad','sai')}
+      ${kpi('Lượt kéo gần nhất',keoCuoi?esc(fmtDT(keoCuoi.bat_dau)):'—',keoCuoi?`${(NK_TT[keoCuoi.trang_thai]||{}).l||''} · ${phutTruoc(keoCuoi.bat_dau)}`:'chưa có',ngung?'bad':'ok','muon')}
+    </div>
+    <div class="bar">${chip('all','Tất cả')}${chip('keo','Kéo tin')}${chip('cham','Chấm')}${chip('loi','Chỉ lỗi')}
+      <div class="right">${chamCuoi?`<span class="badge">Chấm gần nhất ${esc(fmtDT(chamCuoi.bat_dau))}</span>`:''}</div></div>
+    <div class="card scroll"><table style="min-width:1000px">
+      <thead><tr><th>Thời gian</th><th>Loại</th><th>Khoảng</th><th class="num">Tìm thấy</th><th class="num">Thêm mới</th><th class="num">Gỡ miss / soát</th><th class="num">Chấm</th><th class="num">Thời lượng</th><th>Trạng thái</th><th class="c">GitHub</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="10" class="muted" style="padding:24px;text-align:center">Chưa có lượt chạy nào được ghi</td></tr>'}</tbody></table>
+      ${nPg>1?`<div class="more" style="display:flex;gap:6px;justify-content:center">${Array.from({length:nPg},(_,i)=>`<button class="btn${i===pg?' on':''}" onclick="S.nkPg=${i};render()">${i+1}</button>`).join('')}</div>`:''}
+    </div>`;
+}
+
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
   return`<div class="top"><div class="title">Logic xử lý dữ liệu</div></div>
@@ -605,7 +658,7 @@ async function changeCode(){
   {const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-6);S.from=isoDay(t);}
   if(!S.ma){renderGate();return;}
   document.getElementById('app').innerHTML='<div class="muted" style="padding:60px;text-align:center">Đang tải…</div>';
-  try{await load();render();}catch(e){if(e.status===403){ls.del(LS_MA);S.ma='';}renderGate(e.status===403?'Mã đã đổi, nhập lại':e.message);}
+  try{await load();await taiNhatKy();render();}catch(e){if(e.status===403){ls.del(LS_MA);S.ma='';}renderGate(e.status===403?'Mã đã đổi, nhập lại':e.message);}
 })();
 </script>
 </body>

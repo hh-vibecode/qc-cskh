@@ -15,12 +15,14 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
   `curl -s "${H[@]}" "$U/product_faq?select=category,subcategory,question,answer&or=(question.ilike.*TỪ_KHOÁ*,answer.ilike.*TỪ_KHOÁ*)&limit=5"`
 - Ghi kết quả chấm: tạo file `kq.json` = `{"p_ma":"<MA_CHAM>","p_rows":[{"id":..,"verdict":..,"severity":..,"issue":..,"suggestion":..,"source_faq":..}]}` rồi `curl -s "${H[@]}" -X POST $U/rpc/qc_ghi_cham -d @kq.json`. Kết quả trả về `{"ghi":n,"gui":m}`; nếu có `"loi"` thì sửa đúng dòng lỗi rồi gửi lại.
 - Ghi soát miss: `{"p_ma":..,"p_rows":[{"id":..,"verdict":"khong_lien_quan"|"giu","issue":"1 câu vì sao (với khong_lien_quan)"}]}` → `$U/rpc/qc_ghi_soat_miss`.
+- Ghi nhật ký lượt chạy (BẮT BUỘC, 1 lần ở cuối — anh xem ở Cài đặt › Nhật ký chạy): `{"p_ma":..,"p_so_cham":<số dòng đã ghi chấm>,"p_so_soat":<số miss đã soát>,"p_ghi_chu":"1 dòng: vd 12 đúng · 3 thiếu · 1 sai","p_loi":null}` → `$U/rpc/qc_ghi_nhat_ky_cham`. Gặp lỗi làm dừng giữa chừng (CSDL trả lỗi, mã chấm sai…) thì vẫn gọi với `p_loi` = mô tả lỗi ngắn (không chứa mã / khoá).
 - KHÔNG in `MA_CHAM` ra màn hình hay vào tóm tắt. Dùng python3 hoặc jq để dựng JSON cho đúng (có dấu tiếng Việt, ngoặc kép).
 
 ## Quy trình
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
-3. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
+3. Ghi nhật ký lượt chạy (lệnh ở trên) — kể cả khi lô rỗng (0 dòng) hoặc bị lỗi.
+4. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
 
 ## Luật chấm (anh Hải đã chốt — theo đúng)
 - **dung**: trả lời đúng, đủ ý khách hỏi · mẫu trả lời chung cho câu hỏi chung · câu hỏi phân loại ("dùng cho gia đình hay nhập sỉ?"), hỏi ngân sách, hỏi kích thước · chuyển khách sang inbox / Zalo · gửi bảng giá mẫu, hậu cần đơn, cảm ơn.

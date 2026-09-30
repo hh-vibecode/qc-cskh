@@ -14,6 +14,9 @@
 
 ## Người dùng & cách làm việc
 - Làm bằng **tiếng Việt**, gọi người dùng là **anh** (anh Hải). Mọi thứ Claude tạo (file, commit, trang) ký **Monsieur Claude**.
+- **MINH BẠCH TUYỆT ĐỐI (anh chốt 30/9/2026):** anh rất fair, không quan tâm Claude làm sai nhiều hay gặp vấn đề — điều anh cần
+  là **không giấu giếm**. Luôn trình bày đầy đủ: lỗi mình đã gây ra (kể cả đã sửa), rủi ro / threat tiềm tàng, chỗ chưa chắc, chỗ
+  đang tạm bợ, số liệu chưa kiểm được. Không tô hồng, không giảm nhẹ, không để anh tự phát hiện. "Cùng nhau giải quyết."
 - **Tự làm, không giao việc cho anh**: chạy SQL, deploy, cấu hình được thì tự làm rồi báo. Chỉ nhờ anh khi thật sự bị chặn (quyền, đăng nhập tài khoản của anh, quyết nghiệp vụ) và nói rõ vì sao.
 - Anh đã chốt thì LÀM, đừng hỏi lại. Việc định kỳ tự làm không hỏi (anh cấp quyền lâu dài 28/9).
 - Tồn > ~50 dòng cần Sonnet chấm → **chia 2–3 agent `cham-qc` song song ngay từ đầu** (theo khoảng ngày, hoặc 1 đi cũ→mới + 1 đi mới→cũ), lô 40.

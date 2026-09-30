@@ -135,6 +135,30 @@ function tachLuot(page, c, msgs, userMap) {
   return out;
 }
 
+// ── NHẬT KÝ CHẠY (anh Hải 30/9: "ghi lại lịch xử lý m kéo, cái nào kéo lỗi t còn biết để hỏi") ──────────────
+// Mỗi lượt 1 dòng ở qc_nhat_ky_chay → trang Cài đặt › Nhật ký chạy. Ghi nhật ký lỗi thì bỏ qua, KHÔNG làm hỏng lượt kéo.
+const NK = { id: null, s: {} };
+const LIEN_KET = process.env.GITHUB_RUN_ID
+  ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : null;
+const HNK = { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json' };
+const gioVN = d => new Date(d.getTime() + 7 * 36e5).toISOString().slice(5, 16).replace('T', ' ').replace(/^(\d\d)-(\d\d)/, '$2/$1');
+async function nkMo(khoang) {
+  if (DRY) return;
+  try {
+    const r = await fetch(`${SB}/rest/v1/qc_nhat_ky_chay`, { method: 'POST', headers: { ...HNK, Prefer: 'return=representation' },
+      body: JSON.stringify({ loai: CHE_DO === 'moc' ? 'keo-gio' : (LIEN_KET ? 'keo-quet' : 'keo-tay'), khoang, lien_ket: LIEN_KET }) });
+    NK.id = (await r.json())?.[0]?.id || null;
+  } catch (e) { console.log('(không ghi được nhật ký:', e.message + ')'); }
+}
+async function nkDong(trang_thai, loi) {
+  if (DRY || !NK.id) return;
+  try {
+    await fetch(`${SB}/rest/v1/qc_nhat_ky_chay?id=eq.${NK.id}`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
+      body: JSON.stringify({ ...NK.s, trang_thai, loi: loi ? String(loi).slice(0, 1000) : null, ket_thuc: new Date().toISOString() }) });
+    await fetch(`${SB}/rest/v1/qc_nhat_ky_chay?bat_dau=lt.${new Date(Date.now() - 90 * 864e5).toISOString()}`, { method: 'DELETE', headers: HNK });
+  } catch (e) { console.log('(không ghi được nhật ký:', e.message + ')'); }
+}
+
 (async () => {
   if (CHE_DO === 'moc') {
     const r = await rest('GET', `qc_cau_hinh?select=gia_tri&khoa=eq.${encodeURIComponent(KHOA_MOC)}`);
@@ -142,8 +166,11 @@ function tachLuot(page, c, msgs, userMap) {
     tuUtc = new Date(moc.getTime() - 30 * 6e4);
     console.log(`Chế độ MỐC: kéo hội thoại khách nhắn từ ${tuUtc.toISOString()} (mốc lượt trước ${moc.toISOString()})${DRY ? ' · THỬ (không ghi)' : ''}`);
   } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
+  await nkMo(CHE_DO === 'moc' ? `từ ${gioVN(tuUtc)}` : (FROM === TO ? FROM.split('-').reverse().slice(0, 2).join('/') : `${FROM} → ${TO}`));
   const pages = (await pk('/pages'))?.categorized?.activated || [];
   console.log('pages:', pages.length);
+  if (!pages.length) throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
+  NK.s.so_page = pages.length;
   const pairs = [], dem = {};
   for (const p of pages) {
     const userMap = {};
@@ -190,6 +217,7 @@ function tachLuot(page, c, msgs, userMap) {
   }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
   console.log(`Tổng ${pairs.length} lượt:`, theoV);
+  NK.s.luot_tim = pairs.length;
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(pairs, null, 1));
   if (DRY) return;
 
@@ -218,6 +246,7 @@ function tachLuot(page, c, msgs, userMap) {
     co.add(k1); co.add(k2); return true;
   }).map(({ _rep_at, ...x }) => x);
   for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
+  NK.s.luot_them = moi.length; NK.s.miss_cap_nhat = capNhat.length;
   console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
   // Soát lại các dòng MISS còn mở với Pancake thật (anh Hải 30/9: "lúc kéo thì phải xem lại các data miss, họ clear xong
   // rồi thì clear hết"). Sale trả lời bổ sung (dù muộn) / nhắn riêng cho khách bình luận → gỡ khỏi miss, chuyển chấm nội dung,
@@ -238,10 +267,12 @@ function tachLuot(page, c, msgs, userMap) {
     await sleep(150);
   }
   console.log(`Soát ${misses.length} dòng miss (${soatNgay} ngày gần nhất): gỡ ${go} dòng Sale đã trả lời`, demS);
+  NK.s.miss_soat = misses.length; NK.s.miss_go = go;
 
   if (CHE_DO === 'moc') {   // lưu mốc = lúc lượt này BẮT ĐẦU (tin tới trong lúc chạy sẽ được lượt sau lấy)
     const r = await fetch(`${SB}/rest/v1/qc_cau_hinh`, { method: 'POST', body: JSON.stringify({ khoa: KHOA_MOC, gia_tri: BAT_DAU.toISOString() }),
       headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
     console.log('mốc mới:', BAT_DAU.toISOString(), r.ok ? 'ok' : 'LỖI ' + r.status + ' ' + (await r.text()).slice(0, 200));
   }
-})().catch(e => { console.error('LỖI', e.message); process.exit(1); });
+  await nkDong('thanh_cong');
+})().catch(async e => { console.error('LỖI', e.message); await nkDong('loi', e.message); process.exit(1); });
