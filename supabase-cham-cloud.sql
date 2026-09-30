@@ -73,22 +73,24 @@ begin
   return jsonb_build_object('ghi', n, 'gui', jsonb_array_length(p_rows));
 end $$;
 
--- Ghi soát miss: p_rows = [{id, verdict: 'khong_lien_quan'|'giu', issue?}]
+-- Ghi soát miss: p_rows = [{id, verdict: 'khong_lien_quan'|'giu'|'cham', issue?}]
+-- 'cham' (thêm 30/9, báo sai #35): Sale ĐÃ tiếp khách, tin cuối chưa đáp không phải câu hỏi mới → không phải miss,
+-- chuyển về chua_cham để chấm nội dung (Sale có hỏi lại / bỏ lửng không).
 create or replace function public.qc_ghi_soat_miss(p_ma text, p_rows jsonb) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare n int;
 begin
   perform qc_chan_cham(p_ma);
-  if exists (select 1 from jsonb_array_elements(p_rows) e where coalesce(e->>'verdict','') not in ('khong_lien_quan','giu')) then
-    return jsonb_build_object('ghi', 0, 'loi', 'verdict chỉ nhận khong_lien_quan | giu');
+  if exists (select 1 from jsonb_array_elements(p_rows) e where coalesce(e->>'verdict','') not in ('khong_lien_quan','giu','cham')) then
+    return jsonb_build_object('ghi', 0, 'loi', 'verdict chỉ nhận khong_lien_quan | giu | cham');
   end if;
   with v as (select * from jsonb_to_recordset(p_rows) as x(id bigint, verdict text, issue text))
   update sale_response_review s set
-    verdict = case when v.verdict = 'khong_lien_quan' then 'khong_lien_quan' else s.verdict end,
-    severity = case when v.verdict = 'khong_lien_quan' then null else s.severity end,
-    issue = case when v.verdict = 'khong_lien_quan' then coalesce(v.issue, 'Tin tương tác, không phải khách hỏi mua') else s.issue end,
-    suggestion = case when v.verdict = 'khong_lien_quan' then null else s.suggestion end,
-    cham_boi = 'sonnet', reviewed_at = now()
+    verdict = case v.verdict when 'khong_lien_quan' then 'khong_lien_quan' when 'cham' then 'chua_cham' else s.verdict end,
+    severity = case when v.verdict in ('khong_lien_quan','cham') then null else s.severity end,
+    issue = case v.verdict when 'khong_lien_quan' then coalesce(v.issue, 'Tin tương tác, không phải khách hỏi mua') when 'cham' then null else s.issue end,
+    suggestion = case when v.verdict in ('khong_lien_quan','cham') then null else s.suggestion end,
+    cham_boi = case when v.verdict = 'cham' then null else 'sonnet' end, reviewed_at = now()
   from v where s.id = v.id and s.verdict in ('khong_tra_loi','chi_bot') and s.cham_boi is null;
   get diagnostics n = row_count;
   return jsonb_build_object('ghi', n, 'gui', jsonb_array_length(p_rows));

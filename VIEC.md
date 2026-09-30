@@ -16,6 +16,7 @@
 - **Không tài khoản:** trang vào bằng **1 mã truy cập chung** (vì trang public trên github.io mà dữ liệu có SĐT + chat khách). Mã lưu dạng băm trong `qc_cau_hinh`, đổi được ngay trên trang (nút "Đổi mã").
 - **Chấm:** vẫn Claude chấm tay theo luật + FAQ, nhưng chạy bằng **Sonnet** cho rẻ → agent `.claude/agents/cham-qc.md` (`model: sonnet`). Bảo "chấm" thì giao agent này.
 - **Domain:** `hh-vibecode.github.io/qc-cskh`. Repo public (gói GitHub free chỉ bật Pages cho repo public; repo không chứa khoá hay dữ liệu).
+- **Sale có mã truy cập (anh chốt 30/9, câu E5 cũ):** Sale ("Lệ", "ngọc vân") đang vào trang và báo sai — anh: "auke r, không cần xử lý gì". KHÔNG đổi mã, không coi là lộ. Báo sai của Sale vẫn soát bằng dữ liệu thật (người báo có thể là chính Sale bị chấm).
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -27,7 +28,6 @@
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
 | E7 | **Nhắn bù rất muộn:** 30/9 15h–16h Sale **Vân Ngọc** nhắn inbox 47 khách bình luận bị miss từ 1/9–29/9 (muộn 22–700 giờ, tin mẫu chào + bảng giá; Tự Tại Viên 15, Thời Đại 30, Hiền Thủy 2) → lượt quét 17:11 gỡ khỏi miss theo luật "Sale nhắn sau thì gỡ". Nhắn bù sau vài tuần có nên vẫn tính miss không? Em đề xuất: muộn > 24 giờ vẫn giữ miss, ghi chú "đã nhắn bù sau N ngày" | chờ anh chốt; 48 dòng nhận ra được qua nhãn "Bình luận → tư vấn qua tin nhắn (Sale nhắn sau …)", sao lưu 30/9 17h |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
-| E5 | Người báo sai 30/9 ký tên **"Lệ"** (26 báo). Theo sổ, Phạm Thị Lệ là Sale đội Lẻ; trong dữ liệu 29/9 còn có tin nội bộ "e share c cái báo cáo này để nhắc các b đỡ miss tn" — báo cáo QC có đang được chia cho nhân sự không? (anh chốt 28/9: luồng ngầm, chỉ anh + GĐ) | anh xác nhận; cần thì em đổi mã truy cập |
 
 ## 2. CLAUDE ĐANG NỢ
 
@@ -37,6 +37,7 @@
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 9 | Đưa **tầng luật** vào job `keo-tin.yml` (soát miss ĐÃ đưa vào 30/9 qua `tools/soat-lib.js`) — cần viết lại `cham-luat.js` chạy bằng khoá `qc_cskh` (REST) thay Management API | để chấm cloud đỡ tốn |
+| 12 | **Soát lại dòng `thieu` gần đây với Pancake** (như soát miss): 10/26 báo sai của Lệ 30/9 là "Sale đã tư vấn bổ sung" — chấm lúc hội thoại còn dở, sau đó Sale nói tiếp. Lượt kéo nên kéo lại đoạn mới của dòng `thieu` ≤ 3 ngày có tin Sale mới → trả về chờ chấm | bài học báo sai 30/9 |
 | 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
@@ -175,6 +176,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **30/09/2026** — Rà 34 báo sai → ghi bài học vào luật (cả `cham-qc.md` + `routine/cham-cloud.md`): chê bai/mỉa mai → không liên quan (#34); Sale đã tiếp mà tin cuối khó hiểu → không phải miss, soát miss có thêm kết luận `cham` (hàm `qc_ghi_soat_miss` + `ghi-cham.js`, đã áp CSDL, thử: nhận 'cham', từ chối verdict lạ) (#35); đang khai thác nhu cầu → đúng, nhưng hỏi chung chung nhiều ngày khi khách đã chỉ rõ món → thiếu (#13–15 vs #17). Còn phụ thuộc E2: #20, #26. Việc mới #12 (soát lại thiếu gần đây). E5 anh chốt: không xử lý.
 - **30/09/2026** — Anh bảo kéo nhanh 1 lượt: quét 30/9 lúc 17:11 (295 giây) — tìm 73 lượt, thêm 6; soát 84 miss 30 ngày, gỡ 51 (48 do Vân Ngọc nhắn bù 15h–16h cùng ngày → câu E7). Báo sai #34 (bình luận chê bai → không liên quan) và #35 (không phải miss, Sale đã chào; chấm thiếu mức thấp vì bỏ lửng câu khó hiểu) đã đóng — cả 2 do "ngọc vân" báo, tức người có mã truy cập trang (thêm cho E5). `qc_ghi_nhat_ky_cham` bỏ dòng trùng trong 5 phút (lịch chấm 16:53 ghi 2 lần).
 - **30/09/2026** — **Nhật ký chạy** (anh yêu cầu): bảng `qc_nhat_ky_chay` + RPC `qc_ds_nhat_ky` / `qc_ghi_nhat_ky_cham`; `scripts/keo-tin.js` ghi mở/đóng mỗi lượt (token Pancake hết hạn → lỗi ghi rõ thay vì chạy rỗng); `routine/cham-cloud.md` thêm bước ghi nhật ký; trang Cài đặt › Nhật ký chạy. Kiểm: RPC ghi bằng anon + mã chấm 204, sai mã 403, anon đọc thẳng bảng 401; trang đọc được dòng thử (đã xoá); dựng trang với dữ liệu mẫu (thành công / lỗi / chấm) không lỗi JS. Ghi quy tắc **minh bạch tuyệt đối** vào CLAUDE.md + mục 6.
 - **30/09/2026** — **Chuyển hẳn kéo tin sang QC:** đối chiếu 29/9 job mới bắt 43/45 lượt job cũ (2 lượt lệch là bài đăng của page) + 27 lượt job cũ bỏ sót → job QC ghi thẳng `sale_response_review` (workflow `BANG`), đưa lượt ở `qc_review_thu` sang bảng chính (hôm nay 56 lượt lên trang), nối mốc. Anh chốt: **lúc kéo phải soát lại miss, Sale trả lời bổ sung thì gỡ miss** → job mỗi giờ soát miss 3 ngày (6h20: 30 ngày), thư viện `tools/soat-lib.js`. Soát toàn bộ 126 miss: gỡ 31 (Sale trả lời muộn tới 324 giờ — phần lớn trả lời bổ sung hôm nay sau khi xem báo cáo), còn 95 miss thật. 26 báo sai của "Lệ" đã đóng (16 miss → gỡ; 10 thiếu ý → kéo lại hội thoại có phần bổ sung, chấm lại). Bỏ nhãn "muộn" cho trả lời < 1 giờ (4 dòng).

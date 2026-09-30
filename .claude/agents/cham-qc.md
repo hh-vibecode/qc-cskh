@@ -40,8 +40,10 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
    - `khong_lien_quan`: KHÔNG hỏi mua — khen ảnh đẹp, tag bạn bè, sticker/emoji, lời khấn, người rao bán / chào dịch vụ, tin mẫu của chính page, nhân viên nội bộ, spam.
    - **Người bán lại / đại lý / cửa hàng xin báo giá, xin mẫu ở page SỈ là KHÁCH MUA SỈ** → không bao giờ `khong_lien_quan` (28/9 đã loại nhầm chị Nhung "E báo giá luôn cho c nhé!" #2350, #2413). Chỉ loại khi họ CHÀO BÁN dịch vụ / hàng của họ cho mình.
    - `giu`: có bất kỳ ý hỏi mua nào (giá, mẫu, chất liệu, kích thước, còn hàng, xin ảnh, xin số, "em mua…") → miss thật, giữ nguyên.
+   - **Chê bai / mỉa mai / nghi ngờ không kèm ý mua** ("có tác dụng gì mua phí", "phí tiền", "mê tín", "lừa đảo") → `khong_lien_quan` (báo sai #34, 30/9). Nhưng hỏi công dụng lịch sự ("tượng này thờ có tác dụng gì ạ", "để ở đâu") là khách hỏi thật → `giu`.
+   - `cham`: Sale **ĐÃ tiếp khách** trong đoạn (chào, hỏi nhu cầu, gửi mẫu, trả lời câu trước) và tin cuối chưa được đáp **không phải câu hỏi mới rõ ràng** (câu khó hiểu do gõ sai / đọc giọng nói, chỉ gửi ảnh) → KHÔNG phải miss, chuyển về chấm nội dung. (Báo sai #35, 30/9: job ghi "không ai trả lời kể cả bot" dù Sale đã chào + hỏi mẫu.) Khi chấm nội dung ca này: Sale không hỏi lại / không xin số → `thieu` mức `thap`.
    - Phân vân → `giu` (thà báo miss còn hơn giấu miss).
-   Ghi bằng `"$N" tools/ghi-cham.js <file.json> --soat-miss` (chạy `--thu` trước). File: `[{id, verdict: "khong_lien_quan"|"giu", issue?}]` — `issue` với khong_lien_quan là 1 câu ngắn vì sao.
+   Ghi bằng `"$N" tools/ghi-cham.js <file.json> --soat-miss` (chạy `--thu` trước). File: `[{id, verdict: "khong_lien_quan"|"giu"|"cham", issue?}]` — `issue` với khong_lien_quan là 1 câu ngắn vì sao.
 4. Ghi kết quả ra file JSON `[{id, verdict, severity, issue, suggestion, source_faq}]`, chạy `--thu`, rồi ghi thật.
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 
@@ -65,6 +67,8 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
   - "PANCAKE THT HOLDING", "Sales Admin" là tài khoản DÙNG CHUNG: không dùng làm tên Sale, nhưng tin viết tay có ngữ cảnh gửi từ tài khoản này VẪN là người thật trả lời, chấm theo nội dung (28/9 đã chấm oan 3 dòng `chi_bot` vì lý do này). Chỉ "Botcake" / "Hệ thống" mới chắc chắn là máy.
 - Khách nhắn sticker, 👍, "ok / vâng / cảm ơn" thì không cần Sale trả lời.
 - "Khách" là **nhân viên nội bộ** (chat nội bộ, gửi báo cáo công việc NVBH, đăng bài) → `khong_lien_quan`. Đã biết: Đức Tuấn + Đinh Ngọc Diệp (Chánh Tâm, SĐT 0973763458).
+- **Đang khai thác nhu cầu** (bài học báo sai 30/9): Sale hỏi lại 1 lần cho rõ (mẫu nào, kích thước, ngân sách, xin ảnh) và khách chưa trả lời → `dung`, KHÔNG chấm thiếu vì "chưa báo giá". Nhưng khách đã chỉ rõ món (vd "full bộ này" dưới bài quảng cáo, gửi ảnh) mà Sale cứ hỏi chung chung "đang quan tâm gì" nhiều lượt, nhiều ngày không báo giá → `thieu` (báo sai #17 giữ thiếu).
+- Khách nhắn khó hiểu (gõ sai / đọc giọng nói) sau khi Sale đã tiếp → không phải miss; Sale không hỏi lại / xin số → `thieu` `thap`.
 - Page Sỉ luôn hỏi "gia đình hay nhập sỉ". Khách trả lời gia đình hoặc "thỉnh về an vị tại gia" là khách lẻ, tư vấn như khách lẻ là đúng.
 
 ## Bình luận → tư vấn qua tin nhắn (anh Hải chốt 28/9, ca Harri)

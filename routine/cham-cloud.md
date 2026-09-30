@@ -14,7 +14,7 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 - Tra FAQ (CHỈ khi câu hỏi là kiến thức sản phẩm), theo từ khoá không dấu hoặc có dấu:
   `curl -s "${H[@]}" "$U/product_faq?select=category,subcategory,question,answer&or=(question.ilike.*TỪ_KHOÁ*,answer.ilike.*TỪ_KHOÁ*)&limit=5"`
 - Ghi kết quả chấm: tạo file `kq.json` = `{"p_ma":"<MA_CHAM>","p_rows":[{"id":..,"verdict":..,"severity":..,"issue":..,"suggestion":..,"source_faq":..}]}` rồi `curl -s "${H[@]}" -X POST $U/rpc/qc_ghi_cham -d @kq.json`. Kết quả trả về `{"ghi":n,"gui":m}`; nếu có `"loi"` thì sửa đúng dòng lỗi rồi gửi lại.
-- Ghi soát miss: `{"p_ma":..,"p_rows":[{"id":..,"verdict":"khong_lien_quan"|"giu","issue":"1 câu vì sao (với khong_lien_quan)"}]}` → `$U/rpc/qc_ghi_soat_miss`.
+- Ghi soát miss: `{"p_ma":..,"p_rows":[{"id":..,"verdict":"khong_lien_quan"|"giu"|"cham","issue":"1 câu vì sao (với khong_lien_quan)"}]}` → `$U/rpc/qc_ghi_soat_miss`.
 - Ghi nhật ký lượt chạy (BẮT BUỘC, 1 lần ở cuối — anh xem ở Cài đặt › Nhật ký chạy): `{"p_ma":..,"p_so_cham":<số dòng đã ghi chấm>,"p_so_soat":<số miss đã soát>,"p_ghi_chu":"1 dòng: vd 12 đúng · 3 thiếu · 1 sai","p_loi":null}` → `$U/rpc/qc_ghi_nhat_ky_cham`. Gặp lỗi làm dừng giữa chừng (CSDL trả lỗi, mã chấm sai…) thì vẫn gọi với `p_loi` = mô tả lỗi ngắn (không chứa mã / khoá).
 - KHÔNG in `MA_CHAM` ra màn hình hay vào tóm tắt. Dùng python3 hoặc jq để dựng JSON cho đúng (có dấu tiếng Việt, ngoặc kép).
 
@@ -34,12 +34,16 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
   - **Người bán lại / đại lý / cửa hàng xin báo giá ở page SỈ là KHÁCH MUA SỈ** — không bao giờ khong_lien_quan.
 - **chi_bot / khong_tra_loi**: "câu trả lời" thực ra chỉ là tin bot / hệ thống ("X replied to a post", "đã trả lời tin nhắn chào mừng tự động", lời chào tự động khi bấm quảng cáo "Xin chào X, bạn đang tìm mẫu…") → chi_bot; không ai trả lời → khong_tra_loi. Xét theo NỘI DUNG: "PANCAKE THT HOLDING", "Sales Admin" là tài khoản dùng chung nhưng tin viết tay có ngữ cảnh từ đó VẪN là người thật trả lời. Chỉ "Botcake" / "Hệ thống" chắc chắn là máy.
 - Sticker, 👍, "ok / vâng / cảm ơn" không cần trả lời.
+- **Đang khai thác nhu cầu** (báo sai 30/9): Sale hỏi lại 1 lần cho rõ (mẫu nào, kích thước, ngân sách, xin ảnh) và khách chưa trả lời → dung, không chấm thiếu vì "chưa báo giá". Nhưng khách đã chỉ rõ món (vd "full bộ này" dưới quảng cáo, gửi ảnh) mà Sale cứ hỏi chung chung nhiều lượt, nhiều ngày không báo giá → thieu.
+- Khách nhắn khó hiểu (gõ sai / đọc giọng nói) sau khi Sale đã tiếp → không phải miss; Sale không hỏi lại / không xin số → thieu mức thap.
 - Page Sỉ luôn hỏi "gia đình hay nhập sỉ"; khách trả lời gia đình / "thỉnh về an vị tại gia" là khách lẻ.
 - **Dòng có `issue` bắt đầu "Bình luận → tư vấn qua tin nhắn…"**: bình luận mà Sale đã nhắn riêng cho khách; `thread` ghép bình luận + tin nhắn. Chấm Sale tư vấn tới đâu: dung = trả lời đúng câu khách hỏi hoặc dẫn tới bước chốt hợp lý (xin SĐT/Zalo, khách đồng ý); thieu = né câu hỏi giá/mẫu cụ thể rồi bỏ lửng, khách nhắn tiếp mà không trả lời. **Dòng có `issue` bắt đầu "Trả lời muộn…"**: Sale trả lời sau lúc kéo dữ liệu — chấm nội dung như thường. Với 2 loại này hệ thống TỰ giữ nhãn, bạn chỉ viết nhận xét.
 
 ## Soát miss (dòng khong_tra_loi / chi_bot)
 - `khong_lien_quan`: không hỏi mua — khen ảnh, tag bạn, sticker, lời khấn, rao bán / chào dịch vụ, tin mẫu của chính page, nội bộ, spam.
-- `giu`: có bất kỳ ý hỏi mua nào (giá, mẫu, chất liệu, kích thước, còn hàng, xin ảnh, xin số, "em mua…"). Phân vân → giu.
+- **Chê bai / mỉa mai / nghi ngờ không kèm ý mua** ("có tác dụng gì mua phí", "phí tiền", "mê tín", "lừa đảo") → `khong_lien_quan` (báo sai #34). Hỏi công dụng lịch sự ("tượng này thờ có tác dụng gì ạ") vẫn là khách hỏi → giu.
+- `cham`: Sale ĐÃ tiếp khách trong đoạn (chào, hỏi nhu cầu, gửi mẫu, trả lời câu trước) và tin cuối chưa đáp KHÔNG phải câu hỏi mới rõ ràng (khó hiểu do gõ sai / đọc giọng nói, chỉ gửi ảnh) → không phải miss, hệ thống chuyển về chờ chấm nội dung (báo sai #35: job ghi "không ai trả lời kể cả bot" dù Sale đã chào + hỏi mẫu).
+- `giu`: có bất kỳ ý hỏi mua nào (giá, mẫu, chất liệu, kích thước, còn hàng, xin ảnh, xin số, "em mua…") mà chưa ai đáp. Phân vân → giu.
 
 ## Cách ghi
 - thieu/sai BẮT BUỘC: `severity` = cao (mất khách / sai giá / sai chính sách) | trung | thap; `issue` 1–2 câu; `suggestion` = câu Sale gửi được ngay cho khách, xưng "em", gọi "anh/chị", ngắn; `source_faq` khi có dùng FAQ ("Danh mục / Mục con — câu hỏi").
