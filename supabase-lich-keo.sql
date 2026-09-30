@@ -35,7 +35,11 @@ revoke execute on function public.qc_keo_tin(date, date) from public, anon, auth
 -- 6h20 VN (23:20 UTC hôm trước): quét lại TRỌN ngày hôm qua (lưới an toàn).
 -- Mỗi giờ phút :25 (anh Hải 29/9: "kéo tin và chấm cùng lúc, mỗi giờ 1 lần"): p_tu/p_den = null → job chạy chế độ MỐC,
 -- chỉ kéo hội thoại khách nhắn từ lượt trước. Phiên chấm trên cloud chạy phút :50 cùng giờ.
+-- 2 lượt QUÉT LỚN mỗi ngày (anh Hải 30/9: "làm 2 luồng 6h-7h và 18h-19h"), mỗi lượt còn soát lại miss 60 ngày:
+--   6h20 VN (23:20 UTC hôm trước): kéo trọn HÔM QUA · 18h35 VN (11:35 UTC): kéo trọn HÔM NAY tới lúc đó.
 select cron.unschedule(jobid) from cron.job where jobname in ('qc-keo-6h', 'qc-keo-18h', 'qc-keo-gio');
 select cron.schedule('qc-keo-6h',  '20 23 * * *',
   $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date - 1, (now() at time zone 'Asia/Ho_Chi_Minh')::date - 1)$$);
+select cron.schedule('qc-keo-18h', '35 11 * * *',
+  $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date, (now() at time zone 'Asia/Ho_Chi_Minh')::date)$$);
 select cron.schedule('qc-keo-gio', '25 * * * *', $$select public.qc_keo_tin(null, null)$$);

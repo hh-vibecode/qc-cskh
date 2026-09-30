@@ -221,8 +221,9 @@ function tachLuot(page, c, msgs, userMap) {
   console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
   // Soát lại các dòng MISS còn mở với Pancake thật (anh Hải 30/9: "lúc kéo thì phải xem lại các data miss, họ clear xong
   // rồi thì clear hết"). Sale trả lời bổ sung (dù muộn) / nhắn riêng cho khách bình luận → gỡ khỏi miss, chuyển chấm nội dung,
-  // gắn nhãn "Trả lời muộn N giờ" (≥ 1 giờ) hoặc "Bình luận → tư vấn qua tin nhắn". Lượt mỗi giờ soát 3 ngày, lượt 6h20 soát 30 ngày.
-  const soatNgay = Number(process.env.SOAT_NGAY || (CHE_DO === 'moc' ? 3 : 30));
+  // gắn nhãn "Trả lời muộn N giờ" (≥ 1 giờ) hoặc "Bình luận → tư vấn qua tin nhắn". Lượt mỗi giờ soát 3 ngày; 2 lượt quét lớn
+  // 6h20 + 18h35 (chế độ KHOẢNG) soát 60 ngày (anh Hải 30/9: "tăng lên 60 ngày, làm 2 luồng 6h-7h và 18h-19h").
+  const soatNgay = Number(process.env.SOAT_NGAY || (CHE_DO === 'moc' ? 3 : 60));
   const misses = await rest('GET', `${BANG}?select=id,conv_id,conv_at,pancake_url,page_id,customer_name,verdict`
     + `&verdict=in.(khong_tra_loi,chi_bot)&conv_id=not.like.pzl_g_*&conv_at=not.is.null`
     + `&conv_date=gte.${vnDay(new Date(Date.now() - soatNgay * 864e5))}&order=conv_at&limit=500`);
