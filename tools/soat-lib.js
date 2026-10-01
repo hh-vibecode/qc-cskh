@@ -1,6 +1,6 @@
 // THƯ VIỆN SOÁT MISS VỚI PANCAKE — dùng chung cho tools/soat-miss-pancake.js (chạy tay) và scripts/keo-tin.js (job mỗi giờ).
 // Anh Hải 30/9/2026: "lúc kéo thì phải xem lại các data miss, họ clear xong rồi thì clear hết mấy cái tin nhắn miss".
-// soat(r) — r cần: conv_id, conv_at, pancake_url, customer_name, verdict. Trả về:
+// soat(r) — r cần: conv_id, conv_at (hoặc conv_date), pancake_url, customer_name, verdict. Trả về:
 //   { ket:'da_tra_loi', muon, sale, text, them }  Sale thật trả lời sau câu hỏi ngay trong hội thoại gốc (muộn N giờ)
 //   { ket:'qua_inbox',  muon, sale, text, them, url }  bình luận → Sale nhắn riêng cho CHÍNH khách đó ở inbox
 //   { ket:'miss_that' | 'khong_mo_duoc' | 'inbox_khong_thay' }
@@ -57,7 +57,8 @@ function taoSoat(pk, sleep) {
   async function soat(r) {
     const u = (r.pancake_url || '').match(/pancake\.vn\/([^?]+)\?c_id=(.+)$/);
     const pageId = r.page_id || (u ? u[1] : r.conv_id.split('_')[0]);
-    const hoi = utc(r.conv_at);
+    // dòng cũ thiếu conv_at (12 dòng 22–31/8) → lấy đầu ngày conv_date làm mốc, trước đây bị bỏ qua không soát
+    const hoi = r.conv_at ? utc(r.conv_at) : new Date(r.conv_date + 'T00:00:00+07:00');
     const g = await tinNhan(pageId, r.conv_id);             // luôn mở hội thoại GỐC theo conv_id
     if (!g) return { ket: 'khong_mo_duoc' };
     const rep = g.msgs.find(m => utc(m.inserted_at) > hoi && tinSale(m, pageId));
