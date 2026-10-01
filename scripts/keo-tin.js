@@ -158,6 +158,28 @@ async function nkDong(trang_thai, loi) {
     await fetch(`${SB}/rest/v1/qc_nhat_ky_chay?bat_dau=lt.${new Date(Date.now() - 90 * 864e5).toISOString()}`, { method: 'DELETE', headers: HNK });
   } catch (e) { console.log('(không ghi được nhật ký:', e.message + ')'); }
 }
+// Kênh kết nối (anh Hải 1/10): xanh = đọc được, đỏ = không đọc được → biết page / Zalo nào cần kết nối lại với Pancake.
+const loaiKenh = pl => /zalo/.test(pl || '') ? 'zalo' : /tiktok/.test(pl || '') ? 'tiktok' : /facebook/.test(pl || '') ? 'facebook' : (pl || 'khác');
+function kenhDong(p, kichHoat, trang_thai, ly_do, them = {}) {
+  const now = new Date().toISOString();
+  return { page_id: String(p.id), ten: p.name || null, kenh: loaiKenh(p.platform), kich_hoat: kichHoat, trang_thai, ly_do: ly_do || null,
+    lan_kiem: now, ...(trang_thai === 'ok' ? { lan_ok: now } : {}), ...them };
+}
+async function kenhGhi(rows) {
+  if (DRY || !rows.length) return;
+  try {   // tách 2 nhóm: dòng 'ok' có lan_ok, dòng 'loi' KHÔNG đụng lan_ok (giữ lần đọc được gần nhất)
+    for (const nhom of [rows.filter(r => r.lan_ok), rows.filter(r => !r.lan_ok)]) if (nhom.length)
+      await fetch(`${SB}/rest/v1/qc_kenh?on_conflict=page_id`, { method: 'POST', headers: { ...HNK, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(nhom) });
+  } catch (e) { console.log('(không ghi được trạng thái kênh:', e.message + ')'); }
+}
+async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page → mọi kênh đã biết chuyển đỏ
+  if (DRY) return;
+  try {
+    await fetch(`${SB}/rest/v1/qc_kenh?page_id=not.is.null`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
+      body: JSON.stringify({ trang_thai: 'loi', ly_do, lan_kiem: new Date().toISOString() }) });
+  } catch (e) { console.log('(không ghi được trạng thái kênh:', e.message + ')'); }
+}
 
 (async () => {
   if (CHE_DO === 'moc') {
@@ -167,17 +189,25 @@ async function nkDong(trang_thai, loi) {
     console.log(`Chế độ MỐC: kéo hội thoại khách nhắn từ ${tuUtc.toISOString()} (mốc lượt trước ${moc.toISOString()})${DRY ? ' · THỬ (không ghi)' : ''}`);
   } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
   await nkMo(CHE_DO === 'moc' ? `từ ${gioVN(tuUtc)}` : (FROM === TO ? FROM.split('-').reverse().slice(0, 2).join('/') : `${FROM} → ${TO}`));
-  const pages = (await pk('/pages'))?.categorized?.activated || [];
+  const pj = await pk('/pages');
+  const pages = pj?.categorized?.activated || [];
   console.log('pages:', pages.length);
-  if (!pages.length) throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
+  if (!pages.length) {
+    await kenhDoTatCa('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn');
+    throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
+  }
+  const KENH = new Map();   // trạng thái từng kênh lượt này → qc_kenh (Cài đặt › Nhật ký chạy)
+  for (const p of pj?.categorized?.inactivated || [])
+    KENH.set(String(p.id), kenhDong(p, false, 'loi', 'Pancake đang TẮT kênh này (không kích hoạt) — không đọc được'));
   NK.s.so_page = pages.length;
   const pairs = [], dem = {};
   for (const p of pages) {
     const userMap = {};
     ((await pk(`/pages/${p.id}/users`))?.users || []).forEach(u => userMap[u.id] = u.name);
-    let count = 0, lastId = null, cuLien = 0, lay = [];
+    let count = 0, lastId = null, cuLien = 0, lay = [], docDuoc = null, moiNhat = null;
     for (let b = 0; b < 60 && cuLien < 2; b++) {
       const d = await pk(`/pages/${p.id}/conversations${count ? `?current_count=${count}${lastId ? `&last_conversation_id=${encodeURIComponent(lastId)}` : ''}` : ''}`);
+      if (b === 0) { docDuoc = !!(d && Array.isArray(d.conversations)); moiNhat = d?.conversations?.[0]?.updated_at || null; }
       const cs = d?.conversations || [];
       if (!cs.length) break;
       let moi = 0;
@@ -191,6 +221,12 @@ async function nkDong(trang_thai, loi) {
       await sleep(150);
     }
     lay = [...new Map(lay.map(c => [c.id, c])).values()];
+    {
+      const lyDo = !docDuoc ? 'Pancake trả lỗi khi đọc hội thoại — có thể mất kết nối / hết quyền, cần kết nối lại'
+        : p.connected === false ? 'Pancake báo kênh MẤT KẾT NỐI (connected = false) — cần kết nối lại'
+        : p.need_fix_webhook ? 'Pancake báo cần sửa webhook — tin mới có thể không về' : null;
+      KENH.set(String(p.id), kenhDong(p, true, lyDo ? 'loi' : 'ok', lyDo, { tin_moi_nhat: moiNhat ? utc(moiNhat).toISOString() : null, so_hoi_thoai: lay.length }));
+    }
     let n = 0;
     for (const c of lay) {
       const custId = c.customers?.[0]?.id;
@@ -215,6 +251,13 @@ async function nkDong(trang_thai, loi) {
     dem[p.name] = n;
     console.log(`${p.name}: ${lay.length} hội thoại khách nhắn (quét ${count}) → ${n} lượt`);
   }
+  await kenhGhi([...KENH.values()]);
+  const doK = [...KENH.values()].filter(k => k.trang_thai === 'loi');
+  console.log(`Kênh: ${KENH.size - doK.length} đọc được, ${doK.length} không đọc được`, doK.map(k => k.ten).join(' · '));
+  if (!DRY) try {   // kênh từng có mà lượt này Pancake không trả về nữa → đỏ
+    await fetch(`${SB}/rest/v1/qc_kenh?lan_kiem=lt.${BAT_DAU.toISOString()}`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
+      body: JSON.stringify({ trang_thai: 'loi', ly_do: 'Không còn trong danh sách page của Pancake — đã gỡ / mất quyền' }) });
+  } catch (e) { console.log('(không ghi được trạng thái kênh:', e.message + ')'); }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
   console.log(`Tổng ${pairs.length} lượt:`, theoV);
   NK.s.luot_tim = pairs.length;

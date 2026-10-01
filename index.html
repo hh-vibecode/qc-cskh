@@ -202,11 +202,12 @@ const BRAND_PAGE={
   'pzl_1927214341338004925':'HT','pzl_716330578937743406':'HT',                            // … + Siêu Thị Đồ Thờ Cao Cấp (Zalo)
   '506247572578559':'Shidai','pzl_421283811192749346':'Shidai','pzl_636053762312360623':'Shidai',
 };
-function brandTen(p){const n=p||'';
-  if(/tự tại viên|tu tai vien|nến bơ|nen bo/i.test(n))return'TTV';
-  if(/hiền thu[ỷyủ]|hien thuy|đồ thờ cao cấp|đồ mã/i.test(n))return'HT';
-  if(/shidai|thời đại|thoi dai|tổng kho sỉ/i.test(n))return'Shidai';
-  if(/chánh tâm|chanh tam|hoàng dương|hoang duong|ming ying/i.test(n))return'CT';
+// Dự phòng khi dòng thiếu page_id: so tên page đã BỎ DẤU (1/10: "Hiền Thủy" dấu hỏi trên chữ u lọt sang "Khác").
+function brandTen(p){const n=noDau(p||'');
+  if(/tu tai vien|nen bo/.test(n))return'TTV';
+  if(/hien thuy|do tho cao cap|do ma/.test(n))return'HT';
+  if(/shidai|thoi dai|tong kho si/.test(n))return'Shidai';
+  if(/chanh tam|hoang duong|ming ying/.test(n))return'CT';
   return'Khac';}
 const brandOf=r=>BRAND_PAGE[r.page_id]||brandTen(r.page_name);
 const platOf=r=>/^pzl_/.test(r.conv_id||'')?'zalo':'social';
@@ -557,11 +558,35 @@ function historyPage(){
 // Mỗi lượt kéo tin (GitHub job) / chấm (lịch cloud) ghi 1 dòng vào qc_nhat_ky_chay. Đọc 14 ngày qua qc_ds_nhat_ky.
 const NK_LOAI={'keo-gio':'Kéo tin mỗi giờ','keo-quet':'Quét lớn','keo-tay':'Kéo tay',cham:'Chấm (cloud)'};
 const NK_TT={thanh_cong:{l:'Thành công',c:'ok'},loi:{l:'Lỗi',c:'bad'},dang_chay:{l:'Đang chạy',c:'pend'}};
-async function taiNhatKy(){try{S.nk=await rpc('qc_ds_nhat_ky',{p_ngay:14})||[];}catch(e){S.nk=S.nk||[];toast(e.message);}}
+async function taiNhatKy(){try{[S.nk,S.kenh]=await Promise.all([rpc('qc_ds_nhat_ky',{p_ngay:14}),rpc('qc_ds_kenh',{})]);S.nk=S.nk||[];S.kenh=S.kenh||[];}catch(e){S.nk=S.nk||[];S.kenh=S.kenh||[];toast(e.message);}}
 // Có lỗi trong 24 giờ qua, hoặc đã hơn 90 phút không có lượt kéo nào → báo trên menu
-function nkLoiGan(){const nk=S.nk||[];if(!nk.length)return false;
+function nkLoiGan(){const nk=S.nk||[];if((S.kenh||[]).some(k=>k.kich_hoat&&k.trang_thai==='loi'))return true;if(!nk.length)return false;
   if(nk.some(x=>x.trang_thai==='loi'&&Date.now()-new Date(x.bat_dau)<864e5))return true;
   const keo=nk.find(x=>x.loai!=='cham');return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
+// Kênh kết nối (anh Hải 1/10): mọi page / Zalo Pancake trả về, xanh = đọc được, đỏ = không đọc được → kết nối lại với Pancake.
+const KENH_TEN={facebook:'Facebook',tiktok:'TikTok',zalo:'Zalo'};
+function kenhBang(){
+  const ks=S.kenh||[];if(!ks.length)return'<div class="sec">Kênh kết nối <span class="badge">chờ lượt kéo đầu tiên</span></div>';
+  const ok=ks.filter(k=>k.trang_thai==='ok').length;
+  const dot=c=>`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--${c});margin-right:7px;vertical-align:-1px"></span>`;
+  const rows=ks.map(k=>{const loi=k.trang_thai==='loi';
+    return`<tr${!k.kich_hoat?' style="opacity:.6"':''}>
+      <td style="white-space:nowrap;font-weight:700;color:var(--${loi?'bad':'ok'})">${dot(loi?'bad':'ok')}${loi?'Không đọc được':'Đọc được'}</td>
+      <td>${esc(KENH_TEN[k.kenh]||k.kenh||'')}</td>
+      <td>${esc(BRANDS[BRAND_PAGE[k.page_id]||brandTen(k.ten)]||'')}</td>
+      <td class="name">${esc(k.ten||k.page_id)}</td>
+      <td class="num">${k.so_hoi_thoai==null?'<span class="muted">—</span>':num(k.so_hoi_thoai)}</td>
+      <td class="muted" style="white-space:nowrap">${k.tin_moi_nhat?esc(fmtDT(k.tin_moi_nhat)):'—'}</td>
+      <td class="muted" style="white-space:nowrap">${k.lan_ok?esc(fmtDT(k.lan_ok)):'—'}</td>
+      <td style="font-size:12px;color:var(--${loi?'bad':'muted'})">${esc(k.ly_do||'')}</td></tr>`;}).join('');
+  const kiem=ks.reduce((m,k)=>k.lan_kiem&&k.lan_kiem>m?k.lan_kiem:m,'');
+  return`<div class="sec" style="display:flex;align-items:center;gap:8px">Kênh kết nối
+      <span class="badge" style="color:var(--${ok===ks.length?'ok':'bad'})">${ok}/${ks.length} đọc được</span>
+      ${kiem?`<span class="badge">Kiểm ${esc(fmtDT(kiem))}</span>`:''}</div>
+    <div class="card scroll" style="margin-bottom:16px"><table style="min-width:900px">
+      <thead><tr><th>Trạng thái</th><th>Kênh</th><th>Thương hiệu</th><th>Tên page / Zalo</th><th class="num">Hội thoại lượt cuối</th><th>Tin mới nhất</th><th>Đọc được lần cuối</th><th>Lý do</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+}
 function nhatKyPage(){
   const nk=S.nk||[],f=S.nkLoc||'all';
   const list=nk.filter(x=>f==='all'?true:f==='loi'?x.trang_thai==='loi':f==='cham'?x.loai==='cham':x.loai!=='cham');
@@ -595,6 +620,8 @@ function nhatKyPage(){
       ${kpi('Lượt lỗi 7 ngày',num(nk.filter(x=>x.trang_thai==='loi'&&new Date(x.bat_dau)>=tuan).length),'bấm "Chỉ lỗi" để xem','bad','sai')}
       ${kpi('Lượt kéo gần nhất',keoCuoi?esc(fmtDT(keoCuoi.bat_dau)):'—',keoCuoi?`${(NK_TT[keoCuoi.trang_thai]||{}).l||''} · ${phutTruoc(keoCuoi.bat_dau)}`:'chưa có',ngung?'bad':'ok','muon')}
     </div>
+    ${kenhBang()}
+    <div class="sec">Lượt chạy</div>
     <div class="bar">${chip('all','Tất cả')}${chip('keo','Kéo tin')}${chip('cham','Chấm')}${chip('loi','Chỉ lỗi')}
       <div class="right">${chamCuoi?`<span class="badge">Chấm gần nhất ${esc(fmtDT(chamCuoi.bat_dau))}</span>`:''}</div></div>
     <div class="card scroll"><table style="min-width:1000px">
