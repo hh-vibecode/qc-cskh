@@ -65,6 +65,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Luật chấm đầy đủ: `.claude/agents/cham-qc.md` (phiên trên máy / agent) và `routine/cham-cloud.md` (lịch chấm cloud mỗi giờ). Sửa luật thì sửa CẢ HAI.
 - Chỉ quan tâm **tin khách hỏi mua**. Lời khấn "Nam mô…", tương tác, chat nội bộ → `khong_lien_quan`, ẩn khỏi trang.
 - Bình luận ↔ tin nhắn là 2 luồng riêng: tìm inbox của chính khách đó; có Sale nhắn riêng thì chấm cả đoạn tin nhắn, không có mới là miss.
+- Sale đã nhắn lại (dù muộn bao lâu) = **muộn**, không phải miss. Lỗi KHÔNG do Sale (vd Facebook chặn không nhắn được) → verdict `loi_nen_tang` (Lỗi nền tảng), chỉ gắn khi có căn cứ — anh chốt 1/10.
 - Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý) → hiện ở Cài đặt › Lịch sử báo sai.
 
 ## Git

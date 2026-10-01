@@ -189,6 +189,7 @@ const VERDICT={
   dung:{l:'Đúng',c:'ok'},thieu:{l:'Thiếu ý',c:'warn'},sai:{l:'Sai kiến thức',c:'bad'},
   chi_bot:{l:'Chỉ bot trả lời',c:'miss'},khong_tra_loi:{l:'Không trả lời',c:'grey'},
   tra_loi_inbox:{l:'Đã tư vấn ở tin nhắn',c:'info'},khong_lien_quan:{l:'Không liên quan',c:'grey'},
+  loi_nen_tang:{l:'Lỗi nền tảng',c:'grey'},   // anh Hải 1/10: lỗi KHÔNG do Sale (vd Facebook chặn không nhắn được) → không tính miss, để riêng
   chua_cham:{l:'Chưa chấm',c:'pend'}};
 // 4 thương hiệu (anh Hải 29/9: "xếp vào cho đủ 4 thương hiệu: Chánh Tâm, Tự Tại Viên, Hiền Thủy, Shidai").
 // Xếp theo MÃ PAGE (14 page trên Pancake); tên page chỉ dùng dự phòng khi page mới chưa có trong bảng này.
@@ -306,16 +307,16 @@ function verdictMatch(r,v){
   if(v==='muon')return!!lateOf(r);
   if(v==='qua_inbox')return inboxOf(r);
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
-  if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham'].includes(r.verdict);
+  if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham','loi_nen_tang'].includes(r.verdict);
   return r.verdict===v;
 }
-// Tổng hợp 1 nhóm dòng — mẫu số "đã chấm" giống trang cũ: bỏ tra_loi_inbox, chua_cham, khong_lien_quan
+// Tổng hợp 1 nhóm dòng — mẫu số "đã chấm" giống trang cũ: bỏ tra_loi_inbox, chua_cham, khong_lien_quan (+ loi_nen_tang từ 1/10)
 function tally(list){
   const c={};for(const r of list)c[r.verdict]=(c[r.verdict]||0)+1;
   const g=k=>c[k]||0;
-  const den=list.length-g('tra_loi_inbox')-g('chua_cham')-g('khong_lien_quan');
+  const den=list.length-g('tra_loi_inbox')-g('chua_cham')-g('khong_lien_quan')-g('loi_nen_tang');
   return{n:list.length,den,dung:g('dung'),thieu:g('thieu'),sai:g('sai'),bot:g('chi_bot'),none:g('khong_tra_loi'),
-    miss:g('chi_bot')+g('khong_tra_loi'),inbox:g('tra_loi_inbox'),pend:g('chua_cham'),klq:g('khong_lien_quan')};
+    miss:g('chi_bot')+g('khong_tra_loi'),inbox:g('tra_loi_inbox'),pend:g('chua_cham'),klq:g('khong_lien_quan'),loi:g('loi_nen_tang')};
 }
 
 // ── Vẽ ────────────────────────────────────────────────────────────────────
@@ -420,7 +421,7 @@ function render(keepFocus){
       ${kpi('sai','Sai kiến thức',num(T.sai),pct(T.sai,T.den),'bad','sai')}
     </div>
     <div class="kpi-row">
-      ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot`,'miss','miss')}
+      ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot${T.loi?` · <span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('loi_nen_tang')">${num(T.loi)} lỗi nền tảng</span>`:''}`,'miss','miss')}
       ${kpi('qua_inbox','Tư vấn qua tin nhắn',num(base.filter(inboxOf).length),'bình luận → Sale nhắn riêng, đã chấm','info','inbox')}
       ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
     </div>
@@ -630,9 +631,10 @@ function logicPage(){
         <tr><td>${vb('khong_tra_loi')} ${vb('chi_bot')}</td><td>Miss — khách hỏi mua mà không có Sale thật trả lời</td><td>Có</td></tr>
         <tr><td>${vb('tra_loi_inbox')}</td><td>Bình luận có tin nhắn riêng nhưng chưa chấm nội dung (dữ liệu cũ, đang được chấm lại) — không tính lỗi</td><td>Không</td></tr>
         <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
+        <tr><td>${vb('loi_nen_tang')}</td><td>Lỗi không do Sale: Sale có xử lý nhưng nền tảng chặn (vd Facebook chỉ cho nhắn riêng trong 7 ngày sau bình luận) — không tính miss, đếm riêng ở thẻ Miss (bấm để xem)</td><td>Không</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − tư vấn ở tin nhắn − chờ chấm − không liên quan). Cùng công thức trang cũ Dashboard-Meta.</p>
+    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − tư vấn ở tin nhắn − chờ chấm − không liên quan − lỗi nền tảng). Cùng công thức trang cũ Dashboard-Meta.</p>
     <h3>4. Loại trừ đặc biệt</h3>
     <ul>
       <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau (vd "Tổng Kho Sỉ Shidai – Chị Huế").</li>

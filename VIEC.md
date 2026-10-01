@@ -18,6 +18,7 @@
 - **Domain:** `hh-vibecode.github.io/qc-cskh`. Repo public (gói GitHub free chỉ bật Pages cho repo public; repo không chứa khoá hay dữ liệu).
 - **Sale có mã truy cập (anh chốt 30/9, câu E5 cũ):** Sale ("Lệ", "ngọc vân") đang vào trang và báo sai — anh: "auke r, không cần xử lý gì". KHÔNG đổi mã, không coi là lộ. Báo sai của Sale vẫn soát bằng dữ liệu thật (người báo có thể là chính Sale bị chấm).
 - **Nhắn lại muộn = MUỘN, không phải miss (anh chốt 1/10, câu E7 cũ):** "k đã nhắn lại r thì chỉ bị muộn thôi chứ miss gì" — Sale nhắn lại / nhắn riêng sau bao lâu cũng gỡ miss, gắn nhãn muộn (Trả lời muộn N giờ / Bình luận → tư vấn qua tin nhắn (Sale nhắn sau N giờ)). Chỉ miss khi KHÔNG ai nhắn (kể cả bị Facebook chặn vì quá 7 ngày mà chưa nhắn). 48 dòng Vân Ngọc nhắn bù 30/9 giữ là muộn.
+- **Lỗi nền tảng (anh chốt 1/10):** "các phần mà k phải lỗi do sale thì đưa vào lỗi nền tảng, kiểu nhắn k được ấy" — verdict `loi_nen_tang`: Sale có xử lý nhưng nền tảng chặn (vd Facebook chỉ cho nhắn riêng trong 7 ngày sau bình luận). Không tính miss, không vào mẫu số tỉ lệ, đếm riêng trên thẻ Miss (bấm để lọc). Chỉ gắn khi có căn cứ (ảnh lỗi Sale gửi kèm báo sai…), `issue` ghi "Lỗi nền tảng (…)": vì sao. Đã gắn: #1662.
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -177,6 +178,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **01/10/2026** — Thêm nhóm **Lỗi nền tảng** (`loi_nen_tang`) theo anh chốt: trang (nhãn, bỏ khỏi miss + mẫu số, đếm trên thẻ Miss, bấm lọc, Logic xử lý), #1662 Phượng Ớt chuyển vào (báo sai #39). Kiểm: trang 44 miss + 1 lỗi nền tảng = đếm SQL; lọc ra đúng 1 dòng.
 - **01/10/2026** — Anh chốt E7: nhắn lại muộn = muộn, không phải miss. Sửa báo sai #36–#38 (đã đóng giữ miss sáng nay): #880, #1117 → đúng + nhãn muộn 614,9 / 526,9 giờ (căn cứ ảnh Sale gửi, mốc giờ = lúc báo). #39 vẫn miss (Facebook chặn, chưa gửi được).
 - **01/10/2026** — 6 báo sai mới (#36–#41): giữ miss 4 (#36/#37 trùng, #38, #39 — bình luận 5–17/9, Sale nhắn bù 30/9–1/10 hoặc bị Facebook chặn vì quá 7 ngày); đồng ý #40 (Sale tư vấn kỹ, khách dừng vì ngân sách → chấm đúng); giữ sai #41 (khách chặn không đổi nội dung tư vấn sai chất liệu). Sao lưu trước khi sửa. Phát hiện điểm mù nhắn riêng → nợ #13.
 - **30/09/2026** — Rà 34 báo sai → ghi bài học vào luật (cả `cham-qc.md` + `routine/cham-cloud.md`): chê bai/mỉa mai → không liên quan (#34); Sale đã tiếp mà tin cuối khó hiểu → không phải miss, soát miss có thêm kết luận `cham` (hàm `qc_ghi_soat_miss` + `ghi-cham.js`, đã áp CSDL, thử: nhận 'cham', từ chối verdict lạ) (#35); đang khai thác nhu cầu → đúng, nhưng hỏi chung chung nhiều ngày khi khách đã chỉ rõ món → thiếu (#13–15 vs #17). Còn phụ thuộc E2: #20, #26. Việc mới #12 (soát lại thiếu gần đây). E5 anh chốt: không xử lý.
