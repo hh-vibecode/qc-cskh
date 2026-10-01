@@ -178,6 +178,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **01/10/2026** — Anh báo miss Chánh Tâm "sale tl hết r": đúng — Ngọc Diệp trả lời bù 11h00–11h25 hôm nay (muộn 356–550 giờ), nhưng lượt mỗi giờ chỉ soát miss 3 ngày nên phải chờ quét 18h35. Sửa: mọi lượt soát miss 30 ngày (+ dòng thiếu conv_at, mốc đầu ngày). Lượt 15:25 (chạy 1 phút): soát 26, gỡ 20 → còn 6 miss trong 30 ngày (24 miss cũ hơn 30 ngày ngoài khung soát).
 - **01/10/2026** — Thêm nhóm **Lỗi nền tảng** (`loi_nen_tang`) theo anh chốt: trang (nhãn, bỏ khỏi miss + mẫu số, đếm trên thẻ Miss, bấm lọc, Logic xử lý), #1662 Phượng Ớt chuyển vào (báo sai #39). Kiểm: trang 44 miss + 1 lỗi nền tảng = đếm SQL; lọc ra đúng 1 dòng.
 - **01/10/2026** — Anh chốt E7: nhắn lại muộn = muộn, không phải miss. Sửa báo sai #36–#38 (đã đóng giữ miss sáng nay): #880, #1117 → đúng + nhãn muộn 614,9 / 526,9 giờ (căn cứ ảnh Sale gửi, mốc giờ = lúc báo). #39 vẫn miss (Facebook chặn, chưa gửi được).
 - **01/10/2026** — 6 báo sai mới (#36–#41): giữ miss 4 (#36/#37 trùng, #38, #39 — bình luận 5–17/9, Sale nhắn bù 30/9–1/10 hoặc bị Facebook chặn vì quá 7 ngày); đồng ý #40 (Sale tư vấn kỹ, khách dừng vì ngân sách → chấm đúng); giữ sai #41 (khách chặn không đổi nội dung tư vấn sai chất liệu). Sao lưu trước khi sửa. Phát hiện điểm mù nhắn riêng → nợ #13.
