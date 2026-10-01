@@ -17,6 +17,7 @@
 - **Chấm:** vẫn Claude chấm tay theo luật + FAQ, nhưng chạy bằng **Sonnet** cho rẻ → agent `.claude/agents/cham-qc.md` (`model: sonnet`). Bảo "chấm" thì giao agent này.
 - **Domain:** `hh-vibecode.github.io/qc-cskh`. Repo public (gói GitHub free chỉ bật Pages cho repo public; repo không chứa khoá hay dữ liệu).
 - **Sale có mã truy cập (anh chốt 30/9, câu E5 cũ):** Sale ("Lệ", "ngọc vân") đang vào trang và báo sai — anh: "auke r, không cần xử lý gì". KHÔNG đổi mã, không coi là lộ. Báo sai của Sale vẫn soát bằng dữ liệu thật (người báo có thể là chính Sale bị chấm).
+- **Nhắn lại muộn = MUỘN, không phải miss (anh chốt 1/10, câu E7 cũ):** "k đã nhắn lại r thì chỉ bị muộn thôi chứ miss gì" — Sale nhắn lại / nhắn riêng sau bao lâu cũng gỡ miss, gắn nhãn muộn (Trả lời muộn N giờ / Bình luận → tư vấn qua tin nhắn (Sale nhắn sau N giờ)). Chỉ miss khi KHÔNG ai nhắn (kể cả bị Facebook chặn vì quá 7 ngày mà chưa nhắn). 48 dòng Vân Ngọc nhắn bù 30/9 giữ là muộn.
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -26,7 +27,6 @@
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
 | E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
-| E7 | **Nhắn bù rất muộn:** 30/9 15h–16h Sale **Vân Ngọc** nhắn inbox 47 khách bình luận bị miss từ 1/9–29/9 (muộn 22–700 giờ, tin mẫu chào + bảng giá; Tự Tại Viên 15, Thời Đại 30, Hiền Thủy 2) → lượt quét 17:11 gỡ khỏi miss theo luật "Sale nhắn sau thì gỡ". Nhắn bù sau vài tuần có nên vẫn tính miss không? Em đề xuất: muộn > 24 giờ vẫn giữ miss, ghi chú "đã nhắn bù sau N ngày" | chờ anh chốt; 48 dòng nhận ra được qua nhãn "Bình luận → tư vấn qua tin nhắn (Sale nhắn sau …)", sao lưu 30/9 17h |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
 ## 2. CLAUDE ĐANG NỢ
@@ -38,7 +38,7 @@
 | 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 9 | Đưa **tầng luật** vào job `keo-tin.yml` (soát miss ĐÃ đưa vào 30/9 qua `tools/soat-lib.js`) — cần viết lại `cham-luat.js` chạy bằng khoá `qc_cskh` (REST) thay Management API | để chấm cloud đỡ tốn |
 | 12 | **Soát lại dòng `thieu` gần đây với Pancake** (như soát miss): 10/26 báo sai của Lệ 30/9 là "Sale đã tư vấn bổ sung" — chấm lúc hội thoại còn dở, sau đó Sale nói tiếp. Lượt kéo nên kéo lại đoạn mới của dòng `thieu` ≤ 3 ngày có tin Sale mới → trả về chờ chấm | bài học báo sai 30/9 |
-| 13 | **Điểm mù nhắn riêng:** Sale nhắn riêng (private reply) cho khách bình luận mà khách CHƯA trả lời thì Pancake chưa tạo hội thoại tin nhắn → soát miss không thấy, vẫn tính miss. Dấu vết duy nhất: tin bình luận của khách có `private_reply_conversation.id` dạng `m_…` (không có giờ gửi, không có nội dung). Cần tìm cách lấy giờ gửi (API tin theo id?) rồi mới dùng để gỡ miss — nhắn trong 7 ngày (hạn Facebook) mà khách im thì không nên tính miss | phát hiện 1/10 qua báo sai #37–#38 |
+| 13 | **Điểm mù nhắn riêng:** Sale nhắn riêng cho khách bình luận mà khách CHƯA trả lời thì Pancake chưa tạo hội thoại tin nhắn → job không thấy, vẫn tính miss (theo anh chốt 1/10 đáng lẽ là muộn). Dấu `private_reply_conversation.id` dạng `m_…` trên bình luận KHÔNG tin được: không có giờ, và Botcake cũng tự nhắn riêng (ca Tùng Châm có dấu, ca Huỳnh Tuấn Dĩ Sale nhắn rồi lại không có). Tạm thời: Sale báo sai kèm ảnh → gỡ tay, nhãn muộn lấy mốc lúc báo (đã làm #880, #1117). Cần tìm API lấy tin nhắn riêng theo id / theo khách | phát hiện 1/10 qua báo sai #37–#38 |
 | 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
@@ -177,6 +177,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **01/10/2026** — Anh chốt E7: nhắn lại muộn = muộn, không phải miss. Sửa báo sai #36–#38 (đã đóng giữ miss sáng nay): #880, #1117 → đúng + nhãn muộn 614,9 / 526,9 giờ (căn cứ ảnh Sale gửi, mốc giờ = lúc báo). #39 vẫn miss (Facebook chặn, chưa gửi được).
 - **01/10/2026** — 6 báo sai mới (#36–#41): giữ miss 4 (#36/#37 trùng, #38, #39 — bình luận 5–17/9, Sale nhắn bù 30/9–1/10 hoặc bị Facebook chặn vì quá 7 ngày); đồng ý #40 (Sale tư vấn kỹ, khách dừng vì ngân sách → chấm đúng); giữ sai #41 (khách chặn không đổi nội dung tư vấn sai chất liệu). Sao lưu trước khi sửa. Phát hiện điểm mù nhắn riêng → nợ #13.
 - **30/09/2026** — Rà 34 báo sai → ghi bài học vào luật (cả `cham-qc.md` + `routine/cham-cloud.md`): chê bai/mỉa mai → không liên quan (#34); Sale đã tiếp mà tin cuối khó hiểu → không phải miss, soát miss có thêm kết luận `cham` (hàm `qc_ghi_soat_miss` + `ghi-cham.js`, đã áp CSDL, thử: nhận 'cham', từ chối verdict lạ) (#35); đang khai thác nhu cầu → đúng, nhưng hỏi chung chung nhiều ngày khi khách đã chỉ rõ món → thiếu (#13–15 vs #17). Còn phụ thuộc E2: #20, #26. Việc mới #12 (soát lại thiếu gần đây). E5 anh chốt: không xử lý.
 - **30/09/2026** — Anh bảo kéo nhanh 1 lượt: quét 30/9 lúc 17:11 (295 giây) — tìm 73 lượt, thêm 6; soát 84 miss 30 ngày, gỡ 51 (48 do Vân Ngọc nhắn bù 15h–16h cùng ngày → câu E7). Báo sai #34 (bình luận chê bai → không liên quan) và #35 (không phải miss, Sale đã chào; chấm thiếu mức thấp vì bỏ lửng câu khó hiểu) đã đóng — cả 2 do "ngọc vân" báo, tức người có mã truy cập trang (thêm cho E5). `qc_ghi_nhat_ky_cham` bỏ dòng trùng trong 5 phút (lịch chấm 16:53 ghi 2 lần).
