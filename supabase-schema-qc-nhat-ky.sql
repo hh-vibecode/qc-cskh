@@ -34,20 +34,28 @@ begin
 end $$;
 
 -- Lịch chấm cloud ghi 1 dòng khi xong (mã chấm)
+-- 2/10: trả về jsonb để lịch chấm biết đã ghi (trước trả void → phiên chấm tưởng lỗi, gọi lại với câu khác → dòng trùng);
+-- chặn trùng theo số liệu (so_cham + miss_soat) trong 10 phút, KHÔNG so câu chữ.
+drop function if exists public.qc_ghi_nhat_ky_cham(text, int, int, text, text, text);
 create or replace function public.qc_ghi_nhat_ky_cham(p_ma text, p_so_cham int, p_so_soat int default 0,
-  p_ghi_chu text default null, p_loi text default null, p_lien_ket text default null) returns void
+  p_ghi_chu text default null, p_loi text default null, p_lien_ket text default null) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
+declare v_id bigint;
 begin
   perform qc_chan_cham(p_ma);
-  -- lịch chấm đôi khi gọi 2 lần (30/9 16:53 ghi trùng) → bỏ nếu 5 phút qua đã có dòng y hệt
-  if exists (select 1 from qc_nhat_ky_chay where loai = 'cham' and bat_dau > now() - interval '5 minutes'
-             and so_cham is not distinct from p_so_cham and miss_soat is not distinct from p_so_soat
-             and khoang is not distinct from left(p_ghi_chu, 300) and loi is not distinct from left(p_loi, 1000)) then return; end if;
+  select id into v_id from qc_nhat_ky_chay where loai = 'cham' and bat_dau > now() - interval '10 minutes'
+    and so_cham is not distinct from p_so_cham and miss_soat is not distinct from p_so_soat order by id limit 1;
+  if v_id is not null then
+    return jsonb_build_object('ok', true, 'id', v_id, 'ghi_chu', 'ĐÃ GHI từ trước trong lượt này — không cần gọi lại');
+  end if;
   insert into qc_nhat_ky_chay (loai, bat_dau, ket_thuc, trang_thai, so_cham, miss_soat, loi, lien_ket, khoang)
   values ('cham', now(), now(), case when coalesce(p_loi, '') = '' then 'thanh_cong' else 'loi' end,
-          p_so_cham, p_so_soat, left(p_loi, 1000), left(p_lien_ket, 300), left(p_ghi_chu, 300));
+          p_so_cham, p_so_soat, left(p_loi, 1000), left(p_lien_ket, 300), left(p_ghi_chu, 300))
+  returning id into v_id;
   delete from qc_nhat_ky_chay where bat_dau < now() - interval '90 days';
+  return jsonb_build_object('ok', true, 'id', v_id, 'ghi_chu', 'Đã ghi nhật ký — xong, KHÔNG gọi lại');
 end $$;
+grant execute on function public.qc_ghi_nhat_ky_cham(text, int, int, text, text, text) to anon, authenticated;
 
 revoke execute on function public.qc_ds_nhat_ky(text, int), public.qc_ghi_nhat_ky_cham(text, int, int, text, text, text) from public;
 grant execute on function public.qc_ds_nhat_ky(text, int), public.qc_ghi_nhat_ky_cham(text, int, int, text, text, text) to anon, authenticated;

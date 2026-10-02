@@ -207,7 +207,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     let count = 0, lastId = null, cuLien = 0, lay = [], docDuoc = null, moiNhat = null;
     for (let b = 0; b < 60 && cuLien < 2; b++) {
       const d = await pk(`/pages/${p.id}/conversations${count ? `?current_count=${count}${lastId ? `&last_conversation_id=${encodeURIComponent(lastId)}` : ''}` : ''}`);
-      if (b === 0) { docDuoc = !!(d && Array.isArray(d.conversations)); moiNhat = d?.conversations?.[0]?.updated_at || null; }
+      if (b === 0) { docDuoc = !!(d && Array.isArray(d.conversations)); moiNhat = (d?.conversations || []).reduce((m, c) => c.updated_at && (!m || utc(c.updated_at) > utc(m)) ? c.updated_at : m, null); }   // Pancake không xếp theo giờ → lấy lớn nhất
       const cs = d?.conversations || [];
       if (!cs.length) break;
       let moi = 0;
