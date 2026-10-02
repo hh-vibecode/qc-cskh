@@ -141,6 +141,7 @@
 | X2 | Quy ước mục 3.5/3.6 bảo "dữ liệu khách chỉ mở cho người đăng nhập, đăng nhập qua `dang-nhap`" — QC theo quyết định riêng của anh (28/9): KHÔNG tài khoản, trang + lịch chấm cloud gọi hàm `qc_*` bằng khoá anon + **mã truy cập / mã chấm** (băm trong `qc_cau_hinh`) | anh xác nhận để ghi ngoại lệ vào bản quy ước | chờ anh |
 | X3 | Edge Function cũ `review-report` (Dashboard-Meta) vẫn có thể GHI + tự xoá > 3 ngày trong `sale_review_report` (bảng của QC) — trang cũ đã hỏng nên thực tế không ai gọi | để nguyên (Dashboard-Meta chỉ đọc) | ghi nhận |
 | X4 | Lịch `qc-keo-gio` (phút :25) có thể trùng lúc app MKT/Sale quét toàn bộ Pancake 12h30 · 18h00 và tạo đơn / phân loại 18h | theo dõi 429; cần thì bỏ lượt 12h25 / 18h25 | theo dõi |
+| X5 | Lead **L-CT2-0031 Đoàn Nguyễn Minh Tài** (TikTok Chánh Tâm 23/7, Sale Nguyễn Thảo Ngọc) bị gộp vào mã Kiot **KH007517** = "KB CHỊ NGA - NGHỆ AN" (0976343276, 2 hoá đơn nến 14/8 do Nguyễn Hữu Toàn bán). Đơn Pancake của Tài không có SĐT, chỉ có ghi chú "KH007517" + thẻ CHỐT ĐƠN — mã này tạo trên Kiot 13/8, SAU đơn của Tài → Sale gắn nhầm. Anh bảo xoá Tài khỏi nhóm dùng chung mã | phiên MKT/Sale (QC không sửa bảng chung) + Sale sửa ghi chú/thẻ trên Pancake | 2/10 QC kiểm (chỉ đọc), chờ chuyển lời |
 
 ## 5c. CHUYỂN HẲN KÉO TIN + CHẤM SANG QC (anh muốn, 29/9) — thứ tự không hở dữ liệu
 1. Job `keo-tin.yml` (repo qc-cskh) chạy xanh ≥ 1–2 ngày, ghi bảng thử `qc_review_thu` (pg_cron `qc-keo-6h` / `qc-keo-18h` kích).
