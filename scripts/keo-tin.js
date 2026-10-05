@@ -54,9 +54,13 @@ async function pk(path) {
   }
   return null;
 }
+// 5/10: cắt chuỗi (slice 700/1000/6000) có thể cắt đôi 1 emoji → nửa ký tự lẻ (surrogate) làm PostgREST từ chối CẢ LÔ
+// ("Empty or invalid json") — 4 lượt 10h25–13h25 fail vì 1 lời khấn đầy 🙏🌹. Làm sạch mọi chuỗi trước khi ghi.
+const sachChuoi = (k, v) => typeof v === 'string'
+  ? v.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|\u0000/g, '') : v;
 async function rest(method, path, body) {
   for (let i = 0; ; i++) {
-    const r = await fetch(`${SB}/rest/v1/${path}`, { method, body: body ? JSON.stringify(body) : undefined,
+    const r = await fetch(`${SB}/rest/v1/${path}`, { method, body: body ? JSON.stringify(body, sachChuoi) : undefined,
       headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'return=minimal' } });
     if (r.status === 429 && i < 5) { await sleep(5000 * (i + 1)); continue; }
     const t = await r.text();
