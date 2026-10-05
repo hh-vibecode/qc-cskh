@@ -270,13 +270,25 @@ async function reload(){try{await load();if(S.view==='nhatky')await taiNhatKy();
 
 // ── Lọc ───────────────────────────────────────────────────────────────────
 async function setF(k,v){S[k]=v;S.pg=0;if(k==='from'||k==='to')await ensureRange();render(k==='q');}
-// Chọn nhanh ngày (1 ô, kiểu app MKT/Sale)
-const QUICK=[['today','Hôm nay'],['yesterday','Hôm qua'],['7','7 ngày qua'],['30','30 ngày qua'],['all','Tất cả']];
+// Chọn nhanh ngày — theo đúng bộ lọc app MKT/Sale (anh Hải 5/10): thêm "Hôm qua → hôm nay", "Tháng này" và từng tháng đã qua
+const QC_TU_THANG='2026-08';   // dữ liệu QC bắt đầu 22/08/2026 → danh sách tháng không kéo về trước tháng này
+const QUICK=[['today','Hôm nay'],['yesterday','Hôm qua'],['2days','Hôm qua → hôm nay'],['7','7 ngày qua'],['30','30 ngày qua'],['thismonth','Tháng này'],['all','Tất cả']];
+function quickThang(){   // các tháng có dữ liệu, mới nhất lên trước — chọn 1 lần ra trọn tháng
+  const out=[],t=new Date();let y=t.getFullYear(),m=t.getMonth()+1;
+  while(`${y}-${p2(m)}`>=QC_TU_THANG){out.push([`thang:${y}-${p2(m)}`,`${m}/${y}`]);if(--m<1){m=12;y--;}}
+  return out;
+}
 function quickRange(k){
   const t=new Date(),d=n=>{const x=new Date(t);x.setDate(x.getDate()-n);return isoDay(x);};
   if(k==='today')return{from:d(0),to:d(0)};
   if(k==='yesterday')return{from:d(1),to:d(1)};
+  if(k==='2days')return{from:d(1),to:d(0)};
+  if(k==='thismonth')return{from:d(0).slice(0,8)+'01',to:d(0)};
   if(k==='all')return{from:'',to:''};
+  if(/^thang:\d{4}-\d{2}$/.test(k)){   // trọn tháng; tháng đang chạy thì chặn tới hôm nay
+    const ym=k.slice(6),cuoi=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).toISOString().slice(0,10);
+    return{from:ym+'-01',to:cuoi>d(0)?d(0):cuoi};
+  }
   return{from:d(Number(k)-1),to:d(0)};
 }
 async function setQuick(k){if(!k)return;const r=quickRange(k);S.from=r.from;S.to=r.to;S.pg=0;await ensureRange();render();}
@@ -357,7 +369,7 @@ function render(keepFocus){
   // Bộ lọc gọn kiểu app MKT/Sale: ô chọn nhỏ "Brand: tất cả", ô đang lọc viền màu nhấn; chọn nhanh ngày gom 1 ô.
   const sel=(k,label,cur,opts)=>`<select class="sel${cur!=='all'?' on':''}" onchange="setF('${k}',this.value)">
     ${opt('all',`${label}: tất cả`,cur)}${opts.map(([v,l])=>opt(v,l,cur)).join('')}</select>`;
-  const quickNow=QUICK.find(([k])=>{const r=quickRange(k);return r.from===S.from&&r.to===S.to;});
+  const thangQ=quickThang(),quickNow=[...QUICK,...thangQ].find(([k])=>{const r=quickRange(k);return r.from===S.from&&r.to===S.to;});
 
   const kpi=(key,label,val,sub,color,icon)=>`<div class="kpi${S.verdict===key?' on':''}" style="--c:var(--${color})" onclick="toggleVerdict('${key}')">
     <div class="ic">${ICON[icon]}</div>
@@ -410,9 +422,10 @@ function render(keepFocus){
         ${sel('brand','Brand',S.brand,brandOpts.map(([b,n])=>[b,`${BRANDS[b]||b} (${n})`]))}
         ${sel('sale','Sales',S.sale,saleOpts.map(([s,n])=>[s,`${s} (${n})`]))}
         <select class="sel" onchange="setQuick(this.value)">
-          <option value="">${quickNow?'':'Chọn nhanh…'}</option>${QUICK.map(([k,l])=>`<option value="${k}"${quickNow&&quickNow[0]===k?' selected':''}>${l}</option>`).join('')}</select>
+          <option value="">${quickNow?'':'Chọn nhanh…'}</option>${QUICK.map(([k,l])=>`<option value="${k}"${quickNow&&quickNow[0]===k?' selected':''}>${l}</option>`).join('')}<option disabled>──────────</option>${thangQ.map(([k,l])=>`<option value="${k}"${quickNow&&quickNow[0]===k?' selected':''}>${l}</option>`).join('')}</select>
+        <span class="muted" style="font-size:11px;font-weight:700">Từ</span>
         <input type="date" class="sel" value="${esc(S.from)}" onchange="setF('from',this.value)">
-        <span class="muted">→</span>
+        <span class="muted" style="font-size:11px;font-weight:700">Đến</span>
         <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
       </div>
     </div>
@@ -683,8 +696,8 @@ async function changeCode(){
 
 // ── Khởi động ────────────────────────────────────────────────────────────
 (async()=>{
-  // mặc định 7 ngày (29/9: ~48 KB đã nén, so với ~355 KB khi tải cả bảng — quota egress chung với app MKT/Sale)
-  {const t=new Date();S.to=isoDay(t);t.setDate(t.getDate()-6);S.from=isoDay(t);}
+  // mặc định THÁNG NÀY (anh Hải 5/10; trước là 7 ngày). Tải theo khoảng nên vẫn nhẹ (~6 KB/ngày đã nén, quota egress chung app MKT/Sale)
+  {const r=quickRange('thismonth');S.from=r.from;S.to=r.to;}
   if(!S.ma){renderGate();return;}
   document.getElementById('app').innerHTML='<div class="muted" style="padding:60px;text-align:center">Đang tải…</div>';
   try{await load();await taiNhatKy();render();}catch(e){if(e.status===403){ls.del(LS_MA);S.ma='';}renderGate(e.status===403?'Mã đã đổi, nhập lại':e.message);}
