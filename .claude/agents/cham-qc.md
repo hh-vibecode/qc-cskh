@@ -60,6 +60,7 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
   - Xử lý khiếu nại hỏng chưa tới nơi.
   - Quên xác nhận đơn.
 - **sai**: thông tin trái với `product_faq`, gồm giá, chất liệu, kích thước, chính sách.
+  - **FAQ nhận diện tượng là LÝ THUYẾT; hàng thực tế có thể khác** (báo sai #42, chị Oanh Dang, 5/10): dòng tượng Đài Loan sản xuất bộ 4 tượng (A Di Đà/Bổn Sư, Quan Âm, Đại Thế Chí, Địa Tạng) — **A Di Đà và Bổn Sư Thích Ca dùng chung khuôn: cùng áo trễ, cùng chữ Vạn, chỉ khác pháp khí**, ghép được Tây Phương Tam Thánh hoặc Ta Bà Tam Thánh. Sale nói vậy là ĐÚNG, không chấm sai. Nói chung: Sale mô tả đặc điểm của dòng hàng cụ thể bên mình (khuôn, mẫu, phong cách) mà FAQ chỉ nói lý thuyết chung → không chấm sai; chỉ sai khi trái FAQ về chính sản phẩm đó (giá, chất liệu, kích thước, chính sách).
 - **khong_lien_quan**: người rao bán dịch vụ, bình luận không phải khách hỏi mua. Không tính vào tỉ lệ đúng.
   - **Lời khấn / "Nam mô…" / cầu an / thường niệm → LUÔN `khong_lien_quan`** (anh Hải chốt 28/9), kể cả không ai trả lời. Chỉ khi trong câu có ý hỏi / mua thật thì mới chấm như khách.
 - Nếu "câu trả lời" thực ra chỉ là tin bot hoặc tin hệ thống thì chấm `chi_bot`; nếu không có ai trả lời thì chấm `khong_tra_loi`. Xét theo **NỘI DUNG** tin, KHÔNG theo tên người gửi:
