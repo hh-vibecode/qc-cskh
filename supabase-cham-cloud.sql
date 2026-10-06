@@ -25,6 +25,9 @@ begin
   perform qc_chan_cham(p_ma);
   return coalesce((select jsonb_agg(to_jsonb(x)) from (
     select id, conv_date, page_name, conv_id, customer_name, sale_name, customer_ask, sale_reply, issue,
+           -- 6/10: cờ cho chấm QUY TRÌNH — bình luận Facebook (conv không bắt đầu bằng mã page) và page Sỉ
+           (conv_id !~ '^(pzl|ttm)' and conv_id not like coalesce(page_id, '') || '_%') la_binh_luan,
+           (page_name ~* '(sỉ|thời đại|shidai)') page_si,
            left(full_thread, 3000) thread
     from sale_response_review
     where verdict = 'chua_cham' and conv_id not like 'pzl\_g\_%'
@@ -44,7 +47,8 @@ begin
     order by conv_date, id limit least(greatest(p_so, 1), 60)) x), '[]'::jsonb);
 end $$;
 
--- Ghi kết quả chấm: p_rows = [{id, verdict, severity?, issue?, suggestion?, source_faq?}]
+-- Ghi kết quả chấm: p_rows = [{id, verdict, severity?, issue?, suggestion?, source_faq?, sai_quy_trinh?}]
+-- sai_quy_trinh (6/10): null = đúng quy trình; chữ = lý do sai quy trình (SOP tư vấn Sales Onl + bảng khoảng giá)
 create or replace function public.qc_ghi_cham(p_ma text, p_rows jsonb) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
 declare r jsonb; loi text[] := '{}'; n int;
@@ -60,8 +64,8 @@ begin
     end if;
   end loop;
   if array_length(loi, 1) > 0 then return jsonb_build_object('ghi', 0, 'loi', to_jsonb(loi)); end if;
-  with v as (select * from jsonb_to_recordset(p_rows) as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text))
-  update sale_response_review s set verdict = v.verdict,
+  with v as (select * from jsonb_to_recordset(p_rows) as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text, sai_quy_trinh text))
+  update sale_response_review s set verdict = v.verdict, sai_quy_trinh = nullif(trim(v.sai_quy_trinh), ''),
     severity = case when v.verdict in ('thieu','sai') then v.severity end,
     issue = case when s.issue ~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'
                   and coalesce(v.issue,'') !~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'

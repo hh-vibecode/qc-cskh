@@ -1,6 +1,6 @@
 // Ghi kết quả chấm tay vào sale_response_review.
 // Dùng: ELECTRON_RUN_AS_NODE=1 "D:/Microsoft VS Code/Code.exe" tools/ghi-cham.js ket-qua.json [--thu] [--soat-miss]
-// ket-qua.json = [{id, verdict, severity?, issue?, suggestion?, source_faq?}, ...]
+// ket-qua.json = [{id, verdict, severity?, issue?, suggestion?, source_faq?, sai_quy_trinh?}, ...]
 // Mặc định: chỉ ghi vào dòng đang `chua_cham` — KHÔNG bao giờ ghi đè dòng đã chấm.
 // --soat-miss: soát dòng miss (khong_tra_loi / chi_bot) mà job tự gắn. Chỉ nhận 2 kết luận:
 //   'khong_lien_quan' = tin tương tác / không hỏi mua → bỏ qua;  'giu' = miss thật, giữ nguyên, đánh dấu đã soát;
@@ -33,10 +33,10 @@ console.log(`${rows.length} dòng:`, count);
 if (thu) process.exit(0);
 
 const data = JSON.stringify(rows.map(r => ({ id: r.id, verdict: r.verdict, severity: r.severity || null,
-  issue: r.issue || null, suggestion: r.suggestion || null, source_faq: r.source_faq || null })));
+  issue: r.issue || null, suggestion: r.suggestion || null, source_faq: r.source_faq || null, sai_quy_trinh: r.sai_quy_trinh || null })));
 const tag = 'qc' + Date.now();   // dollar-quote tag riêng để nội dung không phá câu SQL
 const v = `with v as (select * from jsonb_to_recordset($${tag}$${data}$${tag}$::jsonb)
-  as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text))`;
+  as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text, sai_quy_trinh text))`;
 const sql = soatMiss
   ? `${v} update sale_response_review s set
        verdict = case v.verdict when 'khong_lien_quan' then 'khong_lien_quan' when 'cham' then 'chua_cham' else s.verdict end,
@@ -46,7 +46,7 @@ const sql = soatMiss
        cham_boi = case when v.verdict='cham' then null else 'sonnet' end, reviewed_at=now()
      from v where s.id=v.id and s.verdict in ('khong_tra_loi','chi_bot') and s.cham_boi is null returning s.id`
   // Nhãn do soat-miss-pancake.js gắn (trả lời muộn / qua tin nhắn) luôn được GIỮ ở đầu issue — 28/9 Sonnet ghi đè mất 21 dòng
-  : `${v} update sale_response_review s set verdict=v.verdict, severity=v.severity,
+  : `${v} update sale_response_review s set verdict=v.verdict, severity=v.severity, sai_quy_trinh=nullif(trim(v.sai_quy_trinh),''),
        issue = case when s.issue ~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'
                      and coalesce(v.issue,'') !~ '^(Trả lời muộn|Bình luận → tư vấn qua tin nhắn)'
                     then substring(s.issue from '^(Trả lời muộn [0-9,]+ (?:giờ|phút)(?: \\([^)]*\\))?\\.?|Bình luận → tư vấn qua tin nhắn[^.]*\\.)') || coalesce(' ' || v.issue, '')

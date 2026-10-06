@@ -44,7 +44,7 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
    - `cham`: Sale **ĐÃ tiếp khách** trong đoạn (chào, hỏi nhu cầu, gửi mẫu, trả lời câu trước) và tin cuối chưa được đáp **không phải câu hỏi mới rõ ràng** (câu khó hiểu do gõ sai / đọc giọng nói, chỉ gửi ảnh) → KHÔNG phải miss, chuyển về chấm nội dung. (Báo sai #35, 30/9: job ghi "không ai trả lời kể cả bot" dù Sale đã chào + hỏi mẫu.) Khi chấm nội dung ca này: Sale không hỏi lại / không xin số → `thieu` mức `thap`.
    - Phân vân → `giu` (thà báo miss còn hơn giấu miss).
    Ghi bằng `"$N" tools/ghi-cham.js <file.json> --soat-miss` (chạy `--thu` trước). File: `[{id, verdict: "khong_lien_quan"|"giu"|"cham", issue?}]` — `issue` với khong_lien_quan là 1 câu ngắn vì sao.
-4. Ghi kết quả ra file JSON `[{id, verdict, severity, issue, suggestion, source_faq}]`, chạy `--thu`, rồi ghi thật.
+4. Ghi kết quả ra file JSON `[{id, verdict, severity, issue, suggestion, source_faq, sai_quy_trinh}]` (sai_quy_trinh: null hoặc lý do — mục Chấm QUY TRÌNH), chạy `--thu`, rồi ghi thật.
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 
 ## Luật chấm (anh Hải đã chốt)
@@ -78,6 +78,19 @@ Bình luận và tin nhắn là 2 luồng riêng trên Pancake. Dòng có `issue
 - `thieu`: khách hỏi giá / mẫu cụ thể mà Sale né, chỉ xin SĐT rồi bỏ; khách nhắn tiếp mà Sale bỏ lửng; chưa trả lời câu hỏi chính của khách.
 - `sai`: thông tin trái FAQ.
 - GIỮ nguyên câu nhãn ở đầu `issue` rồi nối nhận xét của bạn (với `dung` vẫn ghi lại nhãn).
+
+## Chấm QUY TRÌNH — trường `sai_quy_trinh` (anh Hải chốt 6/10/2026)
+Nguồn: "QUY TRÌNH TƯ VẤN SALES ONL" (SOP 6 bước, khách lẻ page Sỉ, thư viện tình huống, khách chờ chốt, chăm sóc, khách không phản hồi, set up trả lời tự động) + "BẢNG KHOẢNG GIÁ BÁO KHÁCH" (KiotViet). Chấm ĐỘC LẬP với đúng/thiếu/sai nội dung: một lượt có thể `dung` mà vẫn sai quy trình. Đúng quy trình → bỏ trống / null. Sai → `sai_quy_trinh` = 1 câu: lỗi gì + dẫn chứng ngắn. Nhiều lỗi thì nối bằng " · ". Chỉ gắn khi thấy RÕ trong `thread`; phân vân → để trống. Bình luận Facebook = `conv_id` KHÔNG bắt đầu bằng `page_id_` (và không phải pzl_/ttm_); page Sỉ = tên page có Sỉ / Thời Đại / Shidai. Tra bảng giá: `select * from qc_bang_gia where concat_ws(' ',nhom,loai,chat_lieu) ilike '%từ khoá%' and kich_thuoc ilike '%40cm%'`.
+1. **Tư vấn công khai dưới bình luận** (`la_binh_luan` = true): dưới bình luận Sale chỉ được dẫn về tin nhắn ("check ib", "kiểm tra tin nhắn"), chào, tri ân lời khấn / lời khen. Báo giá, tư vấn sản phẩm, hỏi khai thác nhu cầu NGAY dưới bình luận → "Tư vấn công khai dưới bình luận — phải dẫn về tin nhắn riêng". Nhắn riêng (nhãn "Bình luận → tư vấn qua tin nhắn") là ĐÚNG quy trình.
+2. **Né giá**: khách hỏi giá một món ĐÃ CHỈ RÕ (gửi ảnh, nêu tên mẫu / kích thước, "bộ này" dưới bài cụ thể) mà cả đoạn Sale không báo khoảng giá nào — chỉ hỏi lại, xin SĐT / Zalo, gửi ảnh → "Né giá — SOP: báo khoảng giá rồi mới khai thác tiếp". KHÔNG tính khi khách hỏi chung chưa rõ món ("xin giá", "có bảng giá không") mà Sale hỏi khách quan tâm sản phẩm nào — SOP cho phép. (Nội dung vẫn chấm theo luật cũ; ca Harri/Cáo xin SĐT không báo giá → gắn Né giá.)
+3. **Báo giá sai cách** (bảng khoảng giá, quy trình 3 bước): báo con số thấp nhất trước hoặc khoảng quá rộng (đầu–cuối chênh > 3 lần, vd "từ 8 triệu tới gần 60 triệu") thay vì "mức giá phổ biến" theo đúng kích thước + chất liệu; khách chưa chọn chất liệu thì nên báo 2–3 phân khúc → "Báo khoảng giá quá rộng / báo giá thấp nhất trước".
+4. **Khách lẻ trên page Sỉ** (`page_si`, khách nói dùng cho gia đình / thỉnh về thờ): đúng là báo KHOẢNG giá rồi chuyển Zalo "đơn vị chuyên hỗ trợ khách lẻ", không tư vấn sâu, không báo giá chi tiết từng phiên bản, không nhắc "bộ phận bán lẻ nội bộ" / lộ vận hành → sai thì "Page Sỉ tư vấn sâu khách lẻ / lộ nội bộ — phải chuyển đơn vị hỗ trợ khách lẻ". (Từ chối báo giá hẳn cũng là Né giá.)
+5. **Gửi dồn quá nhiều mẫu**: gửi hơn 5 ảnh mẫu liền một lúc khi chưa rõ nhu cầu / phân khúc → "Gửi dồn quá nhiều mẫu — SOP: 2–3 phương án (tối đa 3–5 mẫu trong phân khúc)".
+6. **Không có bước tiếp theo**: khách nói "để cân nhắc / bàn với gia đình / chưa cần gấp / đang xem vài nơi" mà Sale không hỏi thời gian dự kiến, không hẹn liên hệ lại → "Không chốt bước tiếp theo".
+7. **Giảm giá ngay / nói xấu đối thủ**: hứa giảm giá khi khách chưa đặt vấn đề, hoặc chê đơn vị khác → ghi đúng lỗi đó.
+Chưa chấm (thiếu dữ liệu sau lượt kéo): lịch nhắn lại khách im lặng 12h / 24h / 3 ngày / 15 ngày, chăm sóc sau bán.
+
+**Giá có sai không (nội dung `sai`)**: Sale báo con số cụ thể → tra bảng giá (theo nhóm + kích thước + chất liệu). Chỉ chấm `sai` khi con số NẰM NGOÀI hẳn "giá thấp nhất – cao nhất" của đúng dòng; nằm trong dải là đúng. Bộ Tam Thánh có giá BỘ riêng — Sale lấy giá tượng đơn × 3 → `sai`. Ghi `source_faq` = "Bảng giá KiotViet 06/10 / <nhóm> <kích thước> <chất liệu>".
 
 ## Cách ghi
 - `thieu`/`sai` BẮT BUỘC có:
