@@ -21,6 +21,7 @@
 - **Lỗi nền tảng (anh chốt 1/10):** "các phần mà k phải lỗi do sale thì đưa vào lỗi nền tảng, kiểu nhắn k được ấy" — verdict `loi_nen_tang`: Sale có xử lý nhưng nền tảng chặn (vd Facebook chỉ cho nhắn riêng trong 7 ngày sau bình luận). Không tính miss, không vào mẫu số tỉ lệ, đếm riêng trên thẻ Miss (bấm để lọc). Chỉ gắn khi có căn cứ (ảnh lỗi Sale gửi kèm báo sai…), `issue` ghi "Lỗi nền tảng (…)": vì sao. Đã gắn: #1662.
 - **Bộ lọc ngày mặc định = Tháng này** (anh chốt 5/10), kiểu chọn nhanh giống app MKT/Sale.
 - **Chấm QUY TRÌNH (anh chốt 6/10):** "trả lời dưới bình luận là sai, phải dẫn về hội thoại riêng là đúng"; thẻ "Hội thoại sai quy trình" thay "Tư vấn qua tin nhắn"; anh gửi 2 bộ quy tắc (Quy trình tư vấn Sales Onl + Bảng khoảng giá báo khách) để học và chấm thêm. **Chỉ áp từ 06/10 14h53 (lúc đẩy luật) — KHÔNG chấm lại quy trình cho hội thoại đã chấm trước đó** (anh chốt); tỉ lệ trên thẻ chỉ tính lượt chấm từ mốc này. Luật: cham-qc.md + cham-cloud.md mục "Chấm QUY TRÌNH"; cột `sai_quy_trinh`; bảng giá ở `qc_bang_gia` (KHÔNG chép vào repo công khai), nạp lại bằng `tools/nap-bang-gia.js`, link ở qc_cau_hinh `bang_gia_url`.
+- **Báo giá (anh chốt 6/10, câu E8):** theo bảng giá — báo MỨC GIÁ PHỔ BIẾN dạng khoảng "từ X – Y", không báo số thấp nhất trước (bỏ ý "luôn nói giá thấp nhất" trong ghi chú bổ sung).
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -30,7 +31,6 @@
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
 | E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
-| E8 | **Báo giá thấp nhất hay mức phổ biến?** Bảng khoảng giá (tab Cách dùng) ghi "báo MỨC GIÁ PHỔ BIẾN, không báo con số thấp nhất trước"; ghi chú bổ sung 6/10 lại ghi "luôn nói ra giá thấp nhất của nhóm sản phẩm đó" | đang TẠM KHÔNG chấm lỗi này; anh chốt 1 trong 2 |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
 ## 2. CLAUDE ĐANG NỢ
