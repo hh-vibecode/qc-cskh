@@ -315,6 +315,9 @@ const ICON={
   inbox:svg('<path d="M4 5h16v10H13l-4 4v-4H4V5Z"/><path d="m9 10 2 2 4-4"/>'),
   muon:svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2.5h6"/>'),
 };
+// Chấm quy trình áp từ lúc anh Hải gửi bộ quy tắc (06/10/2026 14h53, lúc đẩy luật) — lượt chấm trước đó không xét, không tính vào tỉ lệ
+const QT_TU='2026-10-06T07:53:00Z';
+const daXetQT=r=>r.reviewed_at&&r.reviewed_at>=QT_TU&&['dung','thieu','sai'].includes(r.verdict);
 function verdictMatch(r,v){
   if(v==='all')return true;
   if(v==='muon')return!!lateOf(r);
@@ -437,7 +440,7 @@ function render(keepFocus){
     </div>
     <div class="kpi-row">
       ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot${T.loi?` · <span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('loi_nen_tang')">${num(T.loi)} lỗi nền tảng</span>`:''}`,'miss','miss')}
-      ${kpi('quy_trinh','Hội thoại sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),pct(base.filter(r=>r.sai_quy_trinh).length,T.den)+' lượt đã chấm','bad','sai')}
+      ${kpi('quy_trinh','Hội thoại sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),(()=>{const xet=base.filter(daXetQT).length;return xet?pct(base.filter(r=>r.sai_quy_trinh).length,xet)+' / '+num(xet)+' lượt chấm từ 06/10':'chấm từ 06/10, chưa có lượt';})(),'bad','sai')}
       ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
     </div>
     <div class="two">
