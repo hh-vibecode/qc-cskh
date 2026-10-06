@@ -30,6 +30,7 @@
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
 | E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
+| E8 | **Báo giá thấp nhất hay mức phổ biến?** Bảng khoảng giá (tab Cách dùng) ghi "báo MỨC GIÁ PHỔ BIẾN, không báo con số thấp nhất trước"; ghi chú bổ sung 6/10 lại ghi "luôn nói ra giá thấp nhất của nhóm sản phẩm đó" | đang TẠM KHÔNG chấm lỗi này; anh chốt 1 trong 2 |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
 ## 2. CLAUDE ĐANG NỢ
@@ -182,6 +183,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **06/10/2026** — Bổ sung luật quy trình theo ghi chú anh gửi: page Sỉ từ chối thẳng "không bán lẻ chỉ bán sỉ" = sai (dùng câu chuẩn SOP); vừa trả lời vừa khai thác (báo giá xong dừng = sai); page Nến Bơ chưa chấm quy trình (chờ kịch bản riêng); lỗi "báo giá thấp nhất trước" tạm dừng vì ngược bảng giá (E8). Ghi chú nhắc "còn 1 link khoảng giá theo nhóm SP" — chờ anh gửi nếu khác bảng đã nạp.
 - **06/10/2026** — Chấm quy trình: cột `sai_quy_trinh` + thẻ mới; đọc 2 sheet anh gửi (SOP 7 tab, bảng giá 10 tab); nạp 219 dòng giá (khớp từng tab) vào `qc_bang_gia` + RPC `qc_tra_gia` (mã chấm); `qc_lo_cham` thêm cờ la_binh_luan/page_si, `qc_ghi_cham` + ghi-cham.js nhận sai_quy_trinh (thử anon: 200, sai mã 403); 7 lỗi quy trình + kiểm giá vào cả 2 file luật + trang Logic. Tháng 10 hiện 24 lượt bình luận, 71 lượt page Sỉ.
 - **05/10/2026** — 4 lượt kéo 10:25–13:25 FAIL (anh nhận mail GitHub): PostgREST 400 "Empty or invalid json" — câu hỏi của khách Quốc Vương Lê (lời khấn đầy 🙏🌹) bị cắt ở 700 ký tự giữa 1 emoji → nửa ký tự lẻ làm hỏng CẢ LÔ. Sửa: `rest()` làm sạch surrogate lẻ + NUL trước khi ghi. Mốc không tiến khi lỗi nên không mất dữ liệu: chạy bù 13:35 thành công, thêm 36 lượt (từ 08:55).
 - **05/10/2026** — Báo sai #42 (chị Oanh Dang): đồng ý — dòng tượng Đài Loan A Di Đà / Bổn Sư chung khuôn (áo trễ, chữ Vạn), FAQ chỉ ghi lý thuyết. Chấm lại "đúng" #1612 + #1522 (cùng lỗi, 2 dòng duy nhất bị chấm sai vì chữ Vạn), thêm luật vào cả cham-qc.md + cham-cloud.md. Đề xuất bổ sung FAQ (bảng product_faq không phải của QC → X6).
