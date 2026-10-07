@@ -22,6 +22,7 @@
 - **Bộ lọc ngày mặc định = Tháng này** (anh chốt 5/10), kiểu chọn nhanh giống app MKT/Sale.
 - **Chấm QUY TRÌNH (anh chốt 6/10):** "trả lời dưới bình luận là sai, phải dẫn về hội thoại riêng là đúng"; thẻ "Hội thoại sai quy trình" thay "Tư vấn qua tin nhắn"; anh gửi 2 bộ quy tắc (Quy trình tư vấn Sales Onl + Bảng khoảng giá báo khách) để học và chấm thêm. **Chỉ áp từ 06/10 14h53 (lúc đẩy luật) — KHÔNG chấm lại quy trình cho hội thoại đã chấm trước đó** (anh chốt); tỉ lệ trên thẻ chỉ tính lượt chấm từ mốc này. Luật: cham-qc.md + cham-cloud.md mục "Chấm QUY TRÌNH"; cột `sai_quy_trinh`; bảng giá ở `qc_bang_gia` (KHÔNG chép vào repo công khai), nạp lại bằng `tools/nap-bang-gia.js`, link ở qc_cau_hinh `bang_gia_url`.
 - **Báo giá (anh chốt 6/10, câu E8):** theo bảng giá — báo MỨC GIÁ PHỔ BIẾN dạng khoảng "từ X – Y", không báo số thấp nhất trước (bỏ ý "luôn nói giá thấp nhất" trong ghi chú bổ sung).
+- **Sale cố định theo page (anh chốt 7/10):** từ 01/10/2026 mọi tin Hiền Thủy, Shidai, Nến Bơ Tự Tại Viên là của **Vân Ngọc** — trigger `qc_sale_co_dinh` trên sale_response_review, cấu hình qc_cau_hinh `sale_co_dinh` (`supabase-schema-qc-sale-co-dinh.sql`). Đã áp 7 page (FB/TikTok/Zalo Hiền Thủy, Nến Bơ, Thời Đại FB); 2 Zalo Shidai chờ anh (E9).
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -31,6 +32,7 @@
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
 | E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
 | E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
+| E9 | 2 Zalo Shidai ("Tổng Kho Sỉ Đồ Thờ Shidai" pzl_421283811192749346, "Oanh Bùi Tổng Kho Sỉ" pzl_636053762312360623) tháng 10 đang ghi Sale **Oanhh Bùi** 50 lượt — cũng gán Vân Ngọc hay giữ Oanh Bùi? | anh chốt; thêm vào qc_cau_hinh.sale_co_dinh là xong |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
 ## 2. CLAUDE ĐANG NỢ
@@ -183,6 +185,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **07/10/2026** — Gán Sale Vân Ngọc từ 1/10 cho 7 page Hiền Thủy / Nến Bơ / Thời Đại bằng trigger CSDL (sao lưu trước): đổi 57 dòng (54 trống tên + 1 Chánh Tâm Ngọc Diệp trả lời hộ trên page Hiền Thủy + 2 khác), dòng trước 1/10 không đụng. Zalo Shidai chờ E9.
 - **06/10/2026** — Bổ sung luật quy trình theo ghi chú anh gửi: page Sỉ từ chối thẳng "không bán lẻ chỉ bán sỉ" = sai (dùng câu chuẩn SOP); vừa trả lời vừa khai thác (báo giá xong dừng = sai); page Nến Bơ chưa chấm quy trình (chờ kịch bản riêng); lỗi "báo giá thấp nhất trước" tạm dừng vì ngược bảng giá (E8). Ghi chú nhắc "còn 1 link khoảng giá theo nhóm SP" — chờ anh gửi nếu khác bảng đã nạp.
 - **06/10/2026** — Chấm quy trình: cột `sai_quy_trinh` + thẻ mới; đọc 2 sheet anh gửi (SOP 7 tab, bảng giá 10 tab); nạp 219 dòng giá (khớp từng tab) vào `qc_bang_gia` + RPC `qc_tra_gia` (mã chấm); `qc_lo_cham` thêm cờ la_binh_luan/page_si, `qc_ghi_cham` + ghi-cham.js nhận sai_quy_trinh (thử anon: 200, sai mã 403); 7 lỗi quy trình + kiểm giá vào cả 2 file luật + trang Logic. Tháng 10 hiện 24 lượt bình luận, 71 lượt page Sỉ.
 - **05/10/2026** — 4 lượt kéo 10:25–13:25 FAIL (anh nhận mail GitHub): PostgREST 400 "Empty or invalid json" — câu hỏi của khách Quốc Vương Lê (lời khấn đầy 🙏🌹) bị cắt ở 700 ký tự giữa 1 emoji → nửa ký tự lẻ làm hỏng CẢ LÔ. Sửa: `rest()` làm sạch surrogate lẻ + NUL trước khi ghi. Mốc không tiến khi lỗi nên không mất dữ liệu: chạy bù 13:35 thành công, thêm 36 lượt (từ 08:55).
