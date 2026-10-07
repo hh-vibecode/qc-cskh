@@ -312,6 +312,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   }).map(({ _rep_at, ...x }) => x);
   for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
   NK.s.luot_them = moi.length; NK.s.miss_cap_nhat = capNhat.length;
+  NK.s.luot_loc = moi.filter(x => x.verdict === 'khong_lien_quan').length;   // tự lọc lúc kéo (khấn / xã giao), vẫn lưu
   console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
   // Soát lại các dòng MISS còn mở với Pancake thật (anh Hải 30/9: "lúc kéo thì phải xem lại các data miss, họ clear xong
   // rồi thì clear hết"). Sale trả lời bổ sung (dù muộn) / nhắn riêng cho khách bình luận → gỡ khỏi miss, chuyển chấm nội dung,
