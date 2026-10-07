@@ -35,8 +35,6 @@
 | # | Việc | Ghi chú |
 |---|---|---|
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
-| E2 | Ca Harri / Cáo: Sale không trả lời giá, chỉ xin SĐT chuyển Zalo, khách đồng ý → chấm `dung` hay `thieu`? | Sonnet chấm thieu (cao/trung); em đề xuất dung. Chốt xong áp cho mọi ca tương tự |
-| E3 | Ngưỡng "trả lời muộn" khi kéo theo giờ: đang để ≥ 1 giờ | em tạm đặt 29/9 |
 | E9 | 2 Zalo Shidai ("Tổng Kho Sỉ Đồ Thờ Shidai" pzl_421283811192749346, "Oanh Bùi Tổng Kho Sỉ" pzl_636053762312360623) tháng 10 đang ghi Sale **Oanhh Bùi** 50 lượt — cũng gán Vân Ngọc hay giữ Oanh Bùi? | anh chốt; thêm vào qc_cau_hinh.sale_co_dinh là xong |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
@@ -46,9 +44,7 @@
 |---|---|---|
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
-| 7 | Chuyển hẳn kéo tin sang QC (mục 5c): đang ở bước 1–2 | 29/9 bắt đầu chạy song song |
 | 9 | Đưa **tầng luật** vào job `keo-tin.yml` (soát miss ĐÃ đưa vào 30/9 qua `tools/soat-lib.js`) — cần viết lại `cham-luat.js` chạy bằng khoá `qc_cskh` (REST) thay Management API | để chấm cloud đỡ tốn |
-| 12 | **Soát lại dòng `thieu` gần đây với Pancake** (như soát miss): 10/26 báo sai của Lệ 30/9 là "Sale đã tư vấn bổ sung" — chấm lúc hội thoại còn dở, sau đó Sale nói tiếp. Lượt kéo nên kéo lại đoạn mới của dòng `thieu` ≤ 3 ngày có tin Sale mới → trả về chờ chấm | bài học báo sai 30/9 |
 | 13 | **Điểm mù nhắn riêng:** Sale nhắn riêng cho khách bình luận mà khách CHƯA trả lời thì Pancake chưa tạo hội thoại tin nhắn → job không thấy, vẫn tính miss (theo anh chốt 1/10 đáng lẽ là muộn). Dấu `private_reply_conversation.id` dạng `m_…` trên bình luận KHÔNG tin được: không có giờ, và Botcake cũng tự nhắn riêng (ca Tùng Châm có dấu, ca Huỳnh Tuấn Dĩ Sale nhắn rồi lại không có). Tạm thời: Sale báo sai kèm ảnh → gỡ tay, nhãn muộn lấy mốc lúc báo (đã làm #880, #1117). Cần tìm API lấy tin nhắn riêng theo id / theo khách | phát hiện 1/10 qua báo sai #37–#38 |
 | 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
@@ -190,6 +186,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **07/10/2026** — Dọn sổ: E2 (xin SĐT không báo giá) giải bằng SOP = lỗi quy trình Né giá; E3 thay bằng giờ làm 8h–17h30 + ngưỡng 1 giờ làm việc; nợ #7 (chuyển kéo tin sang QC) xong từ 30/9; nợ #12 (Sale nói thêm sau khi chấm) giải bằng chấm cả hội thoại.
 - **07/10/2026** — Giờ làm 8h–17h30 + thẻ ngoài giờ (Social: 41 chậm, 103 ngoài giờ = SQL); gộp "Trả lời muộn" cũ vào "Phản hồi chậm"; 2 hàng × 4 thẻ, bảng xếp dọc; viết lại trang Logic theo toàn bộ quy tắc anh chốt trong phiên.
 - **07/10/2026** — **LỖI GIỜ (của Claude, anh phát hiện):** thread ghi UTC (giữ từ job cũ) → trang + nhận xét chấm lệch 7 tiếng. Sửa: keo-tin / soat-lib / soat-miss-pancake ghi giờ VN; chuyển 3.882 thread cũ sang giờ VN (sao lưu trước; 4 dòng còn lại do thread bị cắt đầu, đã là giờ VN); sửa tay 13 mốc giờ trong 10 nhận xét; chốt chặn tự kiểm. Lịch kéo mỗi giờ tạm dừng 15h04 theo anh, bật lại sau khi thử thật 2 page (46/46 khớp giờ VN). Thêm hàng thẻ Thời gian phản hồi + cột Đúng giờ / TB phản hồi theo thương hiệu & Sale (khớp SQL: Social 165/285, TB 67 phút; Zalo 42/68, 117 phút).
 - **07/10/2026** — Kéo bù 1–7/10 (lượt GitHub kịp ghi 1.133 lượt trước khi huỷ vì quá lâu) → gộp tháng 10 về 1 dòng / hội thoại: 1.955 dòng → 1.236 hội thoại (xoá 719 dòng thừa, sao lưu trước, báo sai trỏ lại dòng giữ). 764 tự lọc lúc kéo (724 lời khấn, 23 sticker, 17 xã giao — kiểm mẫu đúng). Khôi phục kết quả cũ cho 11 hội thoại đã chấm đủ; ~250 hội thoại có lượt mới → 3 agent chấm song song. Thêm Nhật ký chạy › Đối chiếu kéo về / lọc ra (tách bình luận / tin nhắn) + danh sách lượt bị lọc có thẻ loại kênh. Job: PAGE_IDS để chạy bù song song theo nhóm page.
