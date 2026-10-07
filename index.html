@@ -49,6 +49,8 @@ button,input,select,textarea{font-family:inherit;font-size:12.5px;color:var(--te
 select,input[type=date],input[type=search],input[type=password],textarea{padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);font-weight:600;outline:none}
 select:focus,input:focus,textarea:focus{border-color:var(--accent)}
 .kpi-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.kpi-row.kpi4{grid-template-columns:repeat(4,minmax(0,1fr))}
+th.num,td.num{white-space:nowrap}
 .kpi{background:var(--surface);border:1.5px solid var(--border);border-left:4px solid var(--c,var(--accent));border-radius:14px;padding:12px 14px;cursor:pointer}
 .kpi.on{outline:2.5px solid var(--accent);outline-offset:1px}
 .kpi .l{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -128,6 +130,7 @@ input.sel{font-weight:600;cursor:text}
   .sb-bottom{margin:0;border:none;padding:0;display:flex;flex-wrap:wrap}
   .sb-brand{padding:10px 12px}
   .kpi-row{grid-template-columns:1fr}
+  .kpi-row.kpi4{grid-template-columns:1fr 1fr}
   .two{grid-template-columns:1fr}
   .kpi .v{font-size:20px}
   .bar .right{margin-left:0}
@@ -300,7 +303,10 @@ async function setRange(days){
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
-const lateOf=r=>r.turns?r.turns.map(lateOf).find(Boolean)||'':lateOf1(r);
+// Trả lời muộn (anh Hải 7/10): CHỈ lượt khách nhắn trong giờ làm 8h–17h30 mà chờ > 60 phút làm việc. Khách nhắn ngoài giờ → thẻ
+// "ngoài giờ", không tính muộn. Dòng cũ chưa có số đo (trước tháng 10) dùng nhãn "Trả lời muộn" cũ trong issue.
+const lateOf=r=>r.turns?r.turns.map(lateOf).find(Boolean)||'':(r.tg_phan_hoi_max!=null||r.tg_ngoai_gio!=null)?(r.tg_phan_hoi_max>DUNG_GIO?fmtPhut(r.tg_phan_hoi_max):''):lateOf1(r);
+const ngoaiGio=r=>(r.turns||[r]).some(t=>t.tg_ngoai_gio>0);
 const lateOf1=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
 // Bình luận mà Sale đã nhắn riêng (2 luồng khác nhau trên Pancake) — nay được CHẤM nội dung tin nhắn, nhãn ở đầu issue.
 // Dòng tra_loi_inbox cũ (chưa chấm nội dung) cũng tính vào nhóm này.
@@ -326,7 +332,8 @@ function verdictMatch(r,v){
   if(v==='muon')return!!lateOf(r);
   if(v==='qua_inbox')return inboxOf(r);
   if(v==='quy_trinh')return!!r.sai_quy_trinh;
-  if(v==='cham_gio')return r.tg_phan_hoi_max>DUNG_GIO&&r.verdict!=='khong_lien_quan';   // anh Hải 6/10: thẻ thay "Tư vấn qua tin nhắn"
+  if(v==='cham_gio')return r.tg_phan_hoi_max>DUNG_GIO&&r.verdict!=='khong_lien_quan';
+  if(v==='ngoai_gio')return ngoaiGio(r);   // anh Hải 6/10: thẻ thay "Tư vấn qua tin nhắn"
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
   if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham','loi_nen_tang'].includes(r.verdict);
   return r.verdict===v;
@@ -339,7 +346,7 @@ function tally(list){
   return{n:list.length,den,dung:g('dung'),thieu:g('thieu'),sai:g('sai'),bot:g('chi_bot'),none:g('khong_tra_loi'),
     miss:g('chi_bot')+g('khong_tra_loi'),inbox:g('tra_loi_inbox'),pend:g('chua_cham'),klq:g('khong_lien_quan'),loi:g('loi_nen_tang'),...tgPhanHoi(list)};
 }
-// Thời gian phản hồi (anh Hải 7/10) — phút LÀM VIỆC 8h–22h, tính trong CSDL (qc_tinh_tg) từ đoạn hội thoại, chỉ lượt khách từ 1/10.
+// Thời gian phản hồi (anh Hải 7/10) — phút LÀM VIỆC 8h–17h30 (chỉ lượt khách nhắn trong giờ làm), tính trong CSDL (qc_tinh_tg) từ đoạn hội thoại, chỉ lượt khách từ 1/10.
 // Đúng giờ = mọi lượt trong hội thoại được Sale trả lời trong 60 phút làm việc. Chỉ tính hội thoại có Sale trả lời.
 const DUNG_GIO=60;
 function tgPhanHoi(list){
@@ -437,7 +444,7 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Sale trả lời sau lúc job chạy — phát hiện khi soát lại Pancake">muộn ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
+      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Khách nhắn trong giờ làm, Sale trả lời sau hơn 1 giờ làm việc">muộn ${esc(lateOf(r))}</span>`:''}${ngoaiGio(r)?`<span class="late" style="background:var(--grey-bg);color:var(--grey)" title="Khách nhắn ngoài giờ làm (8h–17h30), Sale trả lời sau — không tính muộn">ngoài giờ</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
@@ -466,27 +473,22 @@ function render(keepFocus){
         <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
       </div>
     </div>
-    <div class="kpi-row">
-      ${kpi('dung','Tư vấn đúng',num(T.dung),`${pct(T.dung,T.den)} / ${num(T.den)} lượt đã chấm`,'ok','dung')}
+    <div class="kpi-row kpi4">
+      ${kpi('dung','Tư vấn đúng',num(T.dung),pct(T.dung,T.den),'ok','dung')}
       ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn','thieu')}
       ${kpi('sai','Sai kiến thức',num(T.sai),pct(T.sai,T.den),'bad','sai')}
+      ${kpi('miss','Miss',num(T.miss),T.loi?`<span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('loi_nen_tang')">+ ${num(T.loi)} lỗi nền tảng</span>`:'','miss','miss')}
     </div>
-    <div class="kpi-row">
-      ${kpi('miss','Miss — chưa ai tư vấn',num(T.miss),`${num(T.none)} không trả lời · ${num(T.bot)} chỉ bot${T.loi?` · <span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('loi_nen_tang')">${num(T.loi)} lỗi nền tảng</span>`:''}`,'miss','miss')}
-      ${kpi('quy_trinh','Hội thoại sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),(()=>{const xet=base.filter(daXetQT).length;return xet?pct(base.filter(r=>r.sai_quy_trinh).length,xet)+' / '+num(xet)+' lượt chấm từ 06/10':'chấm từ 06/10, chưa có lượt';})(),'bad','sai')}
-      ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
+    <div class="kpi-row kpi4">
+      ${kpi('quy_trinh','Sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),(()=>{const xet=base.filter(daXetQT).length;return xet?pct(base.filter(r=>r.sai_quy_trinh).length,xet):'';})(),'bad','sai')}
+      ${kpi('dung_gio','Trả lời đúng giờ',pct(T.dungGio,T.coTg),`${num(T.dungGio)} / ${num(T.coTg)}`,'ok','dung')}
+      ${kpi('tb_tg','Phản hồi trung bình',fmtPhut(T.tbTg),'','info','muon')}
+      ${kpi('muon','Phản hồi chậm',num(base.filter(lateOf).length),(()=>{const n=base.filter(ngoaiGio).length;return n?`<span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('ngoai_gio')">+ ${num(n)} ngoài giờ</span>`:'';})(),'warn','muon')}
     </div>
-    <div class="kpi-row">
-      ${kpi('dung_gio','Trả lời đúng giờ',pct(T.dungGio,T.coTg),`${num(T.dungGio)} / ${num(T.coTg)} hội thoại · trong 1 giờ làm việc`,'ok','dung')}
-      ${kpi('tb_tg','Thời gian phản hồi TB',fmtPhut(T.tbTg),`trung vị ${fmtPhut(T.tvTg)} · giờ làm việc 8h–22h`,'info','muon')}
-      ${kpi('cham_gio','Phản hồi chậm',num(T.chamGio),'có lượt chờ quá 1 giờ làm việc','warn','muon')}
-    </div>
-    <div class="two">
-      <div><div class="sec">Theo thương hiệu</div><div class="card scroll"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div></div>
-      <div><div class="sec">Theo Sale</div><div class="card scroll"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div></div>
-    </div>
+    <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div>
+    <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div>
     <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
-      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='cham_gio'?'Phản hồi chậm':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
+      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Phản hồi chậm':S.verdict==='ngoai_gio'?'Ngoài giờ làm':S.verdict==='cham_gio'?'Phản hồi chậm':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
@@ -746,54 +748,74 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 07/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
-    <h3>1. Nguồn dữ liệu</h3>
+    <h3>1. Kéo dữ liệu</h3>
     <ul>
-      <li>Job <code>sync-sale-review</code> (repo mkt-sale-app) kéo hội thoại Pancake lúc 7h05 · 12h05 · 15h05, tách từng lượt khách hỏi – Sale đáp, ghi vào bảng <code>sale_response_review</code> (Supabase dùng chung).</li>
-      <li>Kênh: Facebook, TikTok, Zalo cá nhân nối qua Pancake (Zalo chỉ có dữ liệu từ 15/09/2026 — Pancake không lấy được lịch sử trước lúc nối). Bỏ hẳn nhóm Zalo (<code>pzl_g_</code>).</li>
-      <li>Chỉ giữ tin <b>khách hỏi mua</b>. Lời khấn "Nam mô…", tương tác, chat nội bộ → không liên quan, không hiện, không tính.</li>
+      <li>Job QC kéo hội thoại Pancake: <b>mỗi giờ phút :25</b> chỉ kéo phần mới (để xử lý nhanh); <b>6h20 và 18h35</b> kéo lại trọn <b>hôm qua + hôm nay</b> để không sót.</li>
+      <li><b>Kéo hết rồi mới lọc</b> — không bỏ tin khách nào ở bước kéo (trước 7/10 bộ lọc cũ bỏ sót ~36% tin: câu mẫu quảng cáo, câu gõ không dấu, câu không có dấu hỏi).</li>
+      <li>Kênh: Facebook (tin nhắn + bình luận), TikTok, Zalo cá nhân nối qua Pancake. Bỏ nhóm Zalo. Trạng thái từng kênh (xanh đọc được / đỏ không đọc được) ở <b>Nhật ký chạy</b>.</li>
+      <li>Giờ trong hội thoại là <b>giờ Việt Nam</b>; job tự kiểm, lệch là dừng và báo lỗi.</li>
+      <li><b>Chuẩn từ tháng 10/2026</b> — dữ liệu trước đó giữ như cũ, không kéo / chấm bù.</li>
     </ul>
-    <h3>2. Chấm 3 bước</h3>
+    <h3>2. Mỗi dòng là cả một hội thoại</h3>
+    <ul>
+      <li>Từ 01/10/2026: mỗi khách trên mỗi kênh (Messenger / Zalo / TikTok / bình luận) là <b>1 dòng</b>; cùng người khác kênh thì tách riêng. Gộp theo mã hội thoại Pancake — không gộp theo tên nên 2 khách trùng tên không bị gộp nhầm.</li>
+      <li>Khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm → nối vào hội thoại và <b>chấm lại cả đoạn</b>: hôm qua đúng mà hôm nay trả lời sai thì cả hội thoại thành sai. Hội thoại không có gì mới thì giữ kết quả đã chấm.</li>
+    </ul>
+    <h3>3. Lọc (xem đối chiếu kéo về / lọc ra ở Nhật ký chạy)</h3>
+    <ul>
+      <li><b>Lọc lúc kéo</b> (vẫn lưu đủ): lời khấn thuần "Nam mô…", câu xã giao "ok / vâng / cảm ơn / chào", chỉ sticker.</li>
+      <li><b>Lọc khi chấm</b>: chat nội bộ, nhà cung cấp / đối tác, người rao bán, khen ảnh, chê bai / mỉa mai không kèm ý mua ("có tác dụng gì mua phí").</li>
+      <li>Không lọc: người bán lại / đại lý xin giá ở page Sỉ (là khách sỉ); câu hỏi công dụng lịch sự.</li>
+    </ul>
+    <h3>4. Chấm</h3>
     <ol>
-      <li><b>Soát miss với Pancake thật</b> — dòng "không trả lời / chỉ bot" được mở lại hội thoại: Sale trả lời sau lúc job chạy → hết miss, gắn nhãn <i>trả lời muộn N giờ</i> rồi chấm nội dung.</li>
-      <li><b>Bình luận ↔ tin nhắn là 2 luồng riêng</b> — với mỗi bình luận, tìm hội thoại tin nhắn của CHÍNH khách đó (theo mã khách, thử cả tên đăng nhập / tên bỏ emoji). Có Sale nhắn riêng → ghép bình luận + tin nhắn, gắn nhãn <i>qua tin nhắn</i> và <b>chấm Sale tư vấn tới đâu</b>. Không có → mới là miss.</li>
-      <li><b>Luật</b> (không tốn AI) — chốt ca hiển nhiên: câu hỏi phân loại "gia đình hay nhập sỉ", khách hỏi chung → Sale xin ảnh / ngân sách / mời check ib, mẫu trả lời chuẩn, tin hệ thống, lời khấn, nhân viên nội bộ. Mỗi luật phải đo trên toàn bộ dữ liệu đã chấm ra lệch 0 mới được dùng.</li>
-      <li><b>Sonnet</b> — đọc phần còn lại (khách hỏi cụ thể, kiến thức sản phẩm, khiếu nại), chỉ tra <code>product_faq</code> khi là câu hỏi kiến thức; soát miss còn lại là tương tác hay miss thật.</li>
+      <li><b>Soát miss với Pancake thật</b> mỗi lượt kéo (30 ngày): Sale nhắn lại — <b>dù muộn bao lâu — là trả lời muộn, không phải miss</b>. Bình luận ↔ tin nhắn là 2 luồng: có Sale nhắn riêng cho chính khách đó thì chấm đoạn tin nhắn, không có mới là miss.</li>
+      <li><b>AI chấm cả đoạn hội thoại</b>, tra <code>product_faq</code> khi là câu hỏi kiến thức, tra <b>bảng khoảng giá KiotViet</b> khi Sale báo giá.</li>
+      <li>Đang khai thác nhu cầu (hỏi lại 1 lần cho rõ mẫu / kích thước / ngân sách) mà khách chưa đáp → đúng. Khách đã chỉ rõ món mà Sale hỏi chung chung nhiều ngày không báo giá → thiếu.</li>
+      <li>Sale đã tiếp khách, tin cuối của khách khó hiểu (gõ sai / đọc giọng nói) → không phải miss; Sale không hỏi lại → thiếu mức thấp.</li>
+      <li>FAQ nhận diện tượng là lý thuyết: dòng tượng Đài Loan A Di Đà / Bổn Sư <b>chung khuôn</b> (áo trễ, chữ Vạn, khác pháp khí) — Sale nói vậy là đúng. Giá chỉ tính sai khi nằm ngoài hẳn dải thấp nhất – cao nhất của bảng giá; Bộ Tam Thánh có giá bộ riêng (không nhân 3).</li>
+      <li>Tầng chấm bằng luật (không tốn AI) <b>tạm tắt</b> từ 07/10 vì luật cũ chấm theo từng cặp hỏi–đáp.</li>
     </ol>
-    <h3>3. Kết quả chấm</h3>
+    <h3>5. Kết quả chấm</h3>
     <table style="margin-top:6px">
       <thead><tr><th>Kết quả</th><th>Nghĩa</th><th>Tính vào tỉ lệ đúng</th></tr></thead>
       <tbody>
-        <tr><td>${vb('dung')}</td><td>Trả lời đúng, đủ ý; mẫu chung cho câu hỏi chung; hỏi phân loại / ngân sách; chuyển inbox / Zalo</td><td>Có</td></tr>
-        <tr><td>${vb('thieu')}</td><td>Trả lời mẫu bỏ qua câu hỏi cụ thể, thiếu ý, bỏ lỡ khách muốn chốt (mức cao / trung bình / thấp)</td><td>Có</td></tr>
-        <tr><td>${vb('sai')}</td><td>Trái với kiến thức sản phẩm trong FAQ</td><td>Có</td></tr>
+        <tr><td>${vb('dung')}</td><td>Trả lời đúng, đủ các câu khách hỏi trong cả hội thoại</td><td>Có</td></tr>
+        <tr><td>${vb('thieu')}</td><td>Có lượt trả lời mẫu bỏ qua câu hỏi cụ thể, thiếu ý, bỏ lửng (mức cao / trung bình / thấp)</td><td>Có</td></tr>
+        <tr><td>${vb('sai')}</td><td>Có lượt trái kiến thức sản phẩm (FAQ) / giá ngoài bảng giá</td><td>Có</td></tr>
         <tr><td>${vb('khong_tra_loi')} ${vb('chi_bot')}</td><td>Miss — khách hỏi mua mà không có Sale thật trả lời</td><td>Có</td></tr>
-        <tr><td>${vb('tra_loi_inbox')}</td><td>Bình luận có tin nhắn riêng nhưng chưa chấm nội dung (dữ liệu cũ, đang được chấm lại) — không tính lỗi</td><td>Không</td></tr>
+        <tr><td>${vb('loi_nen_tang')}</td><td>Lỗi không do Sale (vd Facebook chặn nhắn riêng sau 7 ngày) — chỉ gắn khi có căn cứ; không tính miss, đếm riêng ở thẻ Miss</td><td>Không</td></tr>
         <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
-        <tr><td>${vb('loi_nen_tang')}</td><td>Lỗi không do Sale: Sale có xử lý nhưng nền tảng chặn (vd Facebook chỉ cho nhắn riêng trong 7 ngày sau bình luận) — không tính miss, đếm riêng ở thẻ Miss (bấm để xem)</td><td>Không</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − tư vấn ở tin nhắn − chờ chấm − không liên quan − lỗi nền tảng). Cùng công thức trang cũ Dashboard-Meta.</p>
-    <h3>Chấm quy trình (từ 06/10/2026)</h3>
-    <p>Ngoài đúng / thiếu / sai nội dung, mỗi hội thoại xét thêm có đúng <b>Quy trình tư vấn Sales Onl</b> và <b>Bảng khoảng giá báo khách</b> không. Sai thì hiện ở thẻ <b>Hội thoại sai quy trình</b> kèm lý do; một lượt có thể tư vấn đúng mà vẫn sai quy trình.</p>
+    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − chờ chấm − không liên quan − lỗi nền tảng).</p>
+    <h3>6. Thời gian phản hồi</h3>
+    <ul>
+      <li>Giờ làm việc <b>8h–17h30</b>. Mỗi lượt khách nhắn trong giờ làm: đo từ tin đầu của khách tới tin Sale đầu tiên, chỉ tính phút trong giờ làm (khách nhắn 17h, Sale trả lời 8h20 sáng sau = 50 phút). Ảnh page tự gửi khi khách bấm quảng cáo không tính là Sale trả lời.</li>
+      <li><b>Đúng giờ</b>: mọi lượt trong hội thoại được trả lời trong 1 giờ làm việc. <b>Phản hồi chậm</b>: có lượt chờ quá 1 giờ làm việc.</li>
+      <li>Khách nhắn <b>ngoài giờ làm</b> mà trả lời sau → thẻ <b>ngoài giờ</b>, không tính phản hồi chậm, không vào trung bình.</li>
+    </ul>
+    <h3>7. Chấm quy trình (từ 06/10/2026 14h53)</h3>
+    <p>Theo <b>Quy trình tư vấn Sales Onl</b> và <b>Bảng khoảng giá báo khách</b>; chấm riêng với đúng / thiếu / sai (một hội thoại có thể tư vấn đúng mà vẫn sai quy trình). Hội thoại trước mốc không xét.</p>
     <ul>
       <li><b>Tư vấn công khai dưới bình luận</b> — dưới bình luận chỉ dẫn về tin nhắn / chào / tri ân; báo giá, tư vấn phải ở tin nhắn riêng.</li>
       <li><b>Né giá</b> — khách hỏi giá món đã chỉ rõ mà không báo khoảng giá (chỉ hỏi lại, xin số). Khách hỏi chung chưa rõ món thì hỏi lại là đúng.</li>
       <li><b>Báo giá sai cách</b> — phải báo khoảng mức giá phổ biến "từ X – Y" theo kích thước + chất liệu; chỉ báo số thấp nhất hoặc khoảng quá rộng là sai (khách chọn đúng mẫu thì báo giá mã đó).</li>
-      <li><b>Báo giá không khai thác tiếp</b> — báo giá xong dừng, không hỏi thêm nhu cầu / không có bước tiếp (nguyên tắc: vừa trả lời vừa khai thác).</li>
-      <li><b>Page Sỉ gặp khách lẻ</b> — phải báo khoảng giá rồi chuyển đơn vị hỗ trợ khách lẻ bằng câu chuẩn SOP; từ chối thẳng "không bán lẻ, chỉ bán sỉ", tư vấn sâu hay lộ nội bộ đều là sai.</li>
-      <li>Page <b>Nến Bơ - Tự Tại Viên</b> chưa chấm quy trình (chờ kịch bản riêng).</li>
+      <li><b>Báo giá không khai thác tiếp</b> — báo giá xong dừng, không hỏi thêm nhu cầu (nguyên tắc: vừa trả lời vừa khai thác).</li>
+      <li><b>Page Sỉ gặp khách lẻ</b> — báo khoảng giá rồi chuyển đơn vị hỗ trợ khách lẻ bằng câu chuẩn SOP; từ chối thẳng "không bán lẻ, chỉ bán sỉ", tư vấn sâu, lộ nội bộ đều sai.</li>
       <li><b>Gửi dồn quá nhiều mẫu</b> (hơn 5 ảnh một lúc khi chưa rõ nhu cầu) · <b>Không chốt bước tiếp theo</b> khi khách hẹn cân nhắc · <b>Giảm giá ngay / nói xấu đối thủ</b>.</li>
-      <li>Giá Sale báo được đối chiếu bảng khoảng giá KiotViet (nạp lại hằng tháng) — ngoài hẳn dải thấp nhất–cao nhất mới tính <b>Sai kiến thức</b>.</li>
+      <li>Page <b>Nến Bơ - Tự Tại Viên</b> chưa chấm quy trình (chờ kịch bản riêng).</li>
     </ul>
-    <h3>4. Loại trừ đặc biệt</h3>
+    <h3>8. Sale & loại trừ đặc biệt</h3>
     <ul>
-      <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau (vd "Tổng Kho Sỉ Shidai – Chị Huế").</li>
+      <li>Từ 01/10/2026 mọi tin của <b>Hiền Thủy</b> (Facebook, TikTok, Zalo), <b>Nến Bơ - Tự Tại Viên</b> và page <b>Thời Đại</b> (Shidai) tính cho Sale <b>Vân Ngọc</b>.</li>
+      <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau.</li>
       <li>Tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin" không dùng làm tên Sale, nhưng tin viết tay từ các tài khoản này vẫn tính là người thật trả lời.</li>
     </ul>
-    <h3>5. Báo sai</h3>
-    <p>Bấm "Báo sai" ở từng dòng → Claude gom lại, sửa kết quả và sửa luật để không lặp lại, ghi cách xử lý vào <b>Lịch sử báo sai</b>.</p>
+    <h3>9. Báo sai</h3>
+    <p>Bấm "Báo sai" ở từng dòng → Claude soát bằng dữ liệu thật, sửa kết quả, báo sai đúng thì thêm vào luật chấm để không lặp lại, ghi cách xử lý vào <b>Lịch sử báo sai</b>.</p>
   </div>`;
 }
 async function resolveReport(id){
