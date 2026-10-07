@@ -30,6 +30,7 @@
 - **GIỜ TRONG THREAD = GIỜ VIỆT NAM (7/10):** mọi nơi ghi thread dùng gioThread (keo-tin) / bản giống trong soat-lib; job tự kiểm, lệch > 20% thì dừng + báo Lỗi.
 - **Đổi logic là sửa luôn trang Logic xử lý dữ liệu** (anh chốt 7/10, đã ghi CLAUDE.md).
 - **Đóng sổ hôm qua (anh chốt 7/10):** mỗi sáng ngày trước phải còn 0 chờ chấm + 0 miss chưa soát (miss thật vẫn giữ). Luật ở cả 2 file chấm (không để dòng phân vân sang ngày sau); badge xanh/đỏ cạnh Tổng quan trên trang Chất lượng phản hồi. **Nhật ký chạy chỉ theo dõi dữ liệu thô** (kéo về · lọc ra bình luận/tin nhắn · vào chấm) — anh chốt 7/10.
+- **Kênh theo dõi (anh chốt 7/10):** chỉ 15 page ĐANG GẮN trên Pancake (FB "Hoàng Dương / Ming Ying" bật lại 7/10 → CT); kênh Pancake đang tắt không đưa vào bảng. Trạng thái cập nhật mỗi lượt kéo (mỗi giờ); page bị tắt / gỡ → đỏ "Không còn trong danh sách".
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI

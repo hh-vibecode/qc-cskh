@@ -242,8 +242,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
   }
   const KENH = new Map();   // trạng thái từng kênh lượt này → qc_kenh (Cài đặt › Nhật ký chạy)
-  for (const p of pj?.categorized?.inactivated || [])
-    KENH.set(String(p.id), kenhDong(p, false, 'loi', 'Pancake đang TẮT kênh này (không kích hoạt) — không đọc được'));
+  // 7/10 anh Hải: chỉ theo dõi các page ĐANG GẮN (kích hoạt) — kênh Pancake đang tắt không đưa vào bảng
   NK.s.so_page = pages.length;
   const pairs = [], dem = {};
   for (const p of pages) {
