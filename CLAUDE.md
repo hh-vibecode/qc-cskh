@@ -58,6 +58,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - **Lọc đúng nghiệp vụ rồi mới trình anh** — dòng không tính thì không đưa vào bảng; nghi ngờ thì tách riêng, nói rõ vì sao.
 - Dựng / sửa số liệu: **đối chiếu với con số đã biết** (vd đếm thẳng SQL) trước khi báo xong, không chỉ "chạy không lỗi".
 - **Không kiểm một mối nối bằng dữ liệu mượn từ chính bên kia.** Thiếu dữ liệu ≠ khớp; mặc định là NGỜ.
+- **Kéo đủ rồi mới lọc** (anh chốt 7/10): job kéo tin không được bỏ lượt khách vì "không giống câu hỏi" — lưu hết, lọc ở bước xử lý. Kiểm job kéo bằng cách so với Pancake thật, không so với job cũ.
 - Bảng cũ giữ lại có chủ đích — kiểm trước khi nói "mất dữ liệu".
 - Đổi logic chấm: đo trước–sau trên dữ liệu thật (`cham-luat.js --do` phải lệch 0 mới được thêm luật).
 
