@@ -300,11 +300,14 @@ async function setRange(days){
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
-const lateOf=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
+const lateOf=r=>r.turns?r.turns.map(lateOf).find(Boolean)||'':lateOf1(r);
+const lateOf1=r=>{const m=(r.issue||'').match(/Trả lời muộn ([\d,]+ (?:giờ|phút))/);return m?m[1]:'';};
 // Bình luận mà Sale đã nhắn riêng (2 luồng khác nhau trên Pancake) — nay được CHẤM nội dung tin nhắn, nhãn ở đầu issue.
 // Dòng tra_loi_inbox cũ (chưa chấm nội dung) cũng tính vào nhóm này.
-const inboxOf=r=>r.verdict==='tra_loi_inbox'||/^Bình luận → tư vấn qua tin nhắn/.test(r.issue||'');
-const inboxDelay=r=>{const m=(r.issue||'').match(/^Bình luận → tư vấn qua tin nhắn \(Sale nhắn sau ([\d,]+ (?:giờ|phút))\)/);return m?m[1]:'';};
+const inboxOf=r=>r.turns?r.turns.some(inboxOf):inboxOf1(r);
+const inboxOf1=r=>r.verdict==='tra_loi_inbox'||/^Bình luận → tư vấn qua tin nhắn/.test(r.issue||'');
+const inboxDelay=r=>r.turns?r.turns.map(inboxDelay).find(Boolean)||'':inboxDelay1(r);
+const inboxDelay1=r=>{const m=(r.issue||'').match(/^Bình luận → tư vấn qua tin nhắn \(Sale nhắn sau ([\d,]+ (?:giờ|phút))\)/);return m?m[1]:'';};
 // Icon SVG cho thẻ số (anh Hải 28/9: "dashboard thêm icon vào")
 const svg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICON={
@@ -337,6 +340,22 @@ function tally(list){
 }
 
 // ── Vẽ ────────────────────────────────────────────────────────────────────
+// GỘP HỘI THOẠI (anh Hải 7/10: "cùng 1 người gộp hết vào cùng 1 hội thoại, trừ khi là zalo / mess / cmt riêng thì tách"):
+// mỗi lượt hỏi–đáp vẫn chấm riêng trong CSDL, trang gộp theo conv_id (mỗi kênh / bình luận có conv_id riêng nên tự tách).
+// Kết quả hội thoại = lượt nặng nhất: sai > thiếu > miss > chờ chấm > lỗi nền tảng > đúng.
+const NANG={sai:7,thieu:6,khong_tra_loi:5,chi_bot:5,chua_cham:4,tra_loi_inbox:3,loi_nen_tang:2,dung:1};
+function gopHoiThoai(list){
+  const m=new Map();for(const r of list){const k=r.conv_id||('#'+r.id);(m.get(k)||m.set(k,[]).get(k)).push(r);}
+  return[...m.values()].map(ts=>{
+    if(ts.length===1)return ts[0];
+    ts.sort((a,b)=>(a.conv_at||a.conv_date).localeCompare(b.conv_at||b.conv_date));
+    const chinh=ts.reduce((a,b)=>(NANG[b.verdict]||0)>(NANG[a.verdict]||0)?b:a),cuoi=ts[ts.length-1];
+    const qt=[...new Set(ts.map(t=>t.sai_quy_trinh).filter(Boolean))].join(' · ')||null;
+    return{...chinh,turns:ts,_threadId:cuoi.id,conv_at:cuoi.conv_at,conv_date:cuoi.conv_date,
+      sale_name:ts.map(t=>t.sale_name).filter(Boolean).pop()||null,phone:ts.map(t=>t.phone).find(Boolean)||null,
+      reviewed_at:ts.reduce((a,t)=>t.reviewed_at&&t.reviewed_at>a?t.reviewed_at:a,''),sai_quy_trinh:qt};
+  });
+}
 function render(keepFocus){
   const app=document.getElementById('app');
   if(S.view==='history'){app.innerHTML=shell(historyPage());return;}
@@ -344,12 +363,12 @@ function render(keepFocus){
   if(S.view==='nhatky'){app.innerHTML=shell(nhatKyPage());return;}
   // Chỉ quan tâm tin khách hỏi mua (anh Hải 28/9): dòng "không liên quan" (lời khấn, tương tác, nội bộ) ẩn hẳn, không tính.
   const platRows=S.rows.filter(r=>platOf(r)===S.plat&&r.verdict!=='khong_lien_quan');
-  const dated=platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to));
+  const dated=gopHoiThoai(platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to)));
   const q=noDau(S.q.trim());
   const base=dated.filter(r=>{
     if(S.brand!=='all'&&brandOf(r)!==S.brand)return false;
     if(S.sale!=='all'&&saleOf(r)!==S.sale)return false;
-    if(q&&!noDau([r.customer_name,r.phone,r.sale_name,r.customer_ask,r.sale_reply,r.issue].join(' ')).includes(q))return false;
+    if(q&&!noDau((r.turns||[r]).flatMap(t=>[t.customer_name,t.phone,t.sale_name,t.customer_ask,t.sale_reply,t.issue]).join(' ')).includes(q))return false;
     return true;
   });
   const rows=base.filter(r=>verdictMatch(r,S.verdict));
@@ -399,10 +418,10 @@ function render(keepFocus){
   const shown=rows.slice(pg*PER,pg*PER+PER);
   const body=shown.map(r=>{
     const open=S.open.has(r.id),rep=S.reports.some(x=>x.review_id===r.id&&x.status==='open');
-    return`<tr class="click" onclick="toggleRow(${r.id})">
+    return`<tr class="click" onclick="toggleRow(${r.id},${r._threadId||r.id})">
       <td class="muted" style="white-space:nowrap">${open?'▼':'▶'} ${esc(fmtDT(r.conv_at,r.conv_date))}</td>
       <td>${esc(r.page_name||'')}</td>
-      <td><div style="font-weight:700">${esc(r.customer_name||'—')}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
+      <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
       <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Sale trả lời sau lúc job chạy — phát hiện khi soát lại Pancake">muộn ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
@@ -482,11 +501,20 @@ function fmtThread(text){
 }
 function detailRow(r){
   const x=VERDICT[r.verdict]||{c:'grey'};
-  const th=S.threads[r.id];
+  const th=S.threads[r._threadId||r.id];
   const thread=th===undefined?'<div class="muted">Đang tải hội thoại…</div>'
     :th?`<div class="thread">${fmtThread(th)}</div>`
     :`<div class="box" style="background:var(--surface);border-left:3px solid var(--border)"><div class="h muted">Khách hỏi</div>${esc(r.customer_ask||'—')}</div>
       <div class="box" style="background:var(--surface);border-left:3px solid var(--accent)"><div class="h muted">Sale trả lời</div>${esc(r.sale_reply||'(không có phản hồi)')}</div>`;
+  const luot=r.turns?`<div class="sec" style="margin:12px 0 6px">Chấm từng lượt (${r.turns.length})</div>`+r.turns.map(t=>{const c=(VERDICT[t.verdict]||{c:'grey'}).c;
+      return`<div class="box" style="background:var(--surface);border-left:3px solid var(--${c})"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="muted">${esc(fmtDT(t.conv_at,t.conv_date))}</span>${vb(t.verdict)}${lateOf1(t)?`<span class="late">muộn ${esc(lateOf1(t))}</span>`:''}</div>
+        <div style="margin-top:4px"><b>Khách:</b> ${esc((t.customer_ask||'').slice(0,240))}</div>
+        ${t.sai_quy_trinh?`<div style="margin-top:4px;color:var(--bad)"><b>Sai quy trình:</b> ${esc(t.sai_quy_trinh)}</div>`:''}
+        ${t.issue&&!['dung'].includes(t.verdict)?`<div style="margin-top:4px"><b>Vấn đề:</b> ${esc(t.issue)}</div>`:''}
+        ${t.suggestion?`<div style="margin-top:4px;color:var(--sale-fg)"><b>Nên trả lời:</b> ${esc(t.suggestion)}</div>`:''}
+        <div style="margin-top:6px"><button class="btn" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();openReport(${t.id})">Báo sai lượt này</button></div></div>`;}).join(''):'';
+  if(r.turns)return`<tr class="detail"><td colspan="7">${thread}${luot}</td></tr>`;
   return`<tr class="detail"><td colspan="7">
     ${thread}
     ${r.sai_quy_trinh?`<div class="box" style="background:var(--bad-bg)"><div class="h" style="color:var(--bad)">Sai quy trình</div>${esc(r.sai_quy_trinh)}</div>`:''}
@@ -495,11 +523,12 @@ function detailRow(r){
       ${r.source_faq?`<div class="muted" style="font-size:11px;margin-top:6px">Căn cứ: ${esc(r.source_faq)}</div>`:''}</div>`:''}
   </td></tr>`;
 }
-async function toggleRow(id){
+async function toggleRow(id,tid){
+  tid=tid||id;
   if(S.open.has(id)){S.open.delete(id);render();return;}
   S.open.add(id);render();
-  if(S.threads[id]===undefined){
-    try{S.threads[id]=await rpc('qc_hoi_thoai',{p_id:id})||'';}catch(e){S.threads[id]='';toast(e.message);}
+  if(S.threads[tid]===undefined){
+    try{S.threads[tid]=await rpc('qc_hoi_thoai',{p_id:tid})||'';}catch(e){S.threads[tid]='';toast(e.message);}
     render();
   }
 }

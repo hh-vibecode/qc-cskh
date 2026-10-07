@@ -24,6 +24,7 @@
 - **Báo giá (anh chốt 6/10, câu E8):** theo bảng giá — báo MỨC GIÁ PHỔ BIẾN dạng khoảng "từ X – Y", không báo số thấp nhất trước (bỏ ý "luôn nói giá thấp nhất" trong ghi chú bổ sung).
 - **Sale cố định theo page (anh chốt 7/10):** từ 01/10/2026 mọi tin Hiền Thủy, Shidai, Nến Bơ Tự Tại Viên là của **Vân Ngọc** — trigger `qc_sale_co_dinh` trên sale_response_review, cấu hình qc_cau_hinh `sale_co_dinh` (`supabase-schema-qc-sale-co-dinh.sql`). Đã áp 7 page (FB/TikTok/Zalo Hiền Thủy, Nến Bơ, Thời Đại FB); 2 Zalo Shidai chờ anh (E9).
 - **Kéo đủ rồi mới lọc (anh chốt 7/10):** job kéo tin KHÔNG được bỏ lượt khách nào vì "không giống câu hỏi" — lưu hết, chỉ gắn sẵn khong_lien_quan cho lời khấn thuần / câu xã giao / sticker (vẫn lưu), còn lại để tầng luật + Sonnet lọc. **Lượt mỗi giờ chỉ kéo phần mới để xử lý nhanh; 6h20 và 18h35 kéo lại trọn HÔM QUA + HÔM NAY.**
+- **Gộp hội thoại (anh chốt 7/10):** cùng 1 người cùng 1 hội thoại → 1 dòng trên trang (gộp theo conv_id; Zalo / Messenger / bình luận có conv_id riêng nên tự tách). CSDL vẫn chấm từng lượt; kết quả hội thoại = lượt nặng nhất (sai > thiếu > miss > chờ > lỗi nền tảng > đúng); KPI đếm theo hội thoại. **Kéo / chấm bù chỉ từ tháng 10** — trước đó bỏ qua (anh chốt 7/10).
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
