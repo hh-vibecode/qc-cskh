@@ -320,7 +320,7 @@ const ICON={
 };
 // Chấm quy trình áp từ lúc anh Hải gửi bộ quy tắc (06/10/2026 14h53, lúc đẩy luật) — lượt chấm trước đó không xét, không tính vào tỉ lệ
 const QT_TU='2026-10-06T07:53:00Z';
-const daXetQT=r=>r.reviewed_at&&r.reviewed_at>=QT_TU&&['dung','thieu','sai'].includes(r.verdict);
+const daXetQT=r=>r.reviewed_at&&r.reviewed_at>=QT_TU&&(r.conv_at||'')>=QT_TU&&['dung','thieu','sai'].includes(r.verdict);
 function verdictMatch(r,v){
   if(v==='all')return true;
   if(v==='muon')return!!lateOf(r);
@@ -612,6 +612,9 @@ function nkLoiGan(){const nk=S.nk||[];if((S.kenh||[]).some(k=>k.kich_hoat&&k.tra
   const keo=nk.find(x=>x.loai!=='cham');return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
 // Đối chiếu kéo về / lọc ra (anh Hải 7/10: "số kéo về vs số lọc ra liệt kê cho t, để t check k sót;
 // số còn lại cho vào chấm thì bên Chất lượng phản hồi"). Bấm số "Lọc ra" → danh sách từng câu bị lọc + lý do để soát.
+// Thẻ loại hội thoại (7/10): bình luận Facebook = conv_id không bắt đầu bằng mã page; Zalo pzl_; TikTok ttm_; còn lại Messenger
+const laBinhLuan=r=>!/^(pzl|ttm)/.test(r.conv_id||'')&&!(r.conv_id||'').startsWith((r.page_id||'@')+'_');
+function loaiKenh(r){const[l,c]=/^pzl/.test(r.conv_id||'')?['Zalo','info']:/^ttm/.test(r.conv_id||'')?['TikTok','grey']:laBinhLuan(r)?['Bình luận','warn']:['Messenger','miss'];return`<span class="vb" style="background:var(--${c}-bg);color:var(--${c})">${l}</span>`;}
 const LOC_AI={luat:'Tự lọc lúc kéo',sonnet:'Lọc khi chấm',claude:'Claude soát tay'};
 async function xemLoc(ngay){
   if(S.locNgay===ngay){S.locNgay=null;render();return;}
@@ -626,6 +629,7 @@ function doiSoatBang(){
       <td class="name">${ngay(x.ngay)}</td>
       <td class="num" style="font-weight:800">${num(x.keo_ve)}</td>
       <td class="num">${x.loc_ra?`<a href="javascript:void 0" onclick="xemLoc('${x.ngay}')" style="font-weight:800">${num(x.loc_ra)}</a>`:n(0)}</td>
+      <td class="num muted">${n(x.loc_cmt)}</td><td class="num muted">${n(x.loc_tin_nhan)}</td>
       <td class="num muted">${n(x.loc_luc_keo)}</td><td class="num muted">${n(x.loc_khi_cham)}</td>
       <td class="num" style="font-weight:800">${num(x.vao_cham)}</td>
       <td class="num">${n(x.da_cham)}</td><td class="num">${n(x.cho_cham)}</td><td class="num">${n(x.miss)}</td><td class="num">${n(x.loi_nen_tang)}</td></tr>`).join('');
@@ -635,9 +639,10 @@ function doiSoatBang(){
     ct=`<div class="sec" style="display:flex;align-items:center;gap:8px">Lượt bị lọc ngày ${ngay(S.locNgay)} <span class="badge">${num(l.length)} lượt</span>
         <span class="badge" style="cursor:pointer" onclick="xemLoc('${S.locNgay}')">✕</span></div>
       <div class="card scroll" style="margin-bottom:16px"><table style="min-width:900px">
-      <thead><tr><th>Giờ</th><th>Page</th><th>Khách</th><th>Khách nhắn</th><th>Lý do lọc</th><th>Lọc bởi</th><th class="c">Pancake</th></tr></thead>
+      <thead><tr><th>Giờ</th><th>Loại</th><th>Page</th><th>Khách</th><th>Khách nhắn</th><th>Lý do lọc</th><th>Lọc bởi</th><th class="c">Pancake</th></tr></thead>
       <tbody>${l.slice(pg*PER,pg*PER+PER).map(r=>`<tr>
         <td class="muted" style="white-space:nowrap">${esc(fmtDT(r.conv_at,r.conv_date))}</td>
+        <td>${loaiKenh(r)}</td>
         <td>${esc((r.page_name||'').slice(0,30))}</td><td class="name">${esc(r.customer_name||'')}</td>
         <td style="max-width:340px">${esc((r.customer_ask||'').slice(0,160))}</td>
         <td style="font-size:12px;max-width:300px">${esc(r.issue||'')}</td>
@@ -646,9 +651,9 @@ function doiSoatBang(){
       ${nPg>1?`<div class="more" style="display:flex;gap:6px;justify-content:center">${Array.from({length:nPg},(_,i)=>`<button class="btn${i===pg?' on':''}" onclick="S.locPg=${i};render()">${i+1}</button>`).join('')}</div>`:''}</div>`;
   }
   return`<div class="sec" style="display:flex;align-items:center;gap:8px">Đối chiếu kéo về / lọc ra <span class="badge">14 ngày</span>
-      <span class="badge">${num(T('keo_ve'))} kéo về · ${num(T('loc_ra'))} lọc ra · ${num(T('vao_cham'))} vào chấm</span></div>
+      <span class="badge">${num(T('keo_ve'))} kéo về · ${num(T('loc_ra'))} lọc ra (${num(T('loc_cmt'))} bình luận · ${num(T('loc_tin_nhan'))} tin nhắn) · ${num(T('vao_cham'))} vào chấm</span></div>
     <div class="card scroll" style="margin-bottom:16px"><table style="min-width:900px">
-      <thead><tr><th>Ngày</th><th class="num">Kéo về</th><th class="num">Lọc ra</th><th class="num">Lọc lúc kéo</th><th class="num">Lọc khi chấm</th><th class="num">Vào chấm</th><th class="num">Đã chấm</th><th class="num">Chờ chấm</th><th class="num">Miss</th><th class="num">Lỗi nền tảng</th></tr></thead>
+      <thead><tr><th>Ngày</th><th class="num">Kéo về</th><th class="num">Lọc ra</th><th class="num">Bình luận</th><th class="num">Tin nhắn</th><th class="num">Lọc lúc kéo</th><th class="num">Lọc khi chấm</th><th class="num">Vào chấm</th><th class="num">Đã chấm</th><th class="num">Chờ chấm</th><th class="num">Miss</th><th class="num">Lỗi nền tảng</th></tr></thead>
       <tbody>${rows}</tbody></table></div>${ct}`;
 }
 // Kênh kết nối (anh Hải 1/10): mọi page / Zalo Pancake trả về, xanh = đọc được, đỏ = không đọc được → kết nối lại với Pancake.

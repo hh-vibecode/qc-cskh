@@ -13,6 +13,9 @@ begin
     select conv_date ngay,
       count(*) keo_ve,
       count(*) filter (where verdict = 'khong_lien_quan') loc_ra,
+      -- 7/10: tách bình luận / tin nhắn (bình luận FB = conv_id không bắt đầu bằng mã page; Zalo pzl_u, TikTok ttm là tin nhắn)
+      count(*) filter (where verdict = 'khong_lien_quan' and conv_id !~ '^(pzl|ttm)' and conv_id not like coalesce(page_id, '') || '_%') loc_cmt,
+      count(*) filter (where verdict = 'khong_lien_quan' and not (conv_id !~ '^(pzl|ttm)' and conv_id not like coalesce(page_id, '') || '_%')) loc_tin_nhan,
       count(*) filter (where verdict = 'khong_lien_quan' and cham_boi = 'luat' and issue like 'Tự lọc lúc kéo%') loc_luc_keo,
       count(*) filter (where verdict = 'khong_lien_quan' and not (cham_boi = 'luat' and coalesce(issue, '') like 'Tự lọc lúc kéo%')) loc_khi_cham,
       count(*) filter (where verdict <> 'khong_lien_quan') vao_cham,
