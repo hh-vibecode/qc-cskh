@@ -39,7 +39,7 @@ revoke execute on function public.qc_keo_tin(date, date) from public, anon, auth
 --   6h20 VN (23:20 UTC hôm trước): kéo trọn HÔM QUA · 18h35 VN (11:35 UTC): kéo trọn HÔM NAY tới lúc đó.
 select cron.unschedule(jobid) from cron.job where jobname in ('qc-keo-6h', 'qc-keo-18h', 'qc-keo-gio');
 select cron.schedule('qc-keo-6h',  '20 23 * * *',
-  $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date - 1, (now() at time zone 'Asia/Ho_Chi_Minh')::date - 1)$$);
+  $select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date - 1, (now() at time zone 'Asia/Ho_Chi_Minh')::date)$);   -- 7/10: hôm qua + hôm nay
 select cron.schedule('qc-keo-18h', '35 11 * * *',
-  $$select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date, (now() at time zone 'Asia/Ho_Chi_Minh')::date)$$);
+  $select public.qc_keo_tin((now() at time zone 'Asia/Ho_Chi_Minh')::date - 1, (now() at time zone 'Asia/Ho_Chi_Minh')::date)$);   -- 7/10: hôm qua + hôm nay
 select cron.schedule('qc-keo-gio', '25 * * * *', $$select public.qc_keo_tin(null, null)$$);

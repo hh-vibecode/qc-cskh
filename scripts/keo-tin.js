@@ -83,6 +83,21 @@ const TU_DONG = /da tra loi (mot|ve mot) (quang cao|bai viet)|replied to a (post
 const CHAO_TU_DONG = /^xin chao [^,.!?]{1,40},/;   // lời chào tự động khi khách bấm quảng cáo (không tên người gửi)
 const INTENT = /giá|bao nhiêu|bn |bnhiêu|size|kích thước|còn hàng|có bán|mua|ship|đặt|order|tư vấn|mẫu|hình|ảnh|inbox|ib\b|sỉ|đại lý|nhập|combo|khuyến mãi|km\b|bảo hành|đổi trả|chất liệu|gỗ|đồng|cách|hướng dẫn|lắp|giao hàng|phí|freeship|thanh toán|cọc|báo giá|xin|cho e|cho c|cho a|còn ko|còn không|có ko|có không|lấy cho|\?/i;
 
+// 7/10: INTENT cũ bỏ sót khách thật — câu mẫu quảng cáo "Tôi muốn được thỉnh tượng Phật", gõ không dấu "e bao gia",
+// "có tượng … 55cm ko shop" (không "?"). So thêm trên chữ ĐÃ BỎ DẤU với từ ngữ ngành đồ thờ. Lời khấn lọt vào thì tầng luật /
+// soát miss chuyển "không liên quan" như trước. KHÔNG thêm tên các vị (a di đà, quan âm…) — kéo theo hàng chục lời khấn "Nam mô".
+const INTENT_KD = /\b(thinh|tuong|ban tho|do tho|bat huong|lu huong|den tho|bao gia|gia|bao nhieu|kich thuoc|\d+ ?cm|mau|chat lieu|muon mua|can mua|can tim|tim mua|dat hang|ship|co (ban|ko|khong)|(ko|khong) (shop|ban|a|ah|vay)\b)/;
+// Câu CHẮC CHẮN không phải hỏi mua → gắn sẵn khong_lien_quan (vẫn lưu). Có chữ mua / giá / thỉnh / cm… thì KHÔNG lọc.
+const KHAN_THUAN = /^(nam ?mo|nammo|a di da phat|nam (dia tang|quan the am|bon su|duoc su|a di da|di lac))/;
+const CAU_XA_GIAO = /^((ok+|oke+|okie|okay|vang|da+|uh+|um+|ukm|cam on|camon|thanks?|thank you|tks|ty|alo|hi|hello|xin chao|chao)( (a|ah|nha|nhe|nhe|shop|em|ban|anh|chi|c|e|a|nhieu|nhiu|lam|ca nha|moi nguoi))*)+$/;
+function locKhongHoi(ask) {
+  const t = bo(ask).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (INTENT.test(ask) || INTENT_KD.test(t)) return null;
+  if (!t && ask) return 'chỉ sticker / emoji';
+  if (KHAN_THUAN.test(t)) return 'lời khấn';
+  if (CAU_XA_GIAO.test(t)) return 'câu xã giao (ok / vâng / cảm ơn / chào)';
+  return null;
+}
 function kind(m, pageId) {
   if (String(m.from?.id) !== String(pageId)) return 'cust';
   if (BOT.has(bo(m.from?.admin_name || ''))) return 'auto';
@@ -113,7 +128,10 @@ function tachLuot(page, c, msgs, userMap) {
     const first = t.ms[0].at, last = t.ms[t.ms.length - 1].at;
     if (first < tuUtc || first > denUtc) return;
     const ask = t.ms.map(x => clean(x.m.message)).filter(Boolean).join(' ').trim();
-    if (ask.length <= 8 || !INTENT.test(ask)) return;
+    // 7/10 anh Hải: "kéo hết về trước cho đầy đủ rồi hãy xử lý lọc" — KHÔNG bỏ lượt nào ở bước kéo. Chỉ gắn sẵn
+    // "không liên quan" cho câu chắc chắn không hỏi (lời khấn thuần, cảm ơn / ok / sticker), vẫn LƯU để đủ dữ liệu.
+    if (!ask && !t.ms.some(x => coTep(x.m))) return;
+    const loc = locKhongHoi(ask);
     const nxt = turns[i + 1];
     let reply = null, sale = null, repAt = null;
     if (nxt && nxt.side === 'sale') {
@@ -123,14 +141,14 @@ function tachLuot(page, c, msgs, userMap) {
       sale = nxt.ms.find(x => x.m.from?.admin_name)?.m.from.admin_name || null;
     }
     const botSau = ms.some(x => x.k === 'auto' && x.at > last);
-    const verdict = reply ? 'chua_cham' : botSau ? 'chi_bot' : 'khong_tra_loi';
+    const verdict = loc ? 'khong_lien_quan' : reply ? 'chua_cham' : botSau ? 'chi_bot' : 'khong_tra_loi';
     out.push({
       conv_date: vnDay(first), conv_at: first.toISOString(), page_name: page.name, page_id: String(page.id), conv_id: c.id,
       customer_name: c.customers?.[0]?.name || c.from?.name || '', phone: (c.recent_phone_numbers || [])[0]?.phone_number || null,
       sale_name: sale || (c.assignee_ids || []).map(id => userMap[id]).find(Boolean) || null,
-      customer_ask: ask.slice(0, 700), sale_reply: reply ? reply.slice(0, 1000) : null, verdict,
-      severity: null, source_faq: null, suggestion: null,
-      issue: verdict === 'chi_bot' ? 'Chỉ có bot trả lời tự động, không có sale nào vào tư vấn.'
+      customer_ask: (ask || '(gửi ảnh/tệp)').slice(0, 700), sale_reply: reply ? reply.slice(0, 1000) : null, verdict,
+      severity: null, source_faq: null, suggestion: null, cham_boi: loc ? 'luat' : null,
+      issue: loc ? `Tự lọc lúc kéo: ${loc} (vẫn lưu đủ dữ liệu).` : verdict === 'chi_bot' ? 'Chỉ có bot trả lời tự động, không có sale nào vào tư vấn.'
         : verdict === 'khong_tra_loi' ? 'Khách có nhu cầu thật nhưng không ai trả lời (kể cả bot).' : null,
       full_thread: thread, pancake_url: `https://pancake.vn/${page.id}?c_id=${c.id}`,
       _rep_at: repAt,   // giờ Sale trả lời — chỉ dùng để tính "trả lời muộn", không ghi vào bảng
