@@ -445,7 +445,7 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Khách nhắn trong giờ làm, Sale trả lời sau hơn 1 giờ làm việc">muộn ${esc(lateOf(r))}</span>`:''}${ngoaiGio(r)?`<span class="late" style="background:var(--grey-bg);color:var(--grey)" title="Khách nhắn ngoài giờ làm (8h–17h30) — thời gian chờ tính từ 8h">ngoài giờ</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
+      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${ngoaiGio(r)?`<span class="late" style="background:var(--grey-bg);color:var(--grey)" title="Khách nhắn ngoài giờ làm (8h–17h30) — thời gian chờ tính từ 8h">ngoài giờ</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
@@ -796,7 +796,7 @@ function logicPage(){
     <ul>
       <li>Giờ làm việc <b>8h–17h30</b>. Mỗi lượt khách nhắn: đo từ tin đầu của khách tới tin Sale đầu tiên, <b>chỉ tính phút trong giờ làm</b>.</li>
       <li>Khách nhắn <b>ngoài giờ</b> thì tính chờ <b>từ 8h</b> lúc vào làm: nhắn 20h tối, trả lời 9h sáng = chậm 1 giờ; nhắn 7h55, trả lời 11h07 = chậm 3 giờ 7 phút. Thẻ <b>ngoài giờ</b> chỉ để biết khách nhắn ngoài giờ.</li>
-      <li><b>Đúng giờ</b>: mọi lượt trong hội thoại được trả lời trong 1 giờ làm việc. <b>Phản hồi chậm</b>: có lượt chờ quá 1 giờ làm việc.</li>
+      <li><b>Đúng giờ</b>: mọi lượt trong hội thoại được trả lời trong 1 giờ làm việc. <b>Phản hồi chậm</b>: có lượt chờ quá 1 giờ làm việc; nhãn trên dòng ghi <b>trả lời muộn nhất</b> = lượt chờ lâu nhất trong hội thoại.</li>
       <li>Ảnh page tự gửi khi khách bấm quảng cáo không tính là Sale trả lời. Chỉ đo lượt khách nhắn từ 01/10/2026.</li>
     </ul>
     <h3>7. Chấm quy trình (từ 06/10/2026 14h53)</h3>
