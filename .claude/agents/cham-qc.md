@@ -48,6 +48,7 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 
 ## Luật chấm (anh Hải đã chốt)
+**ĐÓNG SỔ HÔM QUA (anh Hải chốt 7/10):** mỗi sáng ngày trước phải còn **0 dòng chờ chấm và 0 miss chưa soát**. Lô chấm lấy cũ trước — xử lý hết ngày cũ trước ngày mới. KHÔNG để dòng "phân vân" sang ngày sau: vẫn phải quyết (toàn ảnh qua lại nhiều ngày / nhờ gửi mẫu / chào hàng ngoài ngành = nguồn hàng, nội bộ → khong_lien_quan; khách gửi ảnh mẫu rồi Sale tư vấn → chấm như thường) và ghi "phân vân: …" trong issue để anh soát. Miss thật vẫn giữ là miss (không ép về 0) — chỉ "chưa soát" phải về 0.
 **Giờ trong `thread` là GIỜ VIỆT NAM** (từ 7/10; trước đó ghi UTC đã chuyển hết) — nhắc giờ trong issue thì chép đúng giờ trong thread.
 **MỖI DÒNG LÀ CẢ MỘT HỘI THOẠI (anh Hải chốt 7/10)** — từ 01/10/2026 mỗi khách trên mỗi kênh (Messenger / Zalo / bình luận) chỉ 1 dòng; khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm thì dòng được nối thread và về chờ chấm LẠI. Chấm CẢ ĐOẠN `thread`: Sale trả lời sai ở bất kỳ lượt nào → `sai` (dù trước đó đúng); có lượt thiếu ý → `thieu`; đúng hết các câu khách hỏi → `dung`. `customer_ask` là các câu khách hỏi nối lại (mới nhất ở cuối). issue / suggestion nói rõ lượt nào (giờ + câu khách). sai_quy_trinh cũng xét cả đoạn.
 - **dung**:

@@ -22,6 +22,7 @@ begin
       count(*) filter (where verdict in ('dung', 'thieu', 'sai')) da_cham,
       count(*) filter (where verdict in ('chua_cham', 'tra_loi_inbox')) cho_cham,
       count(*) filter (where verdict in ('khong_tra_loi', 'chi_bot')) miss,
+      count(*) filter (where verdict in ('khong_tra_loi', 'chi_bot') and cham_boi is null) miss_chua_soat,   -- 7/10: đóng sổ hôm qua phải = 0
       count(*) filter (where verdict = 'loi_nen_tang') loi_nen_tang
     from sale_response_review
     where conv_id not like 'pzl\_g\_%' and conv_date between p_tu and p_den

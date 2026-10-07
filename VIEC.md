@@ -29,6 +29,7 @@
 - **Thời gian phản hồi (anh chốt 7/10):** giờ làm việc **8h–17h30**; chỉ đo lượt khách nhắn trong giờ làm, phút làm việc (qc_tinh_tg, trigger); bỏ ảnh page tự gửi; chỉ lượt khách từ 1/10. Đúng giờ = mọi lượt ≤ 60 phút làm việc; **Phản hồi chậm** = có lượt > 60. **Sửa lại 7/10 theo anh: khách nhắn ngoài giờ thì tính chờ TỪ 8h** (20h tối → 9h sáng = chậm 1 giờ; 7h55 → 11h07 = 3 giờ 7 phút); BỎ hẳn thẻ "ngoài giờ" trên trang (anh: đã tính từ giờ đi làm thì không cần). Nhãn dòng ghi "trả lời muộn nhất X" = lượt chờ lâu nhất. Bỏ nhãn "Trả lời muộn N giờ" giờ thực ở job + soát miss + dữ liệu tháng 10. Thẻ số 2 hàng × 4, bảng Thương hiệu / Sale xếp dọc, chú thích tối giản (anh chốt 7/10).
 - **GIỜ TRONG THREAD = GIỜ VIỆT NAM (7/10):** mọi nơi ghi thread dùng gioThread (keo-tin) / bản giống trong soat-lib; job tự kiểm, lệch > 20% thì dừng + báo Lỗi.
 - **Đổi logic là sửa luôn trang Logic xử lý dữ liệu** (anh chốt 7/10, đã ghi CLAUDE.md).
+- **Đóng sổ hôm qua (anh chốt 7/10):** mỗi sáng ngày trước phải còn 0 chờ chấm + 0 miss chưa soát (miss thật vẫn giữ). Luật ở cả 2 file chấm (không để dòng phân vân sang ngày sau); badge xanh/đỏ cạnh Tổng quan trên trang Chất lượng phản hồi. **Nhật ký chạy chỉ theo dõi dữ liệu thô** (kéo về · lọc ra bình luận/tin nhắn · vào chấm) — anh chốt 7/10.
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -187,6 +188,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **07/10/2026** — Đóng sổ 1–6/10: quyết 6 dòng phân vân (2 đúng, 4 không liên quan: nguồn hàng / ngoài ngành), gỡ 3 miss hôm nay là nội bộ / tin hệ thống → 1–6/10 còn 0 chờ chấm, 0 miss chưa soát. Thêm badge đóng sổ hôm qua + Tổng quan; Nhật ký chỉ còn dữ liệu thô.
 - **07/10/2026** — Dọn sổ: E2 (xin SĐT không báo giá) giải bằng SOP = lỗi quy trình Né giá; E3 thay bằng giờ làm 8h–17h30 + ngưỡng 1 giờ làm việc; nợ #7 (chuyển kéo tin sang QC) xong từ 30/9; nợ #12 (Sale nói thêm sau khi chấm) giải bằng chấm cả hội thoại.
 - **07/10/2026** — Giờ làm 8h–17h30 + thẻ ngoài giờ (Social: 41 chậm, 103 ngoài giờ = SQL); gộp "Trả lời muộn" cũ vào "Phản hồi chậm"; 2 hàng × 4 thẻ, bảng xếp dọc; viết lại trang Logic theo toàn bộ quy tắc anh chốt trong phiên.
 - **07/10/2026** — **LỖI GIỜ (của Claude, anh phát hiện):** thread ghi UTC (giữ từ job cũ) → trang + nhận xét chấm lệch 7 tiếng. Sửa: keo-tin / soat-lib / soat-miss-pancake ghi giờ VN; chuyển 3.882 thread cũ sang giờ VN (sao lưu trước; 4 dòng còn lại do thread bị cắt đầu, đã là giờ VN); sửa tay 13 mốc giờ trong 10 nhận xét; chốt chặn tự kiểm. Lịch kéo mỗi giờ tạm dừng 15h04 theo anh, bật lại sau khi thử thật 2 page (46/46 khớp giờ VN). Thêm hàng thẻ Thời gian phản hồi + cột Đúng giờ / TB phản hồi theo thương hiệu & Sale (khớp SQL: Social 165/285, TB 67 phút; Zalo 42/68, 117 phút).

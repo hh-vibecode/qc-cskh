@@ -376,6 +376,18 @@ function gopHoiThoai(list){
       tg_phan_hoi_max:ts.reduce((a,t)=>t.tg_phan_hoi_max!=null&&(a==null||t.tg_phan_hoi_max>a)?t.tg_phan_hoi_max:a,null)};
   });
 }
+// ĐÓNG SỔ HÔM QUA (anh Hải 7/10): mỗi sáng ngày trước phải còn 0 chờ chấm + 0 miss chưa soát (cả Social lẫn Zalo).
+// Miss thật vẫn giữ — chỉ phần chưa xử lý phải về 0. Tính trên dữ liệu đã tải (mặc định tháng này có hôm qua).
+function dongSo(){
+  const t=new Date();t.setDate(t.getDate()-1);const hq=isoDay(t);
+  if(!S.tai||(S.tai.tu&&S.tai.tu>hq)||(S.tai.den&&S.tai.den<hq))return'';
+  const r=(S.rows||[]).filter(x=>x.conv_date===hq&&x.verdict!=='khong_lien_quan');
+  const cho=r.filter(x=>x.verdict==='chua_cham'||x.verdict==='tra_loi_inbox').length;
+  const ms=r.filter(x=>['khong_tra_loi','chi_bot'].includes(x.verdict)&&!x.cham_boi).length;
+  if(!cho&&!ms)return'<span class="badge" style="color:var(--ok);background:var(--ok-bg)">Hôm qua đã xử lý xong ✓</span>';
+  const p=[cho?num(cho)+' chờ chấm':'',ms?num(ms)+' miss chưa soát':''].filter(Boolean).join(' · ');
+  return`<span class="badge" style="color:var(--bad);background:var(--bad-bg)">Hôm qua còn ${p}</span>`;
+}
 function render(keepFocus){
   const app=document.getElementById('app');
   if(S.view==='history'){app.innerHTML=shell(historyPage());return;}
@@ -474,7 +486,7 @@ function render(keepFocus){
         <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
       </div>
     </div>
-    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge" style="font-size:12px;color:var(--text)">${num(base.length)} hội thoại</span><span class="badge">${num(T.den)} đã chấm</span>${T.pend?`<span class="badge">${num(T.pend)} chờ chấm</span>`:''}</div>
+    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge" style="font-size:12px;color:var(--text)">${num(base.length)} hội thoại</span><span class="badge">${num(T.den)} đã chấm</span>${T.pend?`<span class="badge">${num(T.pend)} chờ chấm</span>`:''}${dongSo()}</div>
     <div class="kpi-row kpi4">
       ${kpi('dung','Tư vấn đúng',num(T.dung),pct(T.dung,T.den),'ok','dung')}
       ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn','thieu')}
@@ -653,9 +665,7 @@ function doiSoatBang(){
       <td class="num" style="font-weight:800">${num(x.keo_ve)}</td>
       <td class="num">${x.loc_ra?`<a href="javascript:void 0" onclick="xemLoc('${x.ngay}')" style="font-weight:800">${num(x.loc_ra)}</a>`:n(0)}</td>
       <td class="num muted">${n(x.loc_cmt)}</td><td class="num muted">${n(x.loc_tin_nhan)}</td>
-      <td class="num muted">${n(x.loc_luc_keo)}</td><td class="num muted">${n(x.loc_khi_cham)}</td>
-      <td class="num" style="font-weight:800">${num(x.vao_cham)}</td>
-      <td class="num">${n(x.da_cham)}</td><td class="num">${n(x.cho_cham)}</td><td class="num">${n(x.miss)}</td><td class="num">${n(x.loi_nen_tang)}</td></tr>`).join('');
+      <td class="num" style="font-weight:800">${num(x.vao_cham)}</td></tr>`).join('');
   let ct='';
   if(S.locNgay){
     const l=S.locDs||[],nPg=Math.max(1,Math.ceil(l.length/PER)),pg=Math.min(S.locPg||0,nPg-1);
@@ -676,7 +686,7 @@ function doiSoatBang(){
   return`<div class="sec" style="display:flex;align-items:center;gap:8px">Đối chiếu kéo về / lọc ra <span class="badge">14 ngày</span>
       <span class="badge">${num(T('keo_ve'))} kéo về · ${num(T('loc_ra'))} lọc ra (${num(T('loc_cmt'))} bình luận · ${num(T('loc_tin_nhan'))} tin nhắn) · ${num(T('vao_cham'))} vào chấm</span></div>
     <div class="card scroll" style="margin-bottom:16px"><table style="min-width:900px">
-      <thead><tr><th>Ngày</th><th class="num">Kéo về</th><th class="num">Lọc ra</th><th class="num">Bình luận</th><th class="num">Tin nhắn</th><th class="num">Lọc lúc kéo</th><th class="num">Lọc khi chấm</th><th class="num">Vào chấm</th><th class="num">Đã chấm</th><th class="num">Chờ chấm</th><th class="num">Miss</th><th class="num">Lỗi nền tảng</th></tr></thead>
+      <thead><tr><th>Ngày</th><th class="num">Kéo về</th><th class="num">Lọc ra</th><th class="num">Bình luận</th><th class="num">Tin nhắn</th><th class="num">Vào chấm</th></tr></thead>
       <tbody>${rows}</tbody></table></div>${ct}`;
 }
 // Kênh kết nối (anh Hải 1/10): mọi page / Zalo Pancake trả về, xanh = đọc được, đỏ = không đọc được → kết nối lại với Pancake.
@@ -792,6 +802,7 @@ function logicPage(){
         <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
       </tbody>
     </table>
+    <p style="margin-top:10px"><b>Đóng sổ hôm qua</b>: mỗi sáng ngày trước phải còn 0 chờ chấm và 0 miss chưa soát (badge cạnh Tổng quan: xanh = xong, đỏ = còn tồn). Miss thật vẫn giữ để anh thấy. Nhật ký chạy chỉ theo dõi dữ liệu thô: kéo về · lọc ra (bình luận / tin nhắn) · vào chấm.</p>
     <p style="margin-top:10px"><b>Tổng quan</b> = số hội thoại khách hỏi mua trong bộ lọc đang chọn (đã bỏ phần lọc ra — xem Nhật ký › Đối chiếu). Tỉ lệ đúng = Đúng / (tất cả − chờ chấm − không liên quan − lỗi nền tảng).</p>
     <h3>6. Thời gian phản hồi</h3>
     <ul>
