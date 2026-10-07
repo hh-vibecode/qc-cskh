@@ -474,6 +474,7 @@ function render(keepFocus){
         <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
       </div>
     </div>
+    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge" style="font-size:12px;color:var(--text)">${num(base.length)} hội thoại</span><span class="badge">${num(T.den)} đã chấm</span>${T.pend?`<span class="badge">${num(T.pend)} chờ chấm</span>`:''}</div>
     <div class="kpi-row kpi4">
       ${kpi('dung','Tư vấn đúng',num(T.dung),pct(T.dung,T.den),'ok','dung')}
       ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn','thieu')}
@@ -488,7 +489,7 @@ function render(keepFocus){
     </div>
     <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div>
     <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div>
-    <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
+    <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} hội thoại</span>
       ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Phản hồi chậm':S.verdict==='ngoai_gio'?'Ngoài giờ làm':S.verdict==='cham_gio'?'Phản hồi chậm':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
@@ -791,7 +792,7 @@ function logicPage(){
         <tr><td>${vb('khong_lien_quan')}</td><td>Không phải khách hỏi mua — ẩn khỏi báo cáo</td><td>Không</td></tr>
       </tbody>
     </table>
-    <p style="margin-top:10px">Tỉ lệ đúng = Đúng / (tất cả − chờ chấm − không liên quan − lỗi nền tảng).</p>
+    <p style="margin-top:10px"><b>Tổng quan</b> = số hội thoại khách hỏi mua trong bộ lọc đang chọn (đã bỏ phần lọc ra — xem Nhật ký › Đối chiếu). Tỉ lệ đúng = Đúng / (tất cả − chờ chấm − không liên quan − lỗi nền tảng).</p>
     <h3>6. Thời gian phản hồi</h3>
     <ul>
       <li>Giờ làm việc <b>8h–17h30</b>. Mỗi lượt khách nhắn: đo từ tin đầu của khách tới tin Sale đầu tiên, <b>chỉ tính phút trong giờ làm</b>.</li>
