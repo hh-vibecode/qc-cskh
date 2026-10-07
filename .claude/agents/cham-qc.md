@@ -19,10 +19,10 @@ $N tools/ghi-cham.js <file.json>        # ghi (chỉ ghi dòng còn chua_cham, k
 Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường — `tools/keys.js` tự lo. KHÔNG in khoá ra, không chép khoá đi đâu. File tạm (lô dữ liệu, kết quả) để ở thư mục tạm của phiên, không để trong repo.
 
 ## Quy trình
-0. **Tầng 1 — luật, không tốn token:** chạy `"$N" tools/cham-luat.js --ghi` TRƯỚC. Nó tự chốt các ca hiển nhiên (câu phân loại Sỉ, hỏi chung → xin ảnh/ngân sách, mời check ib, mẫu trả lời chuẩn, tin hệ thống, nhân viên nội bộ đóng vai khách) — đo trên 1.984 dòng đã chấm: lệch 0. Bạn chỉ chấm phần còn lại. Thấy mẫu lặp lại hiển nhiên mới thì báo lại cho người gọi để bổ sung luật, KHÔNG tự sửa `cham-luat.js`.
+0. **[TẠM KHÔNG CHẠY từ 7/10 — luật cũ chấm theo 1 cặp hỏi–đáp, nay chấm cả hội thoại]** **Tầng 1 — luật, không tốn token:** chạy `"$N" tools/cham-luat.js --ghi` TRƯỚC. Nó tự chốt các ca hiển nhiên (câu phân loại Sỉ, hỏi chung → xin ảnh/ngân sách, mời check ib, mẫu trả lời chuẩn, tin hệ thống, nhân viên nội bộ đóng vai khách) — đo trên 1.984 dòng đã chấm: lệch 0. Bạn chỉ chấm phần còn lại. Thấy mẫu lặp lại hiển nhiên mới thì báo lại cho người gọi để bổ sung luật, KHÔNG tự sửa `cham-luat.js`.
 1. **Tầng 2 — bạn:** lấy lô 40 dòng một lần, cũ trước (lô to = ít bước qua lại = nhanh hơn; tồn nhiều thì người gọi chia 2–3 agent song song theo khoảng ngày):
    ```sql
-   select id, conv_date, page_name, conv_id, customer_name, sale_name, customer_ask, sale_reply, left(full_thread, 2500) thread
+   select id, conv_date, page_name, conv_id, customer_name, sale_name, customer_ask, sale_reply, right(full_thread, 6000) thread
    from sale_response_review
    where verdict='chua_cham' and conv_id not like 'pzl\_g\_%' and conv_date between '<từ>' and '<đến>'
    order by conv_date, id limit 40
@@ -48,6 +48,7 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 
 ## Luật chấm (anh Hải đã chốt)
+**MỖI DÒNG LÀ CẢ MỘT HỘI THOẠI (anh Hải chốt 7/10)** — từ 01/10/2026 mỗi khách trên mỗi kênh (Messenger / Zalo / bình luận) chỉ 1 dòng; khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm thì dòng được nối thread và về chờ chấm LẠI. Chấm CẢ ĐOẠN `thread`: Sale trả lời sai ở bất kỳ lượt nào → `sai` (dù trước đó đúng); có lượt thiếu ý → `thieu`; đúng hết các câu khách hỏi → `dung`. `customer_ask` là các câu khách hỏi nối lại (mới nhất ở cuối). issue / suggestion nói rõ lượt nào (giờ + câu khách). sai_quy_trinh cũng xét cả đoạn.
 - **dung**:
   - Trả lời đúng và đủ ý khách hỏi.
   - Mẫu trả lời chung cho câu hỏi chung.

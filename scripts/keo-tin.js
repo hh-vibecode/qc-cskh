@@ -157,6 +157,23 @@ function tachLuot(page, c, msgs, userMap) {
   return out;
 }
 
+// CHẤM CẢ ĐOẠN HỘI THOẠI (anh Hải 7/10: "chấm là chấm cả đoạn hội thoại; hôm qua đúng nhưng mấy hôm sau khách hỏi mà sai thì
+// vẫn có thể thành sai — không cần chấm riêng và tách ra nhiều cái giống nhau nữa"). Từ 1/10/2026: 1 dòng / conv_id (mỗi kênh
+// Zalo / Messenger / bình luận có conv_id riêng). Lượt khách trong khoảng kéo → gộp: câu khách nối lại, kết quả theo LƯỢT CUỐI
+// (Sale đã trả lời → chờ chấm cả đoạn; chưa → miss). Toàn lượt khấn / xã giao → không liên quan.
+function gopLuot(got) {
+  if (!got.length) return null;
+  const that = got.filter(x => x.verdict !== 'khong_lien_quan'), ds = that.length ? that : got;
+  const cuoi = ds[ds.length - 1], traLoi = [...ds].reverse().find(x => x.sale_reply);
+  return { ...cuoi, customer_ask: ds.map(x => x.customer_ask).join(' · ').slice(-700),
+    sale_reply: cuoi.sale_reply || traLoi?.sale_reply || null, sale_name: cuoi.sale_name || traLoi?.sale_name || null };
+}
+// Nối thread cũ (đã lưu) + mới (lượt này): lượt mỗi giờ chỉ đọc phần mới → không được làm mất đoạn trước
+function ghepThread(a, b) {
+  const l = [...new Set([...(a || '').split('\n'), ...(b || '').split('\n')].filter(Boolean))];
+  return l.sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n').slice(-6000);
+}
+
 // ── NHẬT KÝ CHẠY (anh Hải 30/9: "ghi lại lịch xử lý m kéo, cái nào kéo lỗi t còn biết để hỏi") ──────────────
 // Mỗi lượt 1 dòng ở qc_nhat_ky_chay → trang Cài đặt › Nhật ký chạy. Ghi nhật ký lỗi thì bỏ qua, KHÔNG làm hỏng lượt kéo.
 const NK = { id: null, s: {} };
@@ -212,7 +229,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
   await nkMo(CHE_DO === 'moc' ? `từ ${gioVN(tuUtc)}` : (FROM === TO ? FROM.split('-').reverse().slice(0, 2).join('/') : `${FROM} → ${TO}`));
   const pj = await pk('/pages');
-  const pages = pj?.categorized?.activated || [];
+  // PAGE_IDS (7/10): chạy bù song song theo nhóm page — khi đó KHÔNG ghi trạng thái kênh, KHÔNG soát miss (lượt thường lo)
+  const CHI_PAGE = (process.env.PAGE_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
+  const pages = (pj?.categorized?.activated || []).filter(p => !CHI_PAGE.length || CHI_PAGE.includes(String(p.id)));
   console.log('pages:', pages.length);
   if (!pages.length) {
     await kenhDoTatCa('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn');
@@ -266,61 +285,63 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
         if (!moi.length) break;
         msgs = msgs.concat(moi);
       }
-      const got = tachLuot(p, c, msgs, userMap);
-      pairs.push(...got); n += got.length;
+      const hoi = gopLuot(tachLuot(p, c, msgs, userMap));
+      if (hoi) { pairs.push(hoi); n++; }
       await sleep(150);
     }
     dem[p.name] = n;
-    console.log(`${p.name}: ${lay.length} hội thoại khách nhắn (quét ${count}) → ${n} lượt`);
+    console.log(`${p.name}: ${lay.length} hội thoại khách nhắn (quét ${count}) → ${n} hội thoại có lượt khách`);
   }
-  await kenhGhi([...KENH.values()]);
+  if (!CHI_PAGE.length) await kenhGhi([...KENH.values()]);
   const doK = [...KENH.values()].filter(k => k.trang_thai === 'loi');
   console.log(`Kênh: ${KENH.size - doK.length} đọc được, ${doK.length} không đọc được`, doK.map(k => k.ten).join(' · '));
-  if (!DRY) try {   // kênh từng có mà lượt này Pancake không trả về nữa → đỏ
+  if (!DRY && !CHI_PAGE.length) try {   // kênh từng có mà lượt này Pancake không trả về nữa → đỏ
     await fetch(`${SB}/rest/v1/qc_kenh?lan_kiem=lt.${BAT_DAU.toISOString()}`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
       body: JSON.stringify({ trang_thai: 'loi', ly_do: 'Không còn trong danh sách page của Pancake — đã gỡ / mất quyền' }) });
   } catch (e) { console.log('(không ghi được trạng thái kênh:', e.message + ')'); }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
-  console.log(`Tổng ${pairs.length} lượt:`, theoV);
+  console.log(`Tổng ${pairs.length} hội thoại:`, theoV);
   NK.s.luot_tim = pairs.length;
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(pairs, null, 1));
   if (DRY) return;
 
-  // Chống trùng theo 2 khoá: (conv_id, 160 ký tự đầu câu hỏi) và (conv_id, giờ khách bắt đầu hỏi) — kéo theo giờ thì
-  // khách nhắn nối thêm vào cùng lượt làm câu hỏi dài ra, khoá thứ 2 giữ không đẻ dòng trùng.
-  const convs = [...new Set(pairs.map(x => x.conv_id))], co = new Set(), cu = new Map();
-  const kGio = (id, at) => id + '@' + (at ? new Date(at).toISOString().slice(0, 19) : '');
+  // Ghi theo HỘI THOẠI: mỗi conv_id (từ 1/10/2026) đúng 1 dòng. Có rồi thì cập nhật khi: khách nhắn thêm (lượt khách mới hơn),
+  // Sale nói thêm sau lần chấm trước, hoặc dòng đang miss nay Sale đã trả lời → nối thread, về chờ chấm LẠI CẢ ĐOẠN.
+  const TU_HT = '2026-10-01';
+  const convs = [...new Set(pairs.map(x => x.conv_id))], cu = new Map();
   for (let i = 0; i < convs.length; i += 80) {
     const ds = convs.slice(i, i + 80).map(x => `"${x.replace(/"/g, '\\"')}"`).join(',');
-    const rows = await rest('GET', `${BANG}?select=id,conv_id,customer_ask,conv_at,verdict&conv_id=in.(${encodeURIComponent(ds)})&limit=5000`);
-    rows.forEach(r => { co.add(r.conv_id + '|' + (r.customer_ask || '').slice(0, 160)); co.add(kGio(r.conv_id, r.conv_at)); cu.set(kGio(r.conv_id, r.conv_at), r); });
+    const rows = await rest('GET', `${BANG}?select=id,conv_id,conv_at,verdict,sale_reply,full_thread,issue,cham_boi&conv_id=in.(${encodeURIComponent(ds)})&conv_date=gte.${TU_HT}&order=conv_at.desc&limit=5000`);
+    rows.forEach(r => { if (!cu.has(r.conv_id)) cu.set(r.conv_id, r); });
   }
-  // Dòng đang MISS mà lượt này thấy Sale đã trả lời (kéo theo giờ: lượt trước chạy khi Sale chưa kịp trả lời) → cập nhật
-  // chính dòng đó về chua_cham. Trả lời sau ≥ 1 giờ thì gắn nhãn "Trả lời muộn N giờ" (dưới 1 giờ coi là bình thường).
-  const capNhat = pairs.filter(x => x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(cu.get(kGio(x.conv_id, x.conv_at))?.verdict));
-  for (const x of capNhat) {
+  const moi = [], capNhat = [];
+  for (const x of pairs) {
+    const r = cu.get(x.conv_id);
+    if (!r) { moi.push(x); continue; }
+    const khachMoi = new Date(x.conv_at) > new Date(r.conv_at || 0);
+    const hetMiss = x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(r.verdict);
+    const saleThem = x.verdict === 'chua_cham' && x.sale_reply && x.sale_reply !== r.sale_reply && r.cham_boi !== 'claude';
+    if (!khachMoi && !hetMiss && !saleThem) continue;
     const h = x._rep_at ? (new Date(x._rep_at) - new Date(x.conv_at)) / 36e5 : 0;
-    await rest('PATCH', `${BANG}?id=eq.${cu.get(kGio(x.conv_id, x.conv_at)).id}&verdict=in.(khong_tra_loi,chi_bot)`, {
-      verdict: 'chua_cham', sale_reply: x.sale_reply, sale_name: x.sale_name, full_thread: x.full_thread,
-      severity: null, suggestion: null, cham_boi: null,
-      issue: h >= 1 ? `Trả lời muộn ${h.toFixed(1).replace('.', ',')} giờ.` : null });
+    const nhan = x.verdict !== 'chua_cham' ? x.issue : h >= 1 ? `Trả lời muộn ${h.toFixed(1).replace('.', ',')} giờ.`
+      : (!khachMoi && /^Bình luận →/.test(r.issue || '')) ? r.issue.match(/^Bình luận → tư vấn qua tin nhắn[^.]*\./)?.[0] || null : null;
+    capNhat.push({ id: r.id, body: { conv_at: x.conv_at, conv_date: x.conv_date, customer_ask: x.customer_ask, sale_reply: x.sale_reply,
+      sale_name: x.sale_name, full_thread: ghepThread(r.full_thread, x.full_thread), verdict: x.verdict, issue: nhan,
+      severity: null, suggestion: null, source_faq: null, sai_quy_trinh: null, cham_boi: x.cham_boi } });
   }
-  const moi = pairs.filter(x => {
-    const k1 = x.conv_id + '|' + x.customer_ask.slice(0, 160), k2 = kGio(x.conv_id, x.conv_at);
-    if (co.has(k1) || co.has(k2)) return false;
-    co.add(k1); co.add(k2); return true;
-  }).map(({ _rep_at, ...x }) => x);
-  for (let i = 0; i < moi.length; i += 100) await rest('POST', BANG, moi.slice(i, i + 100));
-  NK.s.luot_them = moi.length; NK.s.miss_cap_nhat = capNhat.length;
-  NK.s.luot_loc = moi.filter(x => x.verdict === 'khong_lien_quan').length;   // tự lọc lúc kéo (khấn / xã giao), vẫn lưu
-  console.log(`[${BANG}] Đã thêm ${moi.length} lượt mới, cập nhật ${capNhat.length} dòng miss → Sale đã trả lời (bỏ ${pairs.length - moi.length - capNhat.length} lượt đã có).`);
+  for (const u of capNhat) await rest('PATCH', `${BANG}?id=eq.${u.id}`, u.body);
+  const them = moi.map(({ _rep_at, ...x }) => x);
+  for (let i = 0; i < them.length; i += 100) await rest('POST', BANG, them.slice(i, i + 100));
+  NK.s.luot_them = them.length; NK.s.miss_cap_nhat = capNhat.length;
+  NK.s.luot_loc = them.filter(x => x.verdict === 'khong_lien_quan').length;   // tự lọc lúc kéo (khấn / xã giao), vẫn lưu
+  console.log(`[${BANG}] Thêm ${them.length} hội thoại mới, cập nhật ${capNhat.length} hội thoại (khách nhắn thêm / Sale nói thêm / hết miss → chấm lại cả đoạn), bỏ ${pairs.length - them.length - capNhat.length} không đổi.`);
   // Soát lại các dòng MISS còn mở với Pancake thật (anh Hải 30/9: "lúc kéo thì phải xem lại các data miss, họ clear xong
   // rồi thì clear hết"). Sale trả lời bổ sung (dù muộn) / nhắn riêng cho khách bình luận → gỡ khỏi miss, chuyển chấm nội dung,
   // gắn nhãn "Trả lời muộn N giờ" (≥ 1 giờ) hoặc "Bình luận → tư vấn qua tin nhắn". Soát miss 30 ngày ở MỌI lượt (từ 1/10;
   // trước đó lượt mỗi giờ chỉ 3 ngày → Sale trả lời miss cũ lúc 11h thì tới 18h35 mới gỡ, anh mở trang vẫn thấy miss).
   // Miss chỉ ~50 dòng nên soát hết mỗi giờ vẫn nhẹ. Dòng cũ thiếu conv_at cũng soát (mốc = đầu ngày conv_date).
-  const soatNgay = Number(process.env.SOAT_NGAY || 30);
-  const misses = await rest('GET', `${BANG}?select=id,conv_id,conv_at,conv_date,pancake_url,page_id,customer_name,verdict`
+  const soatNgay = CHI_PAGE.length ? -1 : Number(process.env.SOAT_NGAY || 30);
+  const misses = soatNgay < 0 ? [] : await rest('GET', `${BANG}?select=id,conv_id,conv_at,conv_date,pancake_url,page_id,customer_name,verdict`
     + `&verdict=in.(khong_tra_loi,chi_bot)&conv_id=not.like.pzl_g_*`
     + `&conv_date=gte.${vnDay(new Date(Date.now() - soatNgay * 864e5))}&order=conv_at&limit=500`);
   const { soat, capNhat: capNhatMiss } = taoSoat(pk, sleep);

@@ -28,7 +28,7 @@ begin
            -- 6/10: cờ cho chấm QUY TRÌNH — bình luận Facebook (conv không bắt đầu bằng mã page) và page Sỉ
            (conv_id !~ '^(pzl|ttm)' and conv_id not like coalesce(page_id, '') || '_%') la_binh_luan,
            (page_name ~* '(sỉ|thời đại|shidai)') page_si,
-           left(full_thread, 3000) thread
+           right(full_thread, 6000) thread   -- 7/10: chấm cả hội thoại → lấy phần MỚI NHẤT, dài hơn
     from sale_response_review
     where verdict = 'chua_cham' and conv_id not like 'pzl\_g\_%'
     order by case when p_nguoc then conv_date end desc, case when p_nguoc then id end desc,
