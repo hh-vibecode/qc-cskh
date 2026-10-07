@@ -332,7 +332,8 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     const saleThem = x.verdict === 'chua_cham' && x.sale_reply && x.sale_reply !== r.sale_reply && r.cham_boi !== 'claude';
     if (!khachMoi && !hetMiss && !saleThem) continue;
     const h = x._rep_at ? (new Date(x._rep_at) - new Date(x.conv_at)) / 36e5 : 0;
-    const nhan = x.verdict !== 'chua_cham' ? x.issue : h >= 1 ? `Trả lời muộn ${h.toFixed(1).replace('.', ',')} giờ.`
+    // 7/10: KHÔNG ghi nhãn "Trả lời muộn N giờ" (giờ thực, tính cả đêm) nữa — độ chậm đo trong CSDL theo giờ làm (qc_tinh_tg)
+    const nhan = x.verdict !== 'chua_cham' ? x.issue
       : (!khachMoi && /^Bình luận →/.test(r.issue || '')) ? r.issue.match(/^Bình luận → tư vấn qua tin nhắn[^.]*\./)?.[0] || null : null;
     capNhat.push({ id: r.id, body: { conv_at: x.conv_at, conv_date: x.conv_date, customer_ask: x.customer_ask, sale_reply: x.sale_reply,
       sale_name: x.sale_name, full_thread: ghepThread(r.full_thread, x.full_thread), verdict: x.verdict, issue: nhan,

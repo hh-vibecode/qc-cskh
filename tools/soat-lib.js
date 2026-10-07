@@ -93,7 +93,7 @@ function taoSoat(pk, sleep) {
         issue: `Bình luận → tư vấn qua tin nhắn (Sale nhắn sau ${fmtH(k.muon)}).`, pancake_url: k.url,
         full_thread: k.them.join('\n').slice(0, 6000), ...(k.sale ? { sale_name: k.sale } : {}) }
     : { verdict: 'chua_cham', sale_reply: k.text.slice(0, 1000), severity: null, suggestion: null, source_faq: null, cham_boi: null,
-        issue: k.muon >= 1 ? `Trả lời muộn ${fmtH(k.muon)} (soát lại Pancake — lúc kéo tin chưa có trả lời).` : null,
+        issue: null,   // 7/10: độ chậm đo trong CSDL theo giờ làm (qc_tinh_tg), không ghi nhãn giờ thực nữa
         full_thread: k.them.join('\n').slice(0, 6000), ...(k.sale ? { sale_name: k.sale } : {}) };
   return { soat, fmtH, capNhat };
 }

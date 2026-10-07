@@ -46,6 +46,9 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
   `statement_timeout` (20s, `qc_keo_tin` 5s) để lỗi / truy vấn nặng của QC không chiếm máy chủ làm chậm app MKT/Sale —
   hàm mới thêm thì chạy lại `supabase-gioi-han-qc.sql`.
 
+## Trang Logic xử lý dữ liệu (anh chốt 7/10/2026 — BẮT BUỘC)
+- **Mọi thay đổi về logic** (kéo, lọc, chấm, quy trình, thời gian phản hồi, gán Sale, công thức thẻ số…) phải **cập nhật luôn vào trang Cài đặt › Logic xử lý dữ liệu** (`logicPage()` trong index.html) cùng lần sửa, ghi ngày ở badge "Cập nhật". Không để trang Logic nói khác code.
+
 ## Giao diện (anh đã chốt — áp cho mọi trang / báo cáo / email)
 - Font **Montserrat** (Google Fonts, subset vietnamese).
 - **Không emoji trang trí.** Chỉ icon SVG (thẻ số, menu) + ký hiệu trên nút: ✏ ✓ ✕ ▶ ☰ ↺. Phân biệt bằng màu viền trái của thẻ.

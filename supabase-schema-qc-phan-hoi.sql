@@ -38,12 +38,11 @@ begin
     elsif ai = 'sale' and cho is not null then
       -- anh Hải 7/10: khách nhắn NGOÀI giờ làm (trước 8h / từ 17h30) mà trả lời chậm → thẻ "Ngoài giờ làm", KHÔNG tính muộn,
       -- không vào trung bình / đúng giờ. Chỉ lượt khách nhắn TRONG giờ làm mới đo phút làm việc.
-      if cho::time < time '08:00' or cho::time >= time '17:30' then
-        if extract(epoch from ts - cho) / 60 > 60 then ng := ng + 1; end if;
-      else
-        d := qc_phut_lam_viec(cho, ts);
-        tong := tong + d; n := n + 1; mx := greatest(coalesce(mx, 0), d);
-      end if;
+      -- Sửa lại 7/10 theo anh: khách nhắn ngoài giờ thì tính chờ TỪ 8h (lúc vào làm) — 20h tối, trả lời 9h sáng = chậm 1 giờ;
+      -- 7h55, trả lời 11h07 = chậm 3 giờ 7 phút. Mọi lượt đều đo phút làm việc; thẻ ngoài giờ chỉ để biết khách nhắn ngoài giờ.
+      if (cho::time < time '08:00' or cho::time >= time '17:30') and extract(epoch from ts - cho) / 60 > 60 then ng := ng + 1; end if;
+      d := qc_phut_lam_viec(cho, ts);
+      tong := tong + d; n := n + 1; mx := greatest(coalesce(mx, 0), d);
       cho := null;
     end if;
   end loop;
