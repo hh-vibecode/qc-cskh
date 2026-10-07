@@ -48,6 +48,7 @@ Khoá: máy anh đọc `qc-keys.local.txt`; cloud đọc biến môi trường �
 5. Lặp tới hết khoảng được giao. Báo lại: số dòng theo verdict, các dòng `sai`/`thieu` mức `cao` (id + 1 dòng lý do), và dòng nào phân vân.
 
 ## Luật chấm (anh Hải đã chốt)
+**Giờ trong `thread` là GIỜ VIỆT NAM** (từ 7/10; trước đó ghi UTC đã chuyển hết) — nhắc giờ trong issue thì chép đúng giờ trong thread.
 **MỖI DÒNG LÀ CẢ MỘT HỘI THOẠI (anh Hải chốt 7/10)** — từ 01/10/2026 mỗi khách trên mỗi kênh (Messenger / Zalo / bình luận) chỉ 1 dòng; khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm thì dòng được nối thread và về chờ chấm LẠI. Chấm CẢ ĐOẠN `thread`: Sale trả lời sai ở bất kỳ lượt nào → `sai` (dù trước đó đúng); có lượt thiếu ý → `thieu`; đúng hết các câu khách hỏi → `dung`. `customer_ask` là các câu khách hỏi nối lại (mới nhất ở cuối). issue / suggestion nói rõ lượt nào (giờ + câu khách). sai_quy_trinh cũng xét cả đoạn.
 - **dung**:
   - Trả lời đúng và đủ ý khách hỏi.

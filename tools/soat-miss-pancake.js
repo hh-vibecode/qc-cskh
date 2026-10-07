@@ -73,7 +73,7 @@ async function tinNhan(pageId, convId) {
 }
 const fmt = (m, pageId) => {
   const d = new Date(utc(m.inserted_at).getTime());
-  const ts = d.toISOString().slice(0, 16).replace('T', ' ');
+  const ts = new Date(d.getTime() + 7 * 36e5).toISOString().slice(0, 16).replace('T', ' ');   // giờ VIỆT NAM (7/10)
   const sale = String(m.from?.id) === String(pageId);
   const who = !sale ? 'Khách' : BOT.has(bo(m.from?.admin_name || '')) || TU_DONG.test(bo(clean(m.message))) ? 'Bot'
     : (m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale');

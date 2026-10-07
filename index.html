@@ -325,7 +325,8 @@ function verdictMatch(r,v){
   if(v==='all')return true;
   if(v==='muon')return!!lateOf(r);
   if(v==='qua_inbox')return inboxOf(r);
-  if(v==='quy_trinh')return!!r.sai_quy_trinh;   // anh Hải 6/10: thẻ thay "Tư vấn qua tin nhắn"
+  if(v==='quy_trinh')return!!r.sai_quy_trinh;
+  if(v==='cham_gio')return r.tg_phan_hoi_max>DUNG_GIO&&r.verdict!=='khong_lien_quan';   // anh Hải 6/10: thẻ thay "Tư vấn qua tin nhắn"
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
   if(v==='da_cham')return!['tra_loi_inbox','khong_lien_quan','chua_cham','loi_nen_tang'].includes(r.verdict);
   return r.verdict===v;
@@ -336,8 +337,17 @@ function tally(list){
   const g=k=>c[k]||0;
   const den=list.length-g('tra_loi_inbox')-g('chua_cham')-g('khong_lien_quan')-g('loi_nen_tang');
   return{n:list.length,den,dung:g('dung'),thieu:g('thieu'),sai:g('sai'),bot:g('chi_bot'),none:g('khong_tra_loi'),
-    miss:g('chi_bot')+g('khong_tra_loi'),inbox:g('tra_loi_inbox'),pend:g('chua_cham'),klq:g('khong_lien_quan'),loi:g('loi_nen_tang')};
+    miss:g('chi_bot')+g('khong_tra_loi'),inbox:g('tra_loi_inbox'),pend:g('chua_cham'),klq:g('khong_lien_quan'),loi:g('loi_nen_tang'),...tgPhanHoi(list)};
 }
+// Thời gian phản hồi (anh Hải 7/10) — phút LÀM VIỆC 8h–22h, tính trong CSDL (qc_tinh_tg) từ đoạn hội thoại, chỉ lượt khách từ 1/10.
+// Đúng giờ = mọi lượt trong hội thoại được Sale trả lời trong 60 phút làm việc. Chỉ tính hội thoại có Sale trả lời.
+const DUNG_GIO=60;
+function tgPhanHoi(list){
+  const c=list.filter(r=>r.tg_phan_hoi_tb!=null&&r.verdict!=='khong_lien_quan'),v=c.map(r=>r.tg_phan_hoi_tb).sort((a,b)=>a-b);
+  return{coTg:c.length,dungGio:c.filter(r=>r.tg_phan_hoi_max<=DUNG_GIO).length,chamGio:c.filter(r=>r.tg_phan_hoi_max>DUNG_GIO).length,
+    tbTg:c.length?Math.round(v.reduce((a,b)=>a+b,0)/c.length):null,tvTg:c.length?v[Math.floor((c.length-1)/2)]:null};
+}
+const fmtPhut=m=>m==null?'—':m<60?m+' phút':(m/60).toFixed(1).replace('.',',')+' giờ';
 
 // ── Vẽ ────────────────────────────────────────────────────────────────────
 // GỘP HỘI THOẠI (anh Hải 7/10: "cùng 1 người gộp hết vào cùng 1 hội thoại, trừ khi là zalo / mess / cmt riêng thì tách"):
@@ -353,7 +363,9 @@ function gopHoiThoai(list){
     const qt=[...new Set(ts.map(t=>t.sai_quy_trinh).filter(Boolean))].join(' · ')||null;
     return{...chinh,turns:ts,_threadId:cuoi.id,conv_at:cuoi.conv_at,conv_date:cuoi.conv_date,
       sale_name:ts.map(t=>t.sale_name).filter(Boolean).pop()||null,phone:ts.map(t=>t.phone).find(Boolean)||null,
-      reviewed_at:ts.reduce((a,t)=>t.reviewed_at&&t.reviewed_at>a?t.reviewed_at:a,''),sai_quy_trinh:qt};
+      reviewed_at:ts.reduce((a,t)=>t.reviewed_at&&t.reviewed_at>a?t.reviewed_at:a,''),sai_quy_trinh:qt,
+      tg_phan_hoi_tb:(()=>{const v=ts.map(t=>t.tg_phan_hoi_tb).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;})(),
+      tg_phan_hoi_max:ts.reduce((a,t)=>t.tg_phan_hoi_max!=null&&(a==null||t.tg_phan_hoi_max>a)?t.tg_phan_hoi_max:a,null)};
   });
 }
 function render(keepFocus){
@@ -406,9 +418,11 @@ function render(keepFocus){
     <td class="num" style="color:var(--bad);font-weight:700">${num(t.sai)}</td>
     <td class="num" style="color:var(--miss);font-weight:700">${num(t.miss)}</td>
     <td class="num">${num(t.pend)}</td>
-    <td class="num" style="font-weight:800;color:${!t.den?'var(--muted)':t.dung/t.den>=.7?'var(--ok)':t.dung/t.den>=.5?'var(--warn)':'var(--bad)'}">${pct(t.dung,t.den)}</td></tr>`;
+    <td class="num" style="font-weight:800;color:${!t.den?'var(--muted)':t.dung/t.den>=.7?'var(--ok)':t.dung/t.den>=.5?'var(--warn)':'var(--bad)'}">${pct(t.dung,t.den)}</td>
+    <td class="num" style="font-weight:700;color:${!t.coTg?'var(--muted)':t.dungGio/t.coTg>=.8?'var(--ok)':t.dungGio/t.coTg>=.6?'var(--warn)':'var(--bad)'}">${pct(t.dungGio,t.coTg)}</td>
+    <td class="num">${fmtPhut(t.tbTg)}</td></tr>`;
   // cột cố định để 2 bảng đặt cạnh nhau gióng thẳng cột (anh Hải: "lệch à")
-  const sumHead=first=>`<colgroup><col style="width:28%">${'<col style="width:10.28%">'.repeat(7)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ chấm</th><th class="num">Tỉ lệ đúng</th></tr></thead>`;
+  const sumHead=first=>`<colgroup><col style="width:20%">${'<col style="width:8.88%">'.repeat(9)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ chấm</th><th class="num">Tỉ lệ đúng</th><th class="num">Đúng giờ</th><th class="num">TB phản hồi</th></tr></thead>`;
   const byBrand=[...THU_TU,...(base.some(r=>brandOf(r)==='Khac')?['Khac']:[])].map(b=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r)===b)),`setF('brand','${b}')`)).join('');
   const bySale=countBy(base,saleOf).map(([s])=>sumRow(s,tally(base.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join('');
 
@@ -462,12 +476,17 @@ function render(keepFocus){
       ${kpi('quy_trinh','Hội thoại sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),(()=>{const xet=base.filter(daXetQT).length;return xet?pct(base.filter(r=>r.sai_quy_trinh).length,xet)+' / '+num(xet)+' lượt chấm từ 06/10':'chấm từ 06/10, chưa có lượt';})(),'bad','sai')}
       ${kpi('muon','Trả lời muộn',num(base.filter(lateOf).length),'Sale trả lời sau lúc job chạy','pend','muon')}
     </div>
+    <div class="kpi-row">
+      ${kpi('dung_gio','Trả lời đúng giờ',pct(T.dungGio,T.coTg),`${num(T.dungGio)} / ${num(T.coTg)} hội thoại · trong 1 giờ làm việc`,'ok','dung')}
+      ${kpi('tb_tg','Thời gian phản hồi TB',fmtPhut(T.tbTg),`trung vị ${fmtPhut(T.tvTg)} · giờ làm việc 8h–22h`,'info','muon')}
+      ${kpi('cham_gio','Phản hồi chậm',num(T.chamGio),'có lượt chờ quá 1 giờ làm việc','warn','muon')}
+    </div>
     <div class="two">
       <div><div class="sec">Theo thương hiệu</div><div class="card scroll"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div></div>
       <div><div class="sec">Theo Sale</div><div class="card scroll"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div></div>
     </div>
     <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} lượt</span>
-      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
+      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Trả lời muộn':S.verdict==='cham_gio'?'Phản hồi chậm':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>

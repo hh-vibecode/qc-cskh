@@ -26,6 +26,7 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 4. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
 
 ## Luật chấm (anh Hải đã chốt — theo đúng)
+**Giờ trong `thread` là GIỜ VIỆT NAM** (từ 7/10; trước đó ghi UTC đã chuyển hết) — nhắc giờ trong issue thì chép đúng giờ trong thread.
 **MỖI DÒNG LÀ CẢ MỘT HỘI THOẠI (anh Hải chốt 7/10)** — từ 01/10/2026 mỗi khách trên mỗi kênh (Messenger / Zalo / bình luận) chỉ 1 dòng; khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm thì dòng được nối thread và về chờ chấm LẠI. Chấm CẢ ĐOẠN `thread`: Sale trả lời sai ở bất kỳ lượt nào → `sai` (dù trước đó đúng); có lượt thiếu ý → `thieu`; đúng hết các câu khách hỏi → `dung`. `customer_ask` là các câu khách hỏi nối lại (mới nhất ở cuối). issue / suggestion nói rõ lượt nào (giờ + câu khách). sai_quy_trinh cũng xét cả đoạn.
 - **dung**: trả lời đúng, đủ ý khách hỏi · mẫu trả lời chung cho câu hỏi chung · câu hỏi phân loại ("dùng cho gia đình hay nhập sỉ?"), hỏi ngân sách, hỏi kích thước · chuyển khách sang inbox / Zalo · gửi bảng giá mẫu, hậu cần đơn, cảm ơn.
 - **thieu**: trả lời mẫu mà bỏ qua câu hỏi cụ thể của khách (giá mẫu cụ thể, kích thước cụ thể, còn hàng, địa chỉ…) và lượt sau cũng không trả lời · thiếu ý quan trọng · xử lý khiếu nại chưa tới nơi · quên xác nhận đơn.

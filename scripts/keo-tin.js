@@ -98,6 +98,10 @@ function locKhongHoi(ask) {
   if (CAU_XA_GIAO.test(t)) return 'câu xã giao (ok / vâng / cảm ơn / chào)';
   return null;
 }
+// GIỜ TRONG THREAD = GIỜ VIỆT NAM (7/10: trước đó ghi UTC theo job cũ → trang + nhận xét chấm lệch 7 tiếng, anh Hải phát hiện).
+// Mọi nơi ghi thread PHẢI dùng hàm này (soat-lib có bản giống hệt). Tự kiểm khi chạy: sai là dừng ngay, không ghi.
+const gioThread = d => new Date(d.getTime() + 7 * 36e5).toISOString().slice(0, 16).replace('T', ' ');
+if (gioThread(new Date('2026-10-07T00:55:00Z')) !== '2026-10-07 07:55') throw new Error('gioThread không ra giờ Việt Nam');
 function kind(m, pageId) {
   if (String(m.from?.id) !== String(pageId)) return 'cust';
   if (BOT.has(bo(m.from?.admin_name || ''))) return 'auto';
@@ -108,7 +112,7 @@ function kind(m, pageId) {
 }
 const coTep = m => (m.attachments || []).length > 0;
 function dong(m, k) {
-  const ts = utc(m.inserted_at).toISOString().slice(0, 16).replace('T', ' ');   // giữ giờ UTC như thread cũ
+  const ts = gioThread(utc(m.inserted_at));
   const who = k === 'cust' ? 'Khách' : k === 'auto' ? 'Bot' : (m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale');
   return `[${ts}] ${who}: ${clean(m.message) || (coTep(m) ? '(gửi ảnh/tệp)' : '')}`;
 }
@@ -307,6 +311,11 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
 
   // Ghi theo HỘI THOẠI: mỗi conv_id (từ 1/10/2026) đúng 1 dòng. Có rồi thì cập nhật khi: khách nhắn thêm (lượt khách mới hơn),
   // Sale nói thêm sau lần chấm trước, hoặc dòng đang miss nay Sale đã trả lời → nối thread, về chờ chấm LẠI CẢ ĐOẠN.
+  // CHỐT CHẶN GIỜ (7/10): dòng khách mở đầu lượt phải nằm trong thread đúng giờ VIỆT NAM của conv_at. Lệch (vd ai đổi lại
+  // UTC) → dừng cả lượt, không ghi, Nhật ký chạy báo Lỗi + GitHub gửi mail.
+  const lechGio = pairs.filter(x => x.full_thread && x.conv_at && !x.full_thread.includes('[' + gioThread(new Date(x.conv_at)) + '] Khách'));
+  if (pairs.length >= 5 && lechGio.length > pairs.length * 0.2)
+    throw new Error(`Giờ trong thread lệch giờ Việt Nam ở ${lechGio.length}/${pairs.length} hội thoại — dừng, không ghi (kiểm hàm gioThread)`);
   const TU_HT = '2026-10-01';
   const convs = [...new Set(pairs.map(x => x.conv_id))], cu = new Map();
   for (let i = 0; i < convs.length; i += 80) {

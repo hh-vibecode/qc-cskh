@@ -4,9 +4,11 @@
 //   { ket:'da_tra_loi', muon, sale, text, them }  Sale thật trả lời sau câu hỏi ngay trong hội thoại gốc (muộn N giờ)
 //   { ket:'qua_inbox',  muon, sale, text, them, url }  bình luận → Sale nhắn riêng cho CHÍNH khách đó ở inbox
 //   { ket:'miss_that' | 'khong_mo_duoc' | 'inbox_khong_thay' }
-// `them` = các dòng hội thoại từ lúc khách hỏi (định dạng "[YYYY-MM-DD HH:MM] Ai: nội dung", giờ UTC như thread cũ).
+// `them` = các dòng hội thoại từ lúc khách hỏi (định dạng "[YYYY-MM-DD HH:MM] Ai: nội dung", GIỜ VIỆT NAM từ 7/10).
 // Monsieur Claude
 function taoSoat(pk, sleep) {
+  // chốt chặn giờ (7/10): thread phải ghi giờ VIỆT NAM, giống gioThread của keo-tin
+  if (new Date(new Date('2026-10-07T00:55:00Z').getTime() + 7 * 36e5).toISOString().slice(0, 16).replace('T', ' ') !== '2026-10-07 07:55') throw new Error('soat-lib: giờ thread không phải giờ Việt Nam');
   const clean = t => (t || '').replace(/<br[^>]*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
   const bo = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase();
@@ -34,7 +36,7 @@ function taoSoat(pk, sleep) {
     return { conv, cust, msgs: (m?.messages || []).slice().sort((a, b) => utc(a.inserted_at) - utc(b.inserted_at)) };
   }
   const fmt = (m, pageId) => {
-    const ts = utc(m.inserted_at).toISOString().slice(0, 16).replace('T', ' ');
+    const ts = new Date(utc(m.inserted_at).getTime() + 7 * 36e5).toISOString().slice(0, 16).replace('T', ' ');   // giờ VIỆT NAM (7/10), giống gioThread của keo-tin
     const sale = String(m.from?.id) === String(pageId);
     const who = !sale ? 'Khách' : BOT.has(bo(m.from?.admin_name || '')) || TU_DONG.test(bo(clean(m.message))) ? 'Bot'
       : (m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale');
