@@ -65,6 +65,17 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Bảng cũ giữ lại có chủ đích — kiểm trước khi nói "mất dữ liệu".
 - Đổi logic chấm: đo trước–sau trên dữ liệu thật (`cham-luat.js --do` phải lệch 0 mới được thêm luật).
 
+## BÀI HỌC LỖI — CẤM LẶP LẠI (anh Hải 7/10/2026: "nhớ mấy cái sửa hôm nay, cấm mắc lỗi lại")
+1. **Không lọc ở bước kéo** — bộ lọc ý định cũ bỏ sót ~36% tin khách (5–7/10). Kéo hết, lọc ở bước xử lý; lọc gì cũng hiện ở Nhật ký › Đối chiếu.
+2. **Giờ trong thread = giờ Việt Nam** — ghi UTC làm trang + nhận xét lệch 7 tiếng (7/10). Chỉ dùng `gioThread` (keo-tin) / bản giống trong soat-lib; job tự kiểm, lệch là dừng.
+3. **Không cắt chuỗi giữa emoji** — 4 lượt kéo 5/10 fail cả lô vì nửa emoji; `rest()` trong keo-tin làm sạch trước khi ghi, đừng gỡ.
+4. **Mỗi dòng = cả hội thoại** (từ 1/10): không tách từng câu, chấm cả đoạn; đã chấm rồi thì giữ, chỉ chấm phần mới.
+5. **Thời gian phản hồi**: phút làm việc 8h–17h30; khách nhắn ngoài giờ tính chờ TỪ 8h; nhãn "trả lời muộn nhất"; không có thẻ "ngoài giờ"; không dùng nhãn "Trả lời muộn N giờ" theo giờ thực.
+6. **Không thừa hưởng mặc định của job cũ mà không kiểm** (bộ lọc, múi giờ đều từ job cũ). Kiểm job kéo bằng **Pancake thật**, không so với job cũ.
+7. **Chỉ làm chuẩn từ tháng 10/2026** — không kéo / chấm bù tháng trước nếu anh không bảo.
+8. **Việc dài (chấm > 50 dòng, kéo bù) chia nhiều luồng / agent song song ngay**, đừng để một luồng GitHub chạy 40 phút.
+9. **Đổi logic = sửa luôn trang Logic** cùng lần.
+
 ## Chấm
 - Luật chấm đầy đủ: `.claude/agents/cham-qc.md` (phiên trên máy / agent) và `routine/cham-cloud.md` (lịch chấm cloud mỗi giờ). Sửa luật thì sửa CẢ HAI.
 - Chỉ quan tâm **tin khách hỏi mua**. Lời khấn "Nam mô…", tương tác, chat nội bộ → `khong_lien_quan`, ẩn khỏi trang.
