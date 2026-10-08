@@ -322,14 +322,19 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     const rows = await rest('GET', `${BANG}?select=id,conv_id,conv_at,verdict,sale_reply,full_thread,issue,cham_boi&conv_id=in.(${encodeURIComponent(ds)})&conv_date=gte.${TU_HT}&order=conv_at.desc&limit=5000`);
     rows.forEach(r => { if (!cu.has(r.conv_id)) cu.set(r.conv_id, r); });
   }
-  const moi = [], capNhat = [];
+  const moi = [], capNhat = [], vaThread = [];
   for (const x of pairs) {
     const r = cu.get(x.conv_id);
     if (!r) { moi.push(x); continue; }
     const khachMoi = new Date(x.conv_at) > new Date(r.conv_at || 0);
     const hetMiss = x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(r.verdict);
     const saleThem = x.verdict === 'chua_cham' && x.sale_reply && x.sale_reply !== r.sale_reply && r.cham_boi !== 'claude';
-    if (!khachMoi && !hetMiss && !saleThem) continue;
+    if (!khachMoi && !hetMiss && !saleThem) {
+      // 8/10: không có gì mới để chấm lại, nhưng thread đã lưu THIẾU đoạn (vd bị soát miss cũ ghi đè) → chỉ vá thread, giữ kết quả chấm
+      const vo = ghepThread(r.full_thread, x.full_thread);
+      if (vo !== (r.full_thread || '') && vo.length > (r.full_thread || '').length) vaThread.push({ id: r.id, full_thread: vo });
+      continue;
+    }
     const h = x._rep_at ? (new Date(x._rep_at) - new Date(x.conv_at)) / 36e5 : 0;
     // 7/10: KHÔNG ghi nhãn "Trả lời muộn N giờ" (giờ thực, tính cả đêm) nữa — độ chậm đo trong CSDL theo giờ làm (qc_tinh_tg)
     const nhan = x.verdict !== 'chua_cham' ? x.issue
@@ -339,6 +344,8 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       severity: null, suggestion: null, source_faq: null, sai_quy_trinh: null, cham_boi: x.cham_boi } });
   }
   for (const u of capNhat) await rest('PATCH', `${BANG}?id=eq.${u.id}`, u.body);
+  for (const u of vaThread) await rest('PATCH', `${BANG}?id=eq.${u.id}`, { full_thread: u.full_thread });
+  if (vaThread.length) console.log(`Vá thread thiếu đoạn: ${vaThread.length} hội thoại (giữ kết quả chấm)`);
   const them = moi.map(({ _rep_at, ...x }) => x);
   for (let i = 0; i < them.length; i += 100) await rest('POST', BANG, them.slice(i, i + 100));
   NK.s.luot_them = them.length; NK.s.miss_cap_nhat = capNhat.length;
@@ -350,7 +357,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   // trước đó lượt mỗi giờ chỉ 3 ngày → Sale trả lời miss cũ lúc 11h thì tới 18h35 mới gỡ, anh mở trang vẫn thấy miss).
   // Miss chỉ ~50 dòng nên soát hết mỗi giờ vẫn nhẹ. Dòng cũ thiếu conv_at cũng soát (mốc = đầu ngày conv_date).
   const soatNgay = CHI_PAGE.length ? -1 : Number(process.env.SOAT_NGAY || 30);
-  const misses = soatNgay < 0 ? [] : await rest('GET', `${BANG}?select=id,conv_id,conv_at,conv_date,pancake_url,page_id,customer_name,verdict`
+  const misses = soatNgay < 0 ? [] : await rest('GET', `${BANG}?select=id,conv_id,conv_at,conv_date,pancake_url,page_id,customer_name,verdict,full_thread`
     + `&verdict=in.(khong_tra_loi,chi_bot)&conv_id=not.like.pzl_g_*`
     + `&conv_date=gte.${vnDay(new Date(Date.now() - soatNgay * 864e5))}&order=conv_at&limit=500`);
   const { soat, capNhat: capNhatMiss } = taoSoat(pk, sleep);
@@ -359,7 +366,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     let k; try { k = await soat(r); } catch (e) { k = { ket: 'loi' }; }
     demS[k.ket] = (demS[k.ket] || 0) + 1;
     if (k.ket === 'da_tra_loi' || k.ket === 'qua_inbox') {
-      await rest('PATCH', `${BANG}?id=eq.${r.id}&verdict=in.(khong_tra_loi,chi_bot)`, capNhatMiss(k)); go++;
+      // 8/10: NỐI thread, không ghi đè (trước đây ghi đè bằng đoạn từ lúc khách hỏi → mất ngữ cảnh trước đó, ca Nguyễn Tiến Sơn)
+      const body = capNhatMiss(k); body.full_thread = ghepThread(r.full_thread, body.full_thread);
+      await rest('PATCH', `${BANG}?id=eq.${r.id}&verdict=in.(khong_tra_loi,chi_bot)`, body); go++;
     }
     await sleep(150);
   }
