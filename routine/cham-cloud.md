@@ -23,7 +23,15 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
 3. Ghi nhật ký lượt chạy (lệnh ở trên) — **mọi lượt**, kể cả khi lô rỗng (0 dòng) hoặc bị lỗi; đúng 1 lần.
-4. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
+4. Đánh giá nhân sự nếu có kỳ đến hạn (mục ĐÁNH GIÁ NHÂN SỰ).
+5. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
+
+## ĐÁNH GIÁ NHÂN SỰ (anh Hải chốt 8/10/2026) — làm SAU khi chấm xong, mỗi lượt đều kiểm
+1. `curl -s "${H[@]}" -X POST $U/rpc/qc_ky_can_danh_gia -d "{\"p_ma\":\"$MA_CHAM\"}"` → danh sách kỳ đến hạn chưa đánh giá (`[]` thì bỏ qua mục này). Tuần = thứ Hai → Chủ nhật cắt theo tháng (đến hạn từ sáng thứ Hai), tháng = tổng kết từ ngày 1.
+2. Với mỗi kỳ: `qc_so_lieu_danh_gia` với `{"p_ma":..,"p_tu":"<tu>","p_den":"<den>","p_tu_truoc":"<tu kỳ trước>","p_den_truoc":"<den kỳ trước>"}` (tuần trước liền kề / tháng trước; kỳ đầu tháng 10/2026 không có kỳ trước). Nếu `chua_xong` > 0 → chấm hết các dòng đó trước (đóng sổ), rồi mới viết đánh giá.
+3. Viết đánh giá cho `__tong` (cả đội) và TỪNG Sale có trong `ky` (kể cả "(chưa rõ)"): 3–5 câu, **khách quan, có số liệu** — hội thoại, tỉ lệ đúng, thiếu / sai / miss, sai quy trình, đúng giờ, phản hồi TB / chậm; nêu 1–2 ví dụ lỗi cụ thể từ `vi_du_loi` (ngày + việc); so với kỳ trước (tăng / giảm bao nhiêu); 1 việc cần cải thiện. Không khen chê cảm tính, không suy đoán ngoài dữ liệu. Sale ít hội thoại (< 10) thì ghi rõ "số lượng ít, chưa đủ kết luận".
+   `xu_huong`: `tien_bo` / `giu` / `di_xuong` theo tỉ lệ đúng + đúng giờ + miss so với kỳ trước (kỳ đầu thì null). Tháng: tổng kết cả tháng + so các tuần trong tháng (tiến bộ hay đi xuống qua từng tuần).
+4. Ghi: `{"p_ma":..,"p_rows":[{"loai":"tuan"|"thang","thang":"YYYY-MM","tuan":n|null,"tu":..,"den":..,"sale":"__tong"|"<tên>","danh_gia":"...","xu_huong":..}]}` → `$U/rpc/qc_ghi_danh_gia` (số liệu tự chụp lúc ghi). Ghi đủ mọi Sale của kỳ trong 1 lần; dòng `__tong` là dấu đã xong kỳ.
 
 ## Luật chấm (anh Hải đã chốt — theo đúng)
 **ĐÓNG SỔ HÔM QUA (anh Hải chốt 7/10):** mỗi sáng ngày trước phải còn **0 dòng chờ chấm và 0 miss chưa soát**. Lô chấm lấy cũ trước — xử lý hết ngày cũ trước ngày mới. KHÔNG để dòng "phân vân" sang ngày sau: vẫn phải quyết (toàn ảnh qua lại nhiều ngày / nhờ gửi mẫu / chào hàng ngoài ngành = nguồn hàng, nội bộ → khong_lien_quan; khách gửi ảnh mẫu rồi Sale tư vấn → chấm như thường) và ghi "phân vân: …" trong issue để anh soát. Miss thật vẫn giữ là miss (không ép về 0) — chỉ "chưa soát" phải về 0.

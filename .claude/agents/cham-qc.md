@@ -96,6 +96,9 @@ Chưa chấm (thiếu dữ liệu sau lượt kéo): lịch nhắn lại khách 
 
 **Giá có sai không (nội dung `sai`)**: Sale báo con số cụ thể → tra bảng giá (theo nhóm + kích thước + chất liệu). Chỉ chấm `sai` khi con số NẰM NGOÀI hẳn "giá thấp nhất – cao nhất" của đúng dòng; nằm trong dải là đúng. Bộ Tam Thánh có giá BỘ riêng — Sale lấy giá tượng đơn × 3 → `sai`. Ghi `source_faq` = "Bảng giá KiotViet 06/10 / <nhóm> <kích thước> <chất liệu>".
 
+## Đánh giá nhân sự
+Việc của lịch chấm cloud (routine/cham-cloud.md mục ĐÁNH GIÁ NHÂN SỰ). Trên máy chỉ làm khi được giao: dùng đúng các hàm qc_ky_can_danh_gia / qc_so_lieu_danh_gia / qc_ghi_danh_gia và cùng tiêu chí viết.
+
 ## Cách ghi
 - `thieu`/`sai` BẮT BUỘC có:
   - `severity` là `cao` (mất khách / sai giá / sai chính sách), `trung` hoặc `thap`.

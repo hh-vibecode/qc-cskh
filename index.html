@@ -164,8 +164,8 @@ const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),pg:0,
   plat:'social',from:'',to:'',brand:'all',sale:'all',verdict:'all',q:'',
   view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
 // Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
-const VIEWS={report:'Chất lượng phản hồi',history:'Lịch sử báo sai',nhatky:'Nhật ký chạy',logic:'Logic xử lý dữ liệu'};
-async function go(v){S.view=v;ls.set('qc_view',v);if(v==='nhatky')await taiNhatKy();render();window.scrollTo(0,0);}
+const VIEWS={report:'Chất lượng phản hồi',nhansu:'Đánh giá nhân sự',history:'Lịch sử báo sai',nhatky:'Nhật ký chạy',logic:'Logic xử lý dữ liệu'};
+async function go(v){S.view=v;ls.set('qc_view',v);if(v==='nhatky')await taiNhatKy();if(v==='nhansu')await taiNhanSu();render();window.scrollTo(0,0);}
 function shell(content){
   const open=S.reports.filter(r=>r.status==='open').length;
   const item=(v,extra='')=>`<div class="nav-item${S.view===v?' active':''}" onclick="go('${v}')">${VIEWS[v]}${extra}</div>`;
@@ -175,6 +175,7 @@ function shell(content){
       <div class="sb-brand">QC CSKH</div>
       <div class="sb-section">Báo cáo</div>
       ${item('report')}
+      ${item('nhansu')}
       <div class="sb-bottom">
         <div class="sb-section" style="padding-top:8px">Cài đặt</div>
         ${item('history',open?`<span class="nav-badge">${open}</span>`:'')}
@@ -394,6 +395,7 @@ function render(keepFocus){
   if(S.view==='history'){app.innerHTML=shell(historyPage());return;}
   if(S.view==='logic'){app.innerHTML=shell(logicPage());return;}
   if(S.view==='nhatky'){app.innerHTML=shell(nhatKyPage());return;}
+  if(S.view==='nhansu'){app.innerHTML=shell(nhanSuPage());return;}
   // Chỉ quan tâm tin khách hỏi mua (anh Hải 28/9): dòng "không liên quan" (lời khấn, tương tác, nội bộ) ẩn hẳn, không tính.
   const platRows=S.rows.filter(r=>platOf(r)===S.plat&&r.verdict!=='khong_lien_quan');
   const dated=gopHoiThoai(platRows.filter(r=>(!S.from||r.conv_date>=S.from)&&(!S.to||r.conv_date<=S.to)));
@@ -646,6 +648,76 @@ async function taiNhatKy(){try{const t=new Date(),tu=new Date(t);tu.setDate(tu.g
 function nkLoiGan(){const nk=S.nk||[];if((S.kenh||[]).some(k=>k.kich_hoat&&k.trang_thai==='loi'))return true;if(!nk.length)return false;
   if(nk.some(x=>x.trang_thai==='loi'&&Date.now()-new Date(x.bat_dau)<864e5))return true;
   const keo=nk.find(x=>x.loai!=='cham');return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
+// ── Báo cáo › Đánh giá nhân sự (anh Hải 8/10) ─────────────────────────────────────────────────────────────
+// Có MÃ RIÊNG (kiểm ở máy chủ: qc_chan_ns) — giữ trong phiên trình duyệt (sessionStorage), đóng tab là phải nhập lại.
+// Tuần (thứ Hai → CN, cắt theo tháng) đánh giá sáng thứ Hai, tháng tổng kết ngày 1 — lượt chấm cloud viết (routine/cham-cloud.md).
+// Bảng so sánh kiểu "So sánh tháng" của app MKT/Sale: cột = tuần, ô = số + ▲▼ so với tuần trước (xanh tốt / đỏ xấu).
+const NS_KEY='qc_ma_ns';
+const ssGet=()=>{try{return sessionStorage.getItem(NS_KEY)||'';}catch(e){return'';}};
+const ssSet=v=>{try{v?sessionStorage.setItem(NS_KEY,v):sessionStorage.removeItem(NS_KEY);}catch(e){}};
+async function taiNhanSu(ma){
+  ma=ma||S.maNs||ssGet();if(!ma){S.ns=null;return;}
+  try{S.ns=await rpc('qc_ds_danh_gia',{p_ma_ns:ma});S.maNs=ma;ssSet(ma);S.nsLoi='';}
+  catch(e){S.ns=null;S.maNs='';ssSet('');S.nsLoi=e.message;}
+}
+async function moNhanSu(){const v=(document.getElementById('maNs')||{}).value||'';await taiNhanSu(v.trim());render();}
+const NS_CS=[
+  ['QUY MÔ','var(--info)',[['hoi_thoai','Hội thoại','n']]],
+  ['CHẤT LƯỢNG','var(--ok)',[['ty_le_dung','Tỉ lệ đúng','pct'],['thieu','Thiếu ý','n',1],['sai','Sai kiến thức','n',1],['miss','Miss','n',1],['ty_le_sai_quy_trinh','Sai quy trình','pct',1]]],
+  ['TỐC ĐỘ PHẢN HỒI','var(--warn)',[['ty_le_dung_gio','Trả lời đúng giờ','pct'],['tb_phan_hoi','Phản hồi trung bình','phut',1],['phan_hoi_cham','Phản hồi chậm','n',1]]]];
+const XH={tien_bo:['Tiến bộ','ok'],giu:['Giữ nguyên','grey'],di_xuong:['Đi xuống','bad']};
+function nsKyCuaThang(th){   // các tuần (đã đánh giá + tuần đang chạy) của 1 tháng
+  const d=S.ns,m=new Map();
+  for(const r of d.danh_gia.filter(r=>r.loai==='tuan'&&r.thang===th)){const k=r.tu;(m.get(k)||m.set(k,{tuan:r.tuan,tu:r.tu,den:r.den,sl:{},dg:{}}).get(k));m.get(k).sl[r.sale]=r.so_lieu;m.get(k).dg[r.sale]=r;}
+  const tn=d.tuan_nay;if(tn&&tn.thang===th&&!m.has(tn.tu)){const sl={};(tn.so_lieu||[]).forEach(x=>sl[x.sale]=x);m.set(tn.tu,{tuan:tn.tuan,tu:tn.tu,den:tn.den,sl,dg:{},dangChay:true});}
+  return[...m.values()].sort((a,b)=>a.tu.localeCompare(b.tu));
+}
+function nsBang(ky,sale){
+  const ddmm=d=>d.slice(8,10)+'/'+d.slice(5,7);
+  const fmt=(v,t)=>v==null?'—':t==='pct'?String(v).replace('.',',')+'%':t==='phut'?fmtPhut(v):num(v);
+  const lech=(a,b,t,xauKhiTang)=>{
+    if(a==null||b==null)return'<div class="muted" style="font-size:10.5px;margin-top:3px">—</div>';
+    let d,chu;if(t==='pct'){d=b-a;chu=Math.abs(d).toFixed(1).replace('.',',')+' điểm';}else{if(!a)return'<div class="muted" style="font-size:10.5px;margin-top:3px">—</div>';d=(b-a)/Math.abs(a)*100;chu=Math.abs(d).toFixed(0)+'%';}
+    if(Math.abs(d)<0.05)return'<div class="muted" style="font-size:10.5px;margin-top:3px">0</div>';
+    const tot=xauKhiTang?d<0:d>0;
+    return`<div style="font-size:10.5px;font-weight:800;margin-top:3px;color:var(--${tot?'ok':'bad'})">${d>0?'▲':'▼'} ${chu}</div>`;};
+  const dong=([k,l,t,xau])=>`<tr><td class="name" style="padding-left:16px">${l}</td>${ky.map((c,i)=>{const v=(c.sl[sale]||{})[k],a=i?(ky[i-1].sl[sale]||{})[k]:undefined;
+    return`<td class="c" style="border-left:1px solid var(--border)"><div style="font-weight:800;font-variant-numeric:tabular-nums">${fmt(v,t)}</div>${i?lech(a,v,t,xau):'<div class="muted" style="font-size:10.5px;margin-top:3px">&nbsp;</div>'}</td>`;}).join('')}</tr>`;
+  return`<div class="card scroll" style="margin-bottom:14px"><table style="min-width:${200+ky.length*150}px">
+    <thead><tr><th>Chỉ số</th>${ky.map(c=>`<th class="c" style="border-left:1px solid var(--border)">Tuần ${c.tuan} · ${ddmm(c.tu)}–${ddmm(c.den)}${c.dangChay?' <span class="badge">đang chạy</span>':''}</th>`).join('')}</tr></thead>
+    <tbody>${NS_CS.map(([g,mau,cs])=>`<tr><td colspan="${ky.length+1}" style="background:${mau};color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 16px">${g}</td></tr>`+cs.map(dong).join('')).join('')}</tbody></table></div>`;
+}
+function nsDanhGia(rs){
+  return rs.filter(Boolean).map(r=>{const x=XH[r.xu_huong];
+    return`<div class="box" style="background:var(--surface);border-left:3px solid var(--${x?x[1]:'border'});margin-top:8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${r.loai==='thang'?'Tổng kết tháng':'Tuần '+r.tuan}</b><span class="muted">${r.tu.slice(8,10)}/${r.tu.slice(5,7)}–${r.den.slice(8,10)}/${r.den.slice(5,7)}</span>${x?`<span class="vb" style="background:var(--${x[1]}-bg);color:var(--${x[1]})">${x[0]}</span>`:''}</div>
+      <div style="margin-top:6px;line-height:1.55">${esc(r.danh_gia||'')}</div></div>`;}).join('');
+}
+function nhanSuPage(){
+  const top=`<div class="top"><div class="title">Đánh giá nhân sự</div>${S.ns?'<div class="right"><button class="sel" onclick="S.ns=null;S.maNs=\'\';ssSet(\'\');render()">Khoá báo cáo</button></div>':''}</div>`;
+  if(!S.ns)return top+`<div class="card" style="padding:22px;max-width:420px"><div style="font-weight:800;margin-bottom:10px">Báo cáo có mã riêng</div>
+    <div style="display:flex;gap:8px"><input id="maNs" type="password" class="sel" style="flex:1;height:36px" placeholder="Nhập mã báo cáo" onkeydown="if(event.key==='Enter')moNhanSu()">
+    <button class="btn on" onclick="moNhanSu()">Mở</button></div>${S.nsLoi?`<div style="color:var(--bad);margin-top:8px;font-size:12px">${esc(S.nsLoi)}</div>`:''}</div>`;
+  const d=S.ns,thNay=d.tuan_nay.thang;
+  const thangs=[...new Set([thNay,...d.danh_gia.map(r=>r.thang)])].sort().reverse();
+  const tenThang=t=>'Tháng '+(+t.slice(5,7))+'/'+t.slice(0,4);
+  const chonSale=th=>{const set=new Set();nsKyCuaThang(th).forEach(c=>Object.keys(c.sl).forEach(x=>set.add(x)));return['__tong',...[...set].filter(x=>x!=='__tong')];};
+  const sale=S.nsSale||'__tong';
+  const khoi=(th,mo)=>{
+    const ky=nsKyCuaThang(th),ss=chonSale(th),sel=ss.includes(sale)?sale:'__tong';
+    const tk=d.danh_gia.find(r=>r.loai==='thang'&&r.thang===th&&r.sale===sel);
+    const dgTuan=ky.slice().reverse().map(c=>c.dg[sel]);
+    const chip=x=>`<button class="sel${x===sel?' on':''}" onclick="S.nsSale=${esc(JSON.stringify(x))};render()">${x==='__tong'?'Cả đội':esc(x)}</button>`;
+    return`<div class="bar" style="flex-wrap:wrap;gap:6px">${ss.map(chip).join('')}</div>${ky.length?nsBang(ky,sel):'<div class="muted" style="padding:12px">Chưa có số liệu</div>'}
+      ${tk?nsDanhGia([tk]):''}${nsDanhGia(dgTuan)||'<div class="muted" style="margin-top:8px">Chưa có đánh giá — tuần chấm sáng thứ Hai, tháng tổng kết ngày 1.</div>'}`;};
+  const cur=`<div class="sec" style="display:flex;align-items:center;gap:8px">${tenThang(thNay)} <span class="badge">tháng đang chạy</span></div>${khoi(thNay,true)}`;
+  const cu=thangs.filter(t=>t!==thNay).map(t=>{const mo=S.nsMo===t,tk=d.danh_gia.find(r=>r.loai==='thang'&&r.thang===t&&r.sale==='__tong');
+    return`<div class="card" style="margin-top:12px"><div class="click" style="padding:14px 16px;display:flex;gap:10px;align-items:center;cursor:pointer" onclick="S.nsMo=S.nsMo==='${t}'?null:'${t}';render()">
+      <b>${mo?'▼':'▶'} ${tenThang(t)} — tổng kết</b>${tk&&tk.so_lieu?`<span class="badge">đúng ${String(tk.so_lieu.ty_le_dung??'—').replace('.',',')}% · đúng giờ ${String(tk.so_lieu.ty_le_dung_gio??'—').replace('.',',')}%</span>`:''}</div>
+      ${mo?`<div style="padding:0 16px 16px">${khoi(t,false)}</div>`:''}</div>`;}).join('');
+  return top+cur+(cu?`<div class="sec" style="margin-top:20px">Các tháng trước</div>${cu}`:'');
+}
+
 // Đối chiếu kéo về / lọc ra (anh Hải 7/10: "số kéo về vs số lọc ra liệt kê cho t, để t check k sót;
 // số còn lại cho vào chấm thì bên Chất lượng phản hồi"). Bấm số "Lọc ra" → danh sách từng câu bị lọc + lý do để soát.
 // Thẻ loại hội thoại (7/10): bình luận Facebook = conv_id không bắt đầu bằng mã page; Zalo pzl_; TikTok ttm_; còn lại Messenger
@@ -829,7 +901,14 @@ function logicPage(){
       <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau.</li>
       <li>Tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin" không dùng làm tên Sale, nhưng tin viết tay từ các tài khoản này vẫn tính là người thật trả lời.</li>
     </ul>
-    <h3>9. Báo sai</h3>
+    <h3>9. Đánh giá nhân sự (từ 10/2026)</h3>
+    <ul>
+      <li>Báo cáo có <b>mã riêng</b> (kiểm ở máy chủ), giữ trong phiên trình duyệt — đóng tab là phải nhập lại.</li>
+      <li><b>Tuần</b> = thứ Hai → Chủ nhật, cắt theo tháng (tuần 1 của tháng 10 là 01–04/10). Đánh giá tuần trước vào <b>sáng thứ Hai</b>; <b>tổng kết tháng</b> vào ngày 1. Phải đóng sổ (0 chờ chấm, 0 miss chưa soát) rồi mới viết.</li>
+      <li>Số liệu do CSDL tính, cùng định nghĩa trang Chất lượng phản hồi; mỗi hội thoại tính vào tuần có tin khách mới nhất. Lời đánh giá: 3–5 câu khách quan, có số và ví dụ lỗi cụ thể, so với kỳ trước, kèm xu hướng tiến bộ / giữ / đi xuống.</li>
+      <li>Bảng so sánh: cột = các tuần trong tháng, ô = số + ▲▼ so với tuần trước (xanh tốt, đỏ xấu; chỉ số % lấy chênh lệch điểm). Hết tháng thì tháng đó thu gọn thành 1 dòng tổng kết, bấm mới mở chi tiết.</li>
+    </ul>
+    <h3>10. Báo sai</h3>
     <p>Bấm "Báo sai" ở từng dòng → Claude soát bằng dữ liệu thật, sửa kết quả, báo sai đúng thì thêm vào luật chấm để không lặp lại, ghi cách xử lý vào <b>Lịch sử báo sai</b>.</p>
   </div>`;
 }

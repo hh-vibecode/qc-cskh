@@ -31,6 +31,7 @@
 - **Đổi logic là sửa luôn trang Logic xử lý dữ liệu** (anh chốt 7/10, đã ghi CLAUDE.md).
 - **Đóng sổ hôm qua (anh chốt 7/10):** mỗi sáng ngày trước phải còn 0 chờ chấm + 0 miss chưa soát (miss thật vẫn giữ). Luật ở cả 2 file chấm (không để dòng phân vân sang ngày sau); badge xanh/đỏ cạnh Tổng quan trên trang Chất lượng phản hồi. **Nhật ký chạy chỉ theo dõi dữ liệu thô** (kéo về · lọc ra bình luận/tin nhắn · vào chấm) — anh chốt 7/10.
 - **Kênh theo dõi (anh chốt 7/10):** chỉ 15 page ĐANG GẮN trên Pancake (FB "Hoàng Dương / Ming Ying" bật lại 7/10 → CT); kênh Pancake đang tắt không đưa vào bảng. Trạng thái cập nhật mỗi lượt kéo (mỗi giờ); page bị tắt / gỡ → đỏ "Không còn trong danh sách".
+- **Đánh giá nhân sự (anh chốt 8/10):** mục Báo cáo › Đánh giá nhân sự, MÃ RIÊNG 0000 (băm ở qc_cau_hinh ma_nhan_su); tuần (T2→CN cắt theo tháng) đánh giá sáng thứ Hai, tháng tổng kết ngày 1 — lịch chấm cloud tự làm (routine/cham-cloud.md mục ĐÁNH GIÁ NHÂN SỰ), bảng qc_danh_gia + qc_tinh_so_lieu (supabase-schema-qc-danh-gia.sql). Kiểu bảng như "So sánh tháng" app MKT/Sale. Hết tháng thu gọn 1 dòng tổng kết.
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -189,6 +190,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **08/10/2026** — Dựng Đánh giá nhân sự: bảng qc_danh_gia, số liệu qc_tinh_so_lieu (khớp định nghĩa trang), RPC trang (mã trang + mã NS, sai mã 403) và RPC cho lịch chấm (kỳ đến hạn / số liệu + ví dụ lỗi / ghi); Claude viết đánh giá tuần 1 (1–4/10) cho cả đội + 5 Sale; trang hiện tuần 2 đang chạy với ▲▼.
 - **07/10/2026** — Đóng sổ 1–6/10: quyết 6 dòng phân vân (2 đúng, 4 không liên quan: nguồn hàng / ngoài ngành), gỡ 3 miss hôm nay là nội bộ / tin hệ thống → 1–6/10 còn 0 chờ chấm, 0 miss chưa soát. Thêm badge đóng sổ hôm qua + Tổng quan; Nhật ký chỉ còn dữ liệu thô.
 - **07/10/2026** — Dọn sổ: E2 (xin SĐT không báo giá) giải bằng SOP = lỗi quy trình Né giá; E3 thay bằng giờ làm 8h–17h30 + ngưỡng 1 giờ làm việc; nợ #7 (chuyển kéo tin sang QC) xong từ 30/9; nợ #12 (Sale nói thêm sau khi chấm) giải bằng chấm cả hội thoại.
 - **07/10/2026** — Giờ làm 8h–17h30 + thẻ ngoài giờ (Social: 41 chậm, 103 ngoài giờ = SQL); gộp "Trả lời muộn" cũ vào "Phản hồi chậm"; 2 hàng × 4 thẻ, bảng xếp dọc; viết lại trang Logic theo toàn bộ quy tắc anh chốt trong phiên.
