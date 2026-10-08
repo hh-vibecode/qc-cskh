@@ -88,7 +88,8 @@ const INTENT = /giá|bao nhiêu|bn |bnhiêu|size|kích thước|còn hàng|có b
 // soát miss chuyển "không liên quan" như trước. KHÔNG thêm tên các vị (a di đà, quan âm…) — kéo theo hàng chục lời khấn "Nam mô".
 const INTENT_KD = /\b(thinh|tuong|ban tho|do tho|bat huong|lu huong|den tho|bao gia|gia|bao nhieu|kich thuoc|\d+ ?cm|mau|chat lieu|muon mua|can mua|can tim|tim mua|dat hang|ship|co (ban|ko|khong)|(ko|khong) (shop|ban|a|ah|vay)\b)/;
 // Câu CHẮC CHẮN không phải hỏi mua → gắn sẵn khong_lien_quan (vẫn lưu). Có chữ mua / giá / thỉnh / cm… thì KHÔNG lọc.
-const KHAN_THUAN = /^(nam ?mo|nammo|a di da phat|nam (dia tang|quan the am|bon su|duoc su|a di da|di lac))/;
+// 8/10: thêm "con nam mô…", "mô a di đà…", "nam.oadidaphat" (lọt khi vá tháng 10)
+const KHAN_THUAN = /^(con |xin |con xin )?(nam ?mo|nammo|nam ?o ?a ?di ?da|mo a di da|a di da phat|adidaphat|nam (dia tang|quan the am|bon su|duoc su|a di da|di lac))/;
 const CAU_XA_GIAO = /^((ok+|oke+|okie|okay|vang|da+|uh+|um+|ukm|cam on|camon|thanks?|thank you|tks|ty|alo|hi|hello|xin chao|chao)( (a|ah|nha|nhe|nhe|shop|em|ban|anh|chi|c|e|a|nhieu|nhiu|lam|ca nha|moi nguoi))*)+$/;
 function locKhongHoi(ask) {
   const t = bo(ask).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
