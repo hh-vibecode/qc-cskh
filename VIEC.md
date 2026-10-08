@@ -190,6 +190,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **08/10/2026** — 4 báo sai (ngọc vân): #44 ảnh lời khấn → không liên quan; #45 chấm sai vì **thread mất đoạn đầu** (LỖI của Claude: soát miss GHI ĐÈ full_thread bằng đoạn từ lúc khách hỏi) → chấm lại đúng, sửa soát miss NỐI thread + lượt kéo tự vá thread thiếu; #46 Facebook lỗi #551 khi Sale nhắn → lỗi nền tảng; #43 nội dung báo không khớp hội thoại (báo nhầm dòng) → giữ. Chạy vá thread cả tháng 10 (3 luồng).
 - **08/10/2026** — Dựng Đánh giá nhân sự: bảng qc_danh_gia, số liệu qc_tinh_so_lieu (khớp định nghĩa trang), RPC trang (mã trang + mã NS, sai mã 403) và RPC cho lịch chấm (kỳ đến hạn / số liệu + ví dụ lỗi / ghi); Claude viết đánh giá tuần 1 (1–4/10) cho cả đội + 5 Sale; trang hiện tuần 2 đang chạy với ▲▼.
 - **07/10/2026** — Đóng sổ 1–6/10: quyết 6 dòng phân vân (2 đúng, 4 không liên quan: nguồn hàng / ngoài ngành), gỡ 3 miss hôm nay là nội bộ / tin hệ thống → 1–6/10 còn 0 chờ chấm, 0 miss chưa soát. Thêm badge đóng sổ hôm qua + Tổng quan; Nhật ký chỉ còn dữ liệu thô.
 - **07/10/2026** — Dọn sổ: E2 (xin SĐT không báo giá) giải bằng SOP = lỗi quy trình Né giá; E3 thay bằng giờ làm 8h–17h30 + ngưỡng 1 giờ làm việc; nợ #7 (chuyển kéo tin sang QC) xong từ 30/9; nợ #12 (Sale nói thêm sau khi chấm) giải bằng chấm cả hội thoại.
