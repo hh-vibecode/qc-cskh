@@ -128,10 +128,13 @@ function tachLuot(page, c, msgs, userMap) {
   }
   const thread = ms.map(x => dong(x.m, x.k)).join('\n').slice(-4000);
   const out = [];
+  const cuoiKhach = turns.map((t, i) => t.side === 'cust' ? i : -1).filter(i => i >= 0).pop();
   turns.forEach((t, i) => {
     if (t.side !== 'cust') return;
     const first = t.ms[0].at, last = t.ms[t.ms.length - 1].at;
-    if (first < tuUtc || first > denUtc) return;
+    // Hội thoại chỉ có Sale nhắn trong khoảng: lấy lượt khách CUỐI (dù cũ hơn khoảng, từ 1/10) để cập nhật dòng đã có
+    const choLayCu = c._chiSale && i === cuoiKhach && first >= new Date('2026-09-30T17:00:00Z');
+    if ((first < tuUtc && !choLayCu) || first > denUtc) return;
     const ask = t.ms.map(x => clean(x.m.message)).filter(Boolean).join(' ').trim();
     // 7/10 anh Hải: "kéo hết về trước cho đầy đủ rồi hãy xử lý lọc" — KHÔNG bỏ lượt nào ở bước kéo. Chỉ gắn sẵn
     // "không liên quan" cho câu chắc chắn không hỏi (lời khấn thuần, cảm ơn / ok / sticker), vẫn LƯU để đủ dữ liệu.
@@ -157,6 +160,7 @@ function tachLuot(page, c, msgs, userMap) {
         : verdict === 'khong_tra_loi' ? 'Khách có nhu cầu thật nhưng không ai trả lời (kể cả bot).' : null,
       full_thread: thread, pancake_url: `https://pancake.vn/${page.id}?c_id=${c.id}`,
       _rep_at: repAt,   // giờ Sale trả lời — chỉ dùng để tính "trả lời muộn", không ghi vào bảng
+      _chiSale: !!c._chiSale,   // hội thoại chỉ có Sale nhắn trong khoảng — chỉ cập nhật dòng đã có
     });
   });
   return out;
@@ -259,7 +263,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       for (const c of cs) {
         if (utc(c.updated_at || '1970-01-01') >= tuUtc) moi++;           // mốc dừng quét: theo thứ tự danh sách (updated_at)
         if (String(c.id).startsWith('pzl_g_')) continue;                 // nhóm Zalo: bỏ
-        if (utc(c.last_customer_interactive_at || c.updated_at || '1970-01-01') >= tuUtc) lay.push(c);   // chỉ hội thoại khách có nhắn
+        if (utc(c.last_customer_interactive_at || c.updated_at || '1970-01-01') >= tuUtc) lay.push(c);   // hội thoại khách có nhắn
+        // 9/10: CHỈ Sale nhắn (khách không nhắn thêm) → vẫn lấy để cập nhật hội thoại đã có (Sale trả lời sau lúc chấm; trước đây phải chờ quét 18h35 — báo sai #47)
+        else if (utc(c.updated_at || '1970-01-01') >= tuUtc) { c._chiSale = true; lay.push(c); }
       }
       cuLien = moi ? 0 : cuLien + 1;
       count += cs.length; lastId = cs[cs.length - 1].id;
@@ -326,7 +332,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const moi = [], capNhat = [], vaThread = [];
   for (const x of pairs) {
     const r = cu.get(x.conv_id);
-    if (!r) { moi.push(x); continue; }
+    if (!r) { if (!x._chiSale) moi.push(x); continue; }   // hội thoại cũ chưa có dòng mà chỉ Sale nhắn → không tạo dòng mới
     const khachMoi = new Date(x.conv_at) > new Date(r.conv_at || 0);
     const hetMiss = x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(r.verdict);
     const saleThem = x.verdict === 'chua_cham' && x.sale_reply && x.sale_reply !== r.sale_reply && r.cham_boi !== 'claude';
@@ -347,7 +353,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   for (const u of capNhat) await rest('PATCH', `${BANG}?id=eq.${u.id}`, u.body);
   for (const u of vaThread) await rest('PATCH', `${BANG}?id=eq.${u.id}`, { full_thread: u.full_thread });
   if (vaThread.length) console.log(`Vá thread thiếu đoạn: ${vaThread.length} hội thoại (giữ kết quả chấm)`);
-  const them = moi.map(({ _rep_at, ...x }) => x);
+  const them = moi.map(({ _rep_at, _chiSale, ...x }) => x);
   for (let i = 0; i < them.length; i += 100) await rest('POST', BANG, them.slice(i, i + 100));
   NK.s.luot_them = them.length; NK.s.miss_cap_nhat = capNhat.length;
   NK.s.luot_loc = them.filter(x => x.verdict === 'khong_lien_quan').length;   // tự lọc lúc kéo (khấn / xã giao), vẫn lưu

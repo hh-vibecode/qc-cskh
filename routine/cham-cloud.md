@@ -11,7 +11,8 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 ```
 - Lấy lô chờ chấm (tối đa 40): `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_cham -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > lo.json`
 - Lấy lô miss chưa soát: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_soat_miss -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > miss.json`
-- Tra bảng khoảng giá (khi Sale báo giá cụ thể / để xét báo giá sai cách): `curl -s "${H[@]}" -X POST $U/rpc/qc_tra_gia -d "{\"p_ma\":\"$MA_CHAM\",\"p_tu_khoa\":\"Hiệu ứng đồng\",\"p_kich\":\"40cm\"}"` (từ khoá: nhóm / loại / chất liệu, vd Tượng Phật, Tam Thánh, Tài Địa, Ban thần tài, Bát hương, Đá thạch anh; kích thước tuỳ chọn). Bảng giá là dữ liệu nội bộ — KHÔNG chép con số vào tóm tắt gửi đi ngoài issue của dòng.
+- **Tra giá KiotViet từng mã** (chấm đúng / sai giá): `curl -s "${H[@]}" -X POST $U/rpc/qc_tra_gia_kiot -d "{\"p_ma\":\"$MA_CHAM\",\"p_tu_khoa\":\"Bát Bảo 155\"}"` (mọi từ khoá phải khớp tên mã; trả ma, ten, gia_ban, ngày sửa giá).
+- Tra bảng khoảng giá (chỉ để xét QUY TRÌNH báo khoảng / phân khúc): `curl -s "${H[@]}" -X POST $U/rpc/qc_tra_gia -d "{\"p_ma\":\"$MA_CHAM\",\"p_tu_khoa\":\"Hiệu ứng đồng\",\"p_kich\":\"40cm\"}"` (từ khoá: nhóm / loại / chất liệu, vd Tượng Phật, Tam Thánh, Tài Địa, Ban thần tài, Bát hương, Đá thạch anh; kích thước tuỳ chọn). Bảng giá là dữ liệu nội bộ — KHÔNG chép con số vào tóm tắt gửi đi ngoài issue của dòng.
 - Tra FAQ (CHỈ khi câu hỏi là kiến thức sản phẩm), theo từ khoá không dấu hoặc có dấu:
   `curl -s "${H[@]}" "$U/product_faq?select=category,subcategory,question,answer&or=(question.ilike.*TỪ_KHOÁ*,answer.ilike.*TỪ_KHOÁ*)&limit=5"`
 - Ghi kết quả chấm: tạo file `kq.json` = `{"p_ma":"<MA_CHAM>","p_rows":[{"id":..,"verdict":..,"severity":..,"issue":..,"suggestion":..,"source_faq":..,"sai_quy_trinh":null|"lý do"}]}` rồi `curl -s "${H[@]}" -X POST $U/rpc/qc_ghi_cham -d @kq.json`. Kết quả trả về `{"ghi":n,"gui":m}`; nếu có `"loi"` thì sửa đúng dòng lỗi rồi gửi lại.
@@ -64,7 +65,7 @@ Nguồn: "QUY TRÌNH TƯ VẤN SALES ONL" (SOP 6 bước, khách lẻ page Sỉ,
 **KHÔNG chấm quy trình page "Nến Bơ - Tự Tại Viên"** (bổ sung 6/10: page nến bơ có kịch bản sales riêng, chờ gửi) — để `sai_quy_trinh` trống.
 Chưa chấm (thiếu dữ liệu sau lượt kéo): lịch nhắn lại khách im lặng 12h / 24h / 3 ngày / 15 ngày, chăm sóc sau bán.
 
-**Giá có sai không (nội dung `sai`)**: Sale báo con số cụ thể → tra bảng giá (theo nhóm + kích thước + chất liệu). Chỉ chấm `sai` khi con số NẰM NGOÀI hẳn "giá thấp nhất – cao nhất" của đúng dòng; nằm trong dải là đúng. Bộ Tam Thánh có giá BỘ riêng — Sale lấy giá tượng đơn × 3 → `sai`. Ghi `source_faq` = "Bảng giá KiotViet 06/10 / <nhóm> <kích thước> <chất liệu>".
+**Giá có sai không (nội dung `sai`) — chấm theo GIÁ KIOTVIET TỪNG MÃ (sửa 9/10, báo sai #50):** Sale báo con số cụ thể → tra giá Kiot hiện tại của đúng mẫu (`qc_tra_gia_kiot`, từ khoá rút từ tên sản phẩm: loại + tên mẫu + kích thước, vd "Bát Bảo 155", "Quan Âm hiệu ứng đồng 30cm", "đèn 9 bông"). Đúng mẫu (khách gửi ảnh / nêu tên) mà Sale báo lệch > 20% so với giá Kiot của mã khớp → `sai`; nhiều mã khớp thì chỉ `sai` khi con số nằm ngoài hẳn dải thấp nhất – cao nhất của các mã đó. KHÔNG chấm sai giá theo bảng khoảng giá (ảnh chụp 06/10, Kiot đã sửa giá sau đó: SP006213 bảng ghi 28–32tr, Kiot 18,1tr). Bảng khoảng giá chỉ dùng cho QUY TRÌNH (báo khoảng "từ X – Y", phân khúc). Không tìm thấy mã khớp → không chấm sai giá. Bộ Tam Thánh có giá BỘ riêng — Sale lấy giá tượng đơn × 3 → `sai`. Ghi `source_faq` = "KiotViet <mã> = <giá>".
 
 ## Soát miss (dòng khong_tra_loi / chi_bot)
 - `khong_lien_quan`: không hỏi mua — khen ảnh, tag bạn, sticker, lời khấn, rao bán / chào dịch vụ, tin mẫu của chính page, nội bộ, spam.

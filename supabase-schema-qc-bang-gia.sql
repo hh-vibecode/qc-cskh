@@ -33,3 +33,20 @@ begin
 end $$;
 revoke execute on function public.qc_tra_gia(text, text, text) from public;
 grant execute on function public.qc_tra_gia(text, text, text) to anon, authenticated;
+
+-- GIÁ KIOTVIET TỪNG MÃ (9/10/2026, báo sai #50): bảng khoảng giá ở trên là ảnh chụp 06/10, KiotViet sửa giá sau đó (vd SP006213
+-- 155cm Óc Chó 18,1tr trong khi bảng khoảng ghi 28–32tr) → chấm ĐÚNG/SAI giá theo giá Kiot hiện tại của từng mã. Nguồn: bảng
+-- kt_kiot_hang của app kế toán (cập nhật hằng ngày) — QC CHỈ ĐỌC (Phụ thuộc chéo X7). Tìm theo các từ khoá (tất cả phải khớp).
+create or replace function public.qc_tra_gia_kiot(p_ma text, p_tu_khoa text, p_so int default 30) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare w text[] := regexp_split_to_array(trim(coalesce(p_tu_khoa, '')), '\s+');
+begin
+  perform qc_chan_cham(p_ma);
+  if coalesce(trim(p_tu_khoa), '') = '' then return '[]'::jsonb; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('ma', ma, 'ten', ten, 'gia_ban', gia_ban, 'sua', sua_kiot::date) order by gia_ban)
+    from (select * from kt_kiot_hang h where hoat_dong and gia_ban > 0
+          and (select bool_and(h.ten ilike '%' || x || '%') from unnest(w) x)
+          order by gia_ban limit least(greatest(p_so, 1), 60)) t), '[]'::jsonb);
+end $$;
+revoke execute on function public.qc_tra_gia_kiot(text, text, int) from public;
+grant execute on function public.qc_tra_gia_kiot(text, text, int) to anon, authenticated;

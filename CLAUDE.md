@@ -75,6 +75,8 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 7. **Chỉ làm chuẩn từ tháng 10/2026** — không kéo / chấm bù tháng trước nếu anh không bảo.
 8. **Việc dài (chấm > 50 dòng, kéo bù) chia nhiều luồng / agent song song ngay**, đừng để một luồng GitHub chạy 40 phút.
 9. **Đổi logic = sửa luôn trang Logic** cùng lần.
+11. **Chấm giá theo giá KiotViet từng mã** (`qc_tra_gia_kiot`), không theo bảng khoảng giá (ảnh chụp, đã cũ) — 9/10 chấm oan #50.
+12. **Lượt kéo phải bắt cả tin Sale nhắn sau** khi khách không nhắn thêm (hội thoại chỉ Sale nhắn) — 9/10 sửa, trước đó phải chờ quét 18h35.
 10. **Không bao giờ ghi đè full_thread** — mọi chỗ ghi (kéo tin, soát miss, vá) phải NỐI bằng `ghepThread`. 8/10 soát miss ghi đè làm mất đoạn đầu → AI chấm sai (báo sai #45).
 
 ## Chấm
