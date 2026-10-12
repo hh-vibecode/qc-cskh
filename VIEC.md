@@ -194,6 +194,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **12/10/2026** — Soát 10 miss "chỉ có ảnh" trong tin nhắn: 7 ảnh rời không ngữ cảnh (EVNNPC, Chợ Cuốn, Le Monde Steak, người lạ 1 ảnh, khấn) → không liên quan; 3 ảnh cuối giữa cuộc tư vấn → chấm lại cả đoạn. Luật ảnh vào 2 file + Logic.
 - **12/10/2026** — Anh: bình luận gửi ảnh linh tinh cũng lọc → job tự lọc bình luận chỉ có ảnh / sticker (tin nhắn chỉ ảnh vẫn giữ); lọc lại 36 dòng tháng 10 (25 đang tính "đúng" — Sale đáp câu tri ân mẫu, 11 miss), giữ 2 ca Sale nhắn riêng tư vấn thật. Luật 2 file + Logic.
 - **12/10/2026** — Anh nới luật báo giá: bỏ lỗi "báo giá sai cách" ở 24/25 hội thoại (chỉ báo mốc sàn / 1 con số), giữ #4536 (1–20tr) và lỗi "gửi dồn 11 mẫu" của #5259. Sửa luật 2 file + Logic.
 - **12/10/2026** — Lịch chấm cloud TỰ viết đánh giá tuần 2 (7 Sale) lúc 00:55 — nhưng trước lượt quét 6h20 (CN chưa kéo đủ) → sửa qc_ky_can_danh_gia chỉ đến hạn sau 7h, xoá bản 00:55 để lượt 8h50 viết lại. Lượt 06:58 chấm sai #7836 đúng (báo 44,4tr/pho, Kiot là giá cả bộ).
