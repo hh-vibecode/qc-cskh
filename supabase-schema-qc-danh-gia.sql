@@ -90,7 +90,8 @@ end $$;
 -- Lượt chấm cloud: kỳ nào đến hạn mà chưa đánh giá (tuần đã hết của tháng ≥ 10/2026; tháng đã hết)
 create or replace function public.qc_ky_can_danh_gia(p_ma text) returns jsonb
 language plpgsql security definer set search_path = public, extensions as $$
-declare hn date := (now() at time zone 'Asia/Ho_Chi_Minh')::date; d date; k_tu date; k_den date; ra jsonb := '[]'::jsonb;
+-- 12/10: chỉ đến hạn SAU 7h sáng (sau lượt quét 6h20 kéo lại trọn hôm qua) — trước đó 00:55 thứ Hai đã viết khi CN chưa kéo đủ
+declare hn date := ((now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 hours')::date; d date; k_tu date; k_den date; ra jsonb := '[]'::jsonb;
 begin
   perform qc_chan_cham(p_ma);
   -- tuần: mọi đoạn tuần (cắt theo tháng) đã kết thúc trước hôm nay, từ 01/10/2026
