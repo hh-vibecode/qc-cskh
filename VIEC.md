@@ -194,6 +194,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **12/10/2026** — Anh: bình luận gửi ảnh linh tinh cũng lọc → job tự lọc bình luận chỉ có ảnh / sticker (tin nhắn chỉ ảnh vẫn giữ); lọc lại 36 dòng tháng 10 (25 đang tính "đúng" — Sale đáp câu tri ân mẫu, 11 miss), giữ 2 ca Sale nhắn riêng tư vấn thật. Luật 2 file + Logic.
 - **12/10/2026** — Anh nới luật báo giá: bỏ lỗi "báo giá sai cách" ở 24/25 hội thoại (chỉ báo mốc sàn / 1 con số), giữ #4536 (1–20tr) và lỗi "gửi dồn 11 mẫu" của #5259. Sửa luật 2 file + Logic.
 - **12/10/2026** — Lịch chấm cloud TỰ viết đánh giá tuần 2 (7 Sale) lúc 00:55 — nhưng trước lượt quét 6h20 (CN chưa kéo đủ) → sửa qc_ky_can_danh_gia chỉ đến hạn sau 7h, xoá bản 00:55 để lượt 8h50 viết lại. Lượt 06:58 chấm sai #7836 đúng (báo 44,4tr/pho, Kiot là giá cả bộ).
 - **12/10/2026** — Anh cho tư vấn khách lẻ ngay trên page Sỉ: sửa luật 2 file + Logic, bỏ 6 cờ "tư vấn sâu khách lẻ" (giữ #4803 từ chối thẳng, #4762 né giá). Lưu 2 tài liệu quy trình vào `qc_tai_lieu` + tự kiểm mỗi sáng (thử giả lập đổi → Nhật ký đỏ đúng). So với bản 6/10: SOP bỏ tab 2.KHÁCH LẺ PAGE SỈ, bảng giá không đổi nội dung.

@@ -139,7 +139,8 @@ function tachLuot(page, c, msgs, userMap) {
     // 7/10 anh Hải: "kéo hết về trước cho đầy đủ rồi hãy xử lý lọc" — KHÔNG bỏ lượt nào ở bước kéo. Chỉ gắn sẵn
     // "không liên quan" cho câu chắc chắn không hỏi (lời khấn thuần, cảm ơn / ok / sticker), vẫn LƯU để đủ dữ liệu.
     if (!ask && !t.ms.some(x => coTep(x.m))) return;
-    const loc = locKhongHoi(ask);
+    // 12/10 anh Hải: bình luận CHỈ có ảnh / sticker (ảnh lời khấn, ảnh tương tác) → lọc; tin nhắn chỉ ảnh thì giữ (thường là ảnh mẫu hỏi giá)
+    const loc = locKhongHoi(ask) || (!ask && (c.type || '').toUpperCase() === 'COMMENT' ? 'bình luận chỉ có ảnh / sticker' : null);
     const nxt = turns[i + 1];
     let reply = null, sale = null, repAt = null;
     if (nxt && nxt.side === 'sale') {
