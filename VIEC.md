@@ -32,6 +32,8 @@
 - **Đóng sổ hôm qua (anh chốt 7/10):** mỗi sáng ngày trước phải còn 0 chờ chấm + 0 miss chưa soát (miss thật vẫn giữ). Luật ở cả 2 file chấm (không để dòng phân vân sang ngày sau); badge xanh/đỏ cạnh Tổng quan trên trang Chất lượng phản hồi. **Nhật ký chạy chỉ theo dõi dữ liệu thô** (kéo về · lọc ra bình luận/tin nhắn · vào chấm) — anh chốt 7/10.
 - **Kênh theo dõi (anh chốt 7/10):** chỉ 15 page ĐANG GẮN trên Pancake (FB "Hoàng Dương / Ming Ying" bật lại 7/10 → CT); kênh Pancake đang tắt không đưa vào bảng. Trạng thái cập nhật mỗi lượt kéo (mỗi giờ); page bị tắt / gỡ → đỏ "Không còn trong danh sách".
 - **Đánh giá nhân sự (anh chốt 8/10):** mục Báo cáo › Đánh giá nhân sự, MÃ RIÊNG 0000 (băm ở qc_cau_hinh ma_nhan_su); tuần (T2→CN cắt theo tháng) đánh giá sáng thứ Hai, tháng tổng kết ngày 1 — lịch chấm cloud tự làm (routine/cham-cloud.md mục ĐÁNH GIÁ NHÂN SỰ), bảng qc_danh_gia + qc_tinh_so_lieu (supabase-schema-qc-danh-gia.sql). Kiểu bảng như "So sánh tháng" app MKT/Sale. Hết tháng thu gọn 1 dòng tổng kết.
+- **Khách lẻ trên page Sỉ ĐƯỢC TƯ VẤN TRỰC TIẾP (anh chốt 12/10)** — bỏ lỗi "tư vấn sâu khách lẻ"; vẫn sai nếu từ chối thẳng "không bán lẻ" / lộ nội bộ. SOP cũng đã bỏ tab "2.KHÁCH LẺ PAGE SỈ".
+- **Tài liệu quy trình (anh chốt 12/10):** lưu SOP + bảng khoảng giá ở bảng `qc_tai_lieu` (không để repo), `tools/kiem-tai-lieu.js` tự chạy trong lượt quét 6h20 — đổi thì Nhật ký đỏ + bảng giá tự nạp lại; phiên Claude đầu phiên xem và cập nhật luật (CLAUDE.md).
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
@@ -192,6 +194,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **12/10/2026** — Anh cho tư vấn khách lẻ ngay trên page Sỉ: sửa luật 2 file + Logic, bỏ 6 cờ "tư vấn sâu khách lẻ" (giữ #4803 từ chối thẳng, #4762 né giá). Lưu 2 tài liệu quy trình vào `qc_tai_lieu` + tự kiểm mỗi sáng (thử giả lập đổi → Nhật ký đỏ đúng). So với bản 6/10: SOP bỏ tab 2.KHÁCH LẺ PAGE SỈ, bảng giá không đổi nội dung.
 - **09/10/2026** — Soát lại 2 dòng "sai" tháng 10 chấm theo bảng khoảng giá: cả 2 OAN → đúng. #3205 bộ Ta Bà 30cm 11,4tr = giá bộ Kiot (luật "không nhân 3" sai, đã sửa); #4809 Bổn Sư Hán Bạch Ngọc 48cm báo 54,8tr "chiết khấu" 51tr > giá niêm yết Kiot 48,4–50,2tr → ghi phân vân cho anh.
 - **09/10/2026** — 4 báo sai (ngọc vân): #47 Sale đã báo giá + gửi mẫu cụ thể sáng 9/10 → đúng (job mỗi giờ KHÔNG thấy tin Sale nhắn sau khi khách không nhắn thêm — sửa: lấy cả hội thoại chỉ Sale nhắn, cập nhật dòng đã có); #48 Facebook #551 → lỗi nền tảng; #49 giữ không liên quan; #50 Sale báo ~20tr đúng giá Kiot SP006213 18,1tr — bảng khoảng giá 06/10 đã cũ → chấm giá theo **giá Kiot từng mã** (`qc_tra_gia_kiot`, bảng kt_kiot_hang, X7).
 - **08/10/2026** — Vá thread tháng 10 (3 luồng): bù 49 thread thiếu đoạn, 105 hội thoại Chánh Tâm KGTL bị thiếu (lượt kéo bù huỷ 7/10 bị cắt giữa lúc ghi — 94 lời khấn, 11 khách thật); 2 agent chấm tồn → tháng 10 còn 1 chờ chấm (khách mới nhắn < 1 giờ), 0 miss chưa soát. Gắn quy trình #4904 (báo 1 con số khi khách chưa chọn mẫu). Viết lại đánh giá tuần 1 theo số mới (đội 200 HT, đúng 94,5%, đúng giờ 71,8%).

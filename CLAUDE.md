@@ -1,6 +1,6 @@
 # App QC CSKH — hướng dẫn cho mọi phiên Claude (máy anh Hải LẪN phiên cloud)
 
-> **Việc đầu tiên mỗi phiên: `git pull` rồi đọc `VIEC.md`** (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
+> **Việc đầu tiên mỗi phiên: `git pull` rồi đọc `VIEC.md`** — rồi xem Nhật ký chạy có dòng đỏ **"Tài liệu quy trình thay đổi"** không: có thì chạy `tools/kiem-tai-lieu.js --in`, so với luật, cập nhật `.claude/agents/cham-qc.md` + `routine/cham-cloud.md` + trang Logic (anh chốt 12/10: SOP / bảng giá anh sửa thì luật chấm phải theo) (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
 >
 > **TỰ GHI SỔ — KHÔNG ĐỢI ANH DẶN (anh Hải chốt 29/9/2026, áp cho mọi phiên, nhất là phiên cloud):**
 > - Anh giao việc mới → thêm ngay vào mục ĐANG NỢ của `VIEC.md`.

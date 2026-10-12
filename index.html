@@ -641,13 +641,13 @@ function historyPage(){
 
 // ── Cài đặt › Nhật ký chạy (anh Hải 30/9: "ghi lại lịch xử lý m kéo, cái nào kéo lỗi t còn biết để hỏi") ────────
 // Mỗi lượt kéo tin (GitHub job) / chấm (lịch cloud) ghi 1 dòng vào qc_nhat_ky_chay. Đọc 14 ngày qua qc_ds_nhat_ky.
-const NK_LOAI={'keo-gio':'Kéo tin mỗi giờ','keo-quet':'Quét lớn','keo-tay':'Kéo tay',cham:'Chấm (cloud)'};
+const NK_LOAI={'keo-gio':'Kéo tin mỗi giờ','keo-quet':'Quét lớn','keo-tay':'Kéo tay',cham:'Chấm (cloud)','tai-lieu':'Kiểm tài liệu quy trình'};
 const NK_TT={thanh_cong:{l:'Thành công',c:'ok'},loi:{l:'Lỗi',c:'bad'},dang_chay:{l:'Đang chạy',c:'pend'}};
 async function taiNhatKy(){try{const t=new Date(),tu=new Date(t);tu.setDate(tu.getDate()-13);[S.nk,S.kenh,S.ds]=await Promise.all([rpc('qc_ds_nhat_ky',{p_ngay:14}),rpc('qc_ds_kenh',{}),rpc('qc_doi_soat_ngay',{p_tu:isoDay(tu),p_den:isoDay(t)})]);S.nk=S.nk||[];S.kenh=S.kenh||[];S.ds=S.ds||[];}catch(e){S.nk=S.nk||[];S.kenh=S.kenh||[];toast(e.message);}}
 // Có lỗi trong 24 giờ qua, hoặc đã hơn 90 phút không có lượt kéo nào → báo trên menu
 function nkLoiGan(){const nk=S.nk||[];if((S.kenh||[]).some(k=>k.kich_hoat&&k.trang_thai==='loi'))return true;if(!nk.length)return false;
   if(nk.some(x=>x.trang_thai==='loi'&&Date.now()-new Date(x.bat_dau)<864e5))return true;
-  const keo=nk.find(x=>x.loai!=='cham');return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
+  const keo=nk.find(x=>/^keo/.test(x.loai));return !keo||Date.now()-new Date(keo.bat_dau)>90*6e4;}
 // ── Báo cáo › Đánh giá nhân sự (anh Hải 8/10) ─────────────────────────────────────────────────────────────
 // Có MÃ RIÊNG (kiểm ở máy chủ: qc_chan_ns) — giữ trong phiên trình duyệt (sessionStorage), đóng tab là phải nhập lại.
 // Tuần (thứ Hai → CN, cắt theo tháng) đánh giá sáng thứ Hai, tháng tổng kết ngày 1 — lượt chấm cloud viết (routine/cham-cloud.md).
@@ -788,9 +788,9 @@ function kenhBang(){
 }
 function nhatKyPage(){
   const nk=S.nk||[],f=S.nkLoc||'all';
-  const list=nk.filter(x=>f==='all'?true:f==='loi'?x.trang_thai==='loi':f==='cham'?x.loai==='cham':x.loai!=='cham');
+  const list=nk.filter(x=>f==='all'?true:f==='loi'?x.trang_thai==='loi':f==='cham'?x.loai==='cham':/^keo/.test(x.loai));
   const homNay=isoDay(new Date()),tuan=Date.now()-7*864e5;
-  const keoCuoi=nk.find(x=>x.loai!=='cham'),chamCuoi=nk.find(x=>x.loai==='cham');
+  const keoCuoi=nk.find(x=>/^keo/.test(x.loai)),chamCuoi=nk.find(x=>x.loai==='cham');
   const phutTruoc=d=>{const m=Math.round((Date.now()-new Date(d))/6e4);return m<60?`${m} phút trước`:`${Math.floor(m/60)} giờ ${m%60} phút trước`;};
   const ngung=!keoCuoi||Date.now()-new Date(keoCuoi.bat_dau)>90*6e4;
   const kpi=(label,val,sub,color,icon)=>`<div class="kpi" style="--c:var(--${color});cursor:default">
@@ -815,7 +815,7 @@ function nhatKyPage(){
       <div class="right"><span class="badge">14 ngày gần nhất</span><button class="sel" onclick="reload()" title="Tải lại">↺</button></div></div>
     ${ngung?`<div class="box" style="background:var(--bad-bg);color:var(--bad);margin:0 0 12px;font-weight:700">Đã hơn 90 phút không có lượt kéo tin nào${keoCuoi?` (lượt cuối ${esc(phutTruoc(keoCuoi.bat_dau))})`:''} — lịch kéo có thể đang ngừng.</div>`:''}
     <div class="kpi-row">
-      ${kpi('Lượt chạy hôm nay',num(nk.filter(x=>isoDay(new Date(x.bat_dau))===homNay).length),`${num(nk.filter(x=>x.loai!=='cham'&&isoDay(new Date(x.bat_dau))===homNay).length)} kéo tin · ${num(nk.filter(x=>x.loai==='cham'&&isoDay(new Date(x.bat_dau))===homNay).length)} chấm`,'info','inbox')}
+      ${kpi('Lượt chạy hôm nay',num(nk.filter(x=>isoDay(new Date(x.bat_dau))===homNay).length),`${num(nk.filter(x=>/^keo/.test(x.loai)&&isoDay(new Date(x.bat_dau))===homNay).length)} kéo tin · ${num(nk.filter(x=>x.loai==='cham'&&isoDay(new Date(x.bat_dau))===homNay).length)} chấm`,'info','inbox')}
       ${kpi('Lượt lỗi 7 ngày',num(nk.filter(x=>x.trang_thai==='loi'&&new Date(x.bat_dau)>=tuan).length),'bấm "Chỉ lỗi" để xem','bad','sai')}
       ${kpi('Lượt kéo gần nhất',keoCuoi?esc(fmtDT(keoCuoi.bat_dau)):'—',keoCuoi?`${(NK_TT[keoCuoi.trang_thai]||{}).l||''} · ${phutTruoc(keoCuoi.bat_dau)}`:'chưa có',ngung?'bad':'ok','muon')}
     </div>
@@ -833,7 +833,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 07/10/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 12/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -888,12 +888,13 @@ function logicPage(){
     </ul>
     <h3>7. Chấm quy trình (từ 06/10/2026 14h53)</h3>
     <p>Theo <b>Quy trình tư vấn Sales Onl</b> và <b>Bảng khoảng giá báo khách</b>; chấm riêng với đúng / thiếu / sai (một hội thoại có thể tư vấn đúng mà vẫn sai quy trình). Hội thoại trước mốc không xét.</p>
+    <p>Tài liệu gốc (SOP tư vấn Sales Onl, Bảng khoảng giá) được lưu trong hệ thống và <b>tự kiểm mỗi sáng</b> (lượt quét 6h20): anh sửa file thì Nhật ký chạy báo đỏ "Tài liệu quy trình thay đổi" — bảng giá tự nạp lại, luật chấm được cập nhật theo SOP mới.</p>
     <ul>
       <li><b>Tư vấn công khai dưới bình luận</b> — dưới bình luận chỉ dẫn về tin nhắn / chào / tri ân; báo giá, tư vấn phải ở tin nhắn riêng.</li>
       <li><b>Né giá</b> — khách hỏi giá món đã chỉ rõ mà không báo khoảng giá (chỉ hỏi lại, xin số). Khách hỏi chung chưa rõ món thì hỏi lại là đúng.</li>
       <li><b>Báo giá sai cách</b> — phải báo khoảng mức giá phổ biến "từ X – Y" theo kích thước + chất liệu; chỉ báo số thấp nhất hoặc khoảng quá rộng là sai (khách chọn đúng mẫu thì báo giá mã đó).</li>
       <li><b>Báo giá không khai thác tiếp</b> — báo giá xong dừng, không hỏi thêm nhu cầu (nguyên tắc: vừa trả lời vừa khai thác).</li>
-      <li><b>Page Sỉ gặp khách lẻ</b> — báo khoảng giá rồi chuyển đơn vị hỗ trợ khách lẻ bằng câu chuẩn SOP; từ chối thẳng "không bán lẻ, chỉ bán sỉ", tư vấn sâu, lộ nội bộ đều sai.</li>
+      <li><b>Page Sỉ gặp khách lẻ</b> — từ 12/10/2026 <b>được tư vấn trực tiếp</b> như page lẻ (báo giá, gửi mẫu); chỉ sai khi từ chối thẳng "không bán lẻ, chỉ bán sỉ" hoặc lộ nội bộ.</li>
       <li><b>Gửi dồn quá nhiều mẫu</b> (hơn 5 ảnh một lúc khi chưa rõ nhu cầu) · <b>Không chốt bước tiếp theo</b> khi khách hẹn cân nhắc · <b>Giảm giá ngay / nói xấu đối thủ</b>.</li>
       <li>Page <b>Nến Bơ - Tự Tại Viên</b> chưa chấm quy trình (chờ kịch bản riêng).</li>
     </ul>

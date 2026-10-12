@@ -387,5 +387,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
     console.log('mốc mới:', BAT_DAU.toISOString(), r.ok ? 'ok' : 'LỖI ' + r.status + ' ' + (await r.text()).slice(0, 200));
   }
+  // 12/10 anh Hải: kiểm tài liệu quy trình (SOP, bảng giá) mỗi sáng — lượt quét 6h20 (chế độ khoảng, buổi sáng, chạy đủ page)
+  if (!DRY && CHE_DO === 'khoang' && !CHI_PAGE.length && new Date(Date.now() + 7 * 36e5).getUTCHours() < 12) {
+    try { await require('../tools/kiem-tai-lieu.js').kiemTaiLieu(); } catch (e) { console.log('(kiểm tài liệu lỗi:', e.message + ')'); }
+  }
   await nkDong('thanh_cong');
 })().catch(async e => { console.error('LỖI', e.message); await nkDong('loi', e.message); process.exit(1); });
