@@ -77,6 +77,8 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 9. **Đổi logic = sửa luôn trang Logic** cùng lần.
 11. **Chấm giá theo giá KiotViet từng mã** (`qc_tra_gia_kiot`), không theo bảng khoảng giá (ảnh chụp, đã cũ) — 9/10 chấm oan #50.
 12. **Lượt kéo phải bắt cả tin Sale nhắn sau** khi khách không nhắn thêm (hội thoại chỉ Sale nhắn) — 9/10 sửa, trước đó phải chờ quét 18h35.
+13. **Lượt "ok / cảm ơn / sticker" không được đè kết quả hội thoại thật** — 13/10: 10 hội thoại thật bị ẩn thành Không liên quan vì khách cảm ơn ở cuối. Khi gộp / cập nhật theo hội thoại, luôn hỏi "lượt mới có làm MẤT kết quả cũ không".
+14. **Bình luận ↔ tin nhắn riêng nối bằng `khach_id`** — Sale nhắn riêng mà khách chưa nhắn lại vẫn phải vào dòng bình luận (13/10, báo sai #52).
 10. **Không bao giờ ghi đè full_thread** — mọi chỗ ghi (kéo tin, soát miss, vá) phải NỐI bằng `ghepThread`. 8/10 soát miss ghi đè làm mất đoạn đầu → AI chấm sai (báo sai #45).
 
 ## Chấm

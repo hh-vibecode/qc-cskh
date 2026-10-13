@@ -37,6 +37,7 @@
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
+- **E12 (13/10)** — Bộ Ta Bà 30cm: Sale báo 7,2tr (Vàng Đá Thạch Anh) và 11,4tr (Lá Đề), Kiot niêm yết 11,4–16,2tr (thấp hơn 22–37%), Sale nói "giá đã được giảm". Đây có phải bảng giá KM được duyệt không? Tạm chấm Đúng (#55/#60); không phải KM thì chuyển Sai.
 
 | # | Việc | Ghi chú |
 |---|---|---|
@@ -194,6 +195,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **13/10/2026** — Xử lý 9 báo sai #52–#60 (đều của Vân Ngọc): 8 sửa thành Đúng, giữ Thiếu #54 (chưa đáp đèn chùm). Lộ 2 lỗi gốc, đã vá: (1) Sale nhắn riêng cho khách bình luận mà khách chưa nhắn lại → job bỏ qua → thêm cột `khach_id`, job nối tin nhắn riêng vào dòng bình luận; chạy bù `tools/noi-tin-rieng.js` cho tháng 10: 74 dòng bình luận, nối 12 (10 về chấm lại). (2) Lượt cuối "ok/cảm ơn/sticker" đè cả hội thoại thành Không liên quan (lỗi Claude gây ra khi gộp 1 dòng/hội thoại) → chặn trong job, gỡ 10 hội thoại. Sticker ghi "(sticker)". Luật giá KM + gửi mẫu khi khách xin vào 2 file + Logic.
 - **12/10/2026** — Soát 10 miss "chỉ có ảnh" trong tin nhắn: 7 ảnh rời không ngữ cảnh (EVNNPC, Chợ Cuốn, Le Monde Steak, người lạ 1 ảnh, khấn) → không liên quan; 3 ảnh cuối giữa cuộc tư vấn → chấm lại cả đoạn. Luật ảnh vào 2 file + Logic.
 - **12/10/2026** — Anh: bình luận gửi ảnh linh tinh cũng lọc → job tự lọc bình luận chỉ có ảnh / sticker (tin nhắn chỉ ảnh vẫn giữ); lọc lại 36 dòng tháng 10 (25 đang tính "đúng" — Sale đáp câu tri ân mẫu, 11 miss), giữ 2 ca Sale nhắn riêng tư vấn thật. Luật 2 file + Logic.
 - **12/10/2026** — Anh nới luật báo giá: bỏ lỗi "báo giá sai cách" ở 24/25 hội thoại (chỉ báo mốc sàn / 1 con số), giữ #4536 (1–20tr) và lỗi "gửi dồn 11 mẫu" của #5259. Sửa luật 2 file + Logic.

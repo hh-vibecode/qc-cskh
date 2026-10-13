@@ -833,7 +833,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 12/10/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 13/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -859,10 +859,12 @@ function logicPage(){
     <h3>4. Chấm</h3>
     <ol>
       <li><b>Soát miss với Pancake thật</b> mỗi lượt kéo (30 ngày): Sale nhắn lại — <b>dù muộn bao lâu — là trả lời muộn, không phải miss</b>. Bình luận ↔ tin nhắn là 2 luồng: có Sale nhắn riêng cho chính khách đó thì chấm đoạn tin nhắn, không có mới là miss.</li>
+      <li><b>Tin nhắn riêng nối vào bình luận</b> (13/10): Sale nhắn riêng cho khách bình luận mà khách chưa nhắn lại → job kéo nối phần tin nhắn riêng vào dòng bình luận (khớp mã khách Pancake, cùng page, trong 7 ngày) rồi chấm lại cả đoạn. Khách đã nhắn trong tin nhắn riêng → tin nhắn có dòng chấm riêng, dòng bình luận chỉ xét Sale có dẫn về không — không chấm nội dung 2 lần.</li>
+      <li><b>Lượt cuối chỉ là "ok / cảm ơn / sticker"</b> (13/10): không đè kết quả hội thoại thật — chỉ nối thêm vào thread. Sticker / nút like ghi là "(sticker)", không phải ảnh mẫu.</li>
       <li><b>AI chấm cả đoạn hội thoại</b>, tra <code>product_faq</code> khi là câu hỏi kiến thức, đối chiếu <b>giá KiotViet hiện tại của từng mã</b> khi Sale báo giá (cập nhật hằng ngày; bảng khoảng giá chỉ dùng cho quy trình báo khoảng).</li>
       <li>Đang khai thác nhu cầu (hỏi lại 1 lần cho rõ mẫu / kích thước / ngân sách) mà khách chưa đáp → đúng. Khách đã chỉ rõ món mà Sale hỏi chung chung nhiều ngày không báo giá → thiếu.</li>
       <li>Sale đã tiếp khách, tin cuối của khách khó hiểu (gõ sai / đọc giọng nói) → không phải miss; Sale không hỏi lại → thiếu mức thấp.</li>
-      <li>FAQ nhận diện tượng là lý thuyết: dòng tượng Đài Loan A Di Đà / Bổn Sư <b>chung khuôn</b> (áo trễ, chữ Vạn, khác pháp khí) — Sale nói vậy là đúng. Giá chỉ tính sai khi lệch > 20% so với giá Kiot của đúng mẫu (nhiều mẫu khớp thì ngoài hẳn dải các mẫu đó); Bộ Tam Thánh tra giá bộ trên Kiot.</li>
+      <li>FAQ nhận diện tượng là lý thuyết: dòng tượng Đài Loan A Di Đà / Bổn Sư <b>chung khuôn</b> (áo trễ, chữ Vạn, khác pháp khí) — Sale nói vậy là đúng. Giá chỉ tính sai khi lệch > 20% so với giá Kiot của đúng mẫu (nhiều mẫu khớp thì ngoài hẳn dải các mẫu đó); Bộ Tam Thánh tra giá bộ trên Kiot. Báo thấp hơn Kiot mà Sale nói rõ "giá đã giảm" / khuyến mãi → không tính sai (13/10).</li>
       <li>Tầng chấm bằng luật (không tốn AI) <b>tạm tắt</b> từ 07/10 vì luật cũ chấm theo từng cặp hỏi–đáp.</li>
     </ol>
     <h3>5. Kết quả chấm</h3>
@@ -895,7 +897,7 @@ function logicPage(){
       <li><b>Báo giá sai cách</b> — chỉ khi đưa khoảng rộng quá mức (đầu–cuối chênh hơn 5 lần, vd "từ 1 tới 20 triệu"). Báo "từ X trở lên", "hơn X" hay một con số tham khảo đều chấp nhận (anh nới 12/10).</li>
       <li><b>Báo giá không khai thác tiếp</b> — báo giá xong dừng, không hỏi thêm nhu cầu (nguyên tắc: vừa trả lời vừa khai thác).</li>
       <li><b>Page Sỉ gặp khách lẻ</b> — từ 12/10/2026 <b>được tư vấn trực tiếp</b> như page lẻ (báo giá, gửi mẫu); chỉ sai khi từ chối thẳng "không bán lẻ, chỉ bán sỉ" hoặc lộ nội bộ.</li>
-      <li><b>Gửi dồn quá nhiều mẫu</b> (hơn 5 ảnh một lúc khi chưa rõ nhu cầu) · <b>Không chốt bước tiếp theo</b> khi khách hẹn cân nhắc · <b>Giảm giá ngay / nói xấu đối thủ</b>.</li>
+      <li><b>Gửi dồn quá nhiều mẫu</b> (hơn 5 ảnh một lúc khi chưa rõ nhu cầu; khách tự xin xem mẫu thì không tính) · <b>Không chốt bước tiếp theo</b> khi khách hẹn cân nhắc · <b>Giảm giá ngay / nói xấu đối thủ</b>.</li>
       <li>Page <b>Nến Bơ - Tự Tại Viên</b> chưa chấm quy trình (chờ kịch bản riêng).</li>
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>

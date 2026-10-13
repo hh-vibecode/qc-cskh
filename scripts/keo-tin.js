@@ -112,10 +112,13 @@ function kind(m, pageId) {
   return 'sale';
 }
 const coTep = m => (m.attachments || []).length > 0;
+// 13/10 (báo sai #59): sticker / nút like là attachment type 'sticker' — ghi rõ "(sticker)", trước đây ghi "(gửi ảnh/tệp)" nên bị chấm như ảnh mẫu
+const chiSticker = m => coTep(m) && m.attachments.every(a => /sticker/i.test(a.type || ''));
+const nhanTep = m => chiSticker(m) ? '(sticker)' : '(gửi ảnh/tệp)';
 function dong(m, k) {
   const ts = gioThread(utc(m.inserted_at));
   const who = k === 'cust' ? 'Khách' : k === 'auto' ? 'Bot' : (m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale');
-  return `[${ts}] ${who}: ${clean(m.message) || (coTep(m) ? '(gửi ảnh/tệp)' : '')}`;
+  return `[${ts}] ${who}: ${clean(m.message) || (coTep(m) ? nhanTep(m) : '')}`;
 }
 
 function tachLuot(page, c, msgs, userMap) {
@@ -140,7 +143,9 @@ function tachLuot(page, c, msgs, userMap) {
     // "không liên quan" cho câu chắc chắn không hỏi (lời khấn thuần, cảm ơn / ok / sticker), vẫn LƯU để đủ dữ liệu.
     if (!ask && !t.ms.some(x => coTep(x.m))) return;
     // 12/10 anh Hải: bình luận CHỈ có ảnh / sticker (ảnh lời khấn, ảnh tương tác) → lọc; tin nhắn chỉ ảnh thì giữ (thường là ảnh mẫu hỏi giá)
-    const loc = locKhongHoi(ask) || (!ask && (c.type || '').toUpperCase() === 'COMMENT' ? 'bình luận chỉ có ảnh / sticker' : null);
+    const chiStk = !ask && t.ms.every(x => chiSticker(x.m));   // 13/10: lượt chỉ có sticker / like (tin nhắn lẫn bình luận)
+    const loc = locKhongHoi(ask) || (chiStk ? 'chỉ sticker / emoji' : null)
+      || (!ask && (c.type || '').toUpperCase() === 'COMMENT' ? 'bình luận chỉ có ảnh / sticker' : null);
     const nxt = turns[i + 1];
     let reply = null, sale = null, repAt = null;
     if (nxt && nxt.side === 'sale') {
@@ -155,7 +160,8 @@ function tachLuot(page, c, msgs, userMap) {
       conv_date: vnDay(first), conv_at: first.toISOString(), page_name: page.name, page_id: String(page.id), conv_id: c.id,
       customer_name: c.customers?.[0]?.name || c.from?.name || '', phone: (c.recent_phone_numbers || [])[0]?.phone_number || null,
       sale_name: sale || (c.assignee_ids || []).map(id => userMap[id]).find(Boolean) || null,
-      customer_ask: (ask || '(gửi ảnh/tệp)').slice(0, 700), sale_reply: reply ? reply.slice(0, 1000) : null, verdict,
+      khach_id: c.customers?.[0]?.id ? String(c.customers[0].id) : null,   // 13/10: nối bình luận ↔ tin nhắn riêng cùng khách
+      customer_ask: (ask || (chiStk ? '(sticker)' : '(gửi ảnh/tệp)')).slice(0, 700), sale_reply: reply ? reply.slice(0, 1000) : null, verdict,
       severity: null, source_faq: null, suggestion: null, cham_boi: loc ? 'luat' : null,
       issue: loc ? `Tự lọc lúc kéo: ${loc} (vẫn lưu đủ dữ liệu).` : verdict === 'chi_bot' ? 'Chỉ có bot trả lời tự động, không có sale nào vào tư vấn.'
         : verdict === 'khong_tra_loi' ? 'Khách có nhu cầu thật nhưng không ai trả lời (kể cả bot).' : null,
@@ -250,7 +256,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const KENH = new Map();   // trạng thái từng kênh lượt này → qc_kenh (Cài đặt › Nhật ký chạy)
   // 7/10 anh Hải: chỉ theo dõi các page ĐANG GẮN (kích hoạt) — kênh Pancake đang tắt không đưa vào bảng
   NK.s.so_page = pages.length;
-  const pairs = [], dem = {};
+  const pairs = [], dem = {}, rieng = [];   // rieng: tin nhắn riêng CHỈ có Sale nhắn (trả lời bình luận) → nối vào dòng bình luận
   for (const p of pages) {
     const userMap = {};
     ((await pk(`/pages/${p.id}/users`))?.users || []).forEach(u => userMap[u.id] = u.name);
@@ -298,6 +304,16 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       }
       const hoi = gopLuot(tachLuot(p, c, msgs, userMap));
       if (hoi) { pairs.push(hoi); n++; }
+      else if ((c.type || '').toUpperCase() === 'INBOX') {
+        // 13/10 (báo sai #52): Sale nhắn riêng cho khách bình luận mà khách chưa nhắn lại → hội thoại inbox không có lượt khách,
+        // trước đây bị bỏ → dòng bình luận không thấy phần Sale đã tư vấn. Giữ lại để nối vào dòng bình luận cùng khách.
+        const ms = msgs.map(m => ({ m, k: kind(m, p.id), at: utc(m.inserted_at) })).filter(x => clean(x.m.message) || coTep(x.m)).sort((a, b) => a.at - b.at);
+        const sm = ms.filter(x => x.k === 'sale' && x.at >= tuUtc);
+        if (sm.length) rieng.push({ page_id: String(p.id), khach_id: String(custId), conv_id: c.id, sale_at: sm[0].at.toISOString(),
+          sale_name: sm.find(x => x.m.from?.admin_name)?.m.from.admin_name || null,
+          reply: sm.map(x => clean(x.m.message)).filter(Boolean).join(' | ').slice(0, 1000) || '(gửi ảnh/tệp)',
+          thread: ms.map(x => dong(x.m, x.k)).join('\n').slice(-4000) });
+      }
       await sleep(150);
     }
     dem[p.name] = n;
@@ -334,13 +350,20 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   for (const x of pairs) {
     const r = cu.get(x.conv_id);
     if (!r) { if (!x._chiSale) moi.push(x); continue; }   // hội thoại cũ chưa có dòng mà chỉ Sale nhắn → không tạo dòng mới
+    // 13/10: lượt mới CHỈ là "ok / cảm ơn / sticker" (khong_lien_quan) → KHÔNG đè kết quả hội thoại thật, chỉ nối thread.
+    // Trước đó 10 hội thoại thật (có cái 26 tin khách) bị ẩn thành "không liên quan" vì khách cảm ơn ở cuối.
+    if (x.verdict === 'khong_lien_quan' && r.verdict !== 'khong_lien_quan') {
+      const vo = ghepThread(r.full_thread, x.full_thread);
+      if (vo !== (r.full_thread || '')) vaThread.push({ id: r.id, full_thread: vo, khach_id: x.khach_id });
+      continue;
+    }
     const khachMoi = new Date(x.conv_at) > new Date(r.conv_at || 0);
     const hetMiss = x.verdict === 'chua_cham' && ['khong_tra_loi', 'chi_bot'].includes(r.verdict);
     const saleThem = x.verdict === 'chua_cham' && x.sale_reply && x.sale_reply !== r.sale_reply && r.cham_boi !== 'claude';
     if (!khachMoi && !hetMiss && !saleThem) {
       // 8/10: không có gì mới để chấm lại, nhưng thread đã lưu THIẾU đoạn (vd bị soát miss cũ ghi đè) → chỉ vá thread, giữ kết quả chấm
       const vo = ghepThread(r.full_thread, x.full_thread);
-      if (vo !== (r.full_thread || '') && vo.length > (r.full_thread || '').length) vaThread.push({ id: r.id, full_thread: vo });
+      if (vo !== (r.full_thread || '') && vo.length > (r.full_thread || '').length) vaThread.push({ id: r.id, full_thread: vo, khach_id: x.khach_id });
       continue;
     }
     const h = x._rep_at ? (new Date(x._rep_at) - new Date(x.conv_at)) / 36e5 : 0;
@@ -348,12 +371,29 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     const nhan = x.verdict !== 'chua_cham' ? x.issue
       : (!khachMoi && /^Bình luận →/.test(r.issue || '')) ? r.issue.match(/^Bình luận → tư vấn qua tin nhắn[^.]*\./)?.[0] || null : null;
     capNhat.push({ id: r.id, body: { conv_at: x.conv_at, conv_date: x.conv_date, customer_ask: x.customer_ask, sale_reply: x.sale_reply,
-      sale_name: x.sale_name, full_thread: ghepThread(r.full_thread, x.full_thread), verdict: x.verdict, issue: nhan,
+      sale_name: x.sale_name, full_thread: ghepThread(r.full_thread, x.full_thread), verdict: x.verdict, issue: nhan, khach_id: x.khach_id,
       severity: null, suggestion: null, source_faq: null, sai_quy_trinh: null, cham_boi: x.cham_boi } });
   }
   for (const u of capNhat) await rest('PATCH', `${BANG}?id=eq.${u.id}`, u.body);
-  for (const u of vaThread) await rest('PATCH', `${BANG}?id=eq.${u.id}`, { full_thread: u.full_thread });
+  for (const u of vaThread) await rest('PATCH', `${BANG}?id=eq.${u.id}`, u.khach_id ? { full_thread: u.full_thread, khach_id: u.khach_id } : { full_thread: u.full_thread });
   if (vaThread.length) console.log(`Vá thread thiếu đoạn: ${vaThread.length} hội thoại (giữ kết quả chấm)`);
+  // 13/10 (báo sai #52): tin Sale NHẮN RIÊNG (khách chưa nhắn lại) → nối vào dòng BÌNH LUẬN của chính khách đó (cùng page, cùng
+  // mã khách Pancake, trong 7 ngày, bình luận trước tin nhắn) → về chờ chấm lại cả đoạn. Dòng anh / Claude đã chốt tay chỉ nối thread.
+  let noiRieng = 0;
+  try { for (const x of rieng) {
+    const ds = await rest('GET', `${BANG}?select=id,conv_at,verdict,full_thread,cham_boi,sale_reply,sale_name&page_id=eq.${x.page_id}&khach_id=eq.${encodeURIComponent(x.khach_id)}`
+      + `&conv_id=neq.${encodeURIComponent(x.conv_id)}&conv_date=gte.${vnDay(new Date(Date.now() - 7 * 864e5))}&order=conv_at.desc&limit=1`);
+    const r = ds?.[0];
+    if (!r || new Date(x.sale_at) <= new Date(r.conv_at)) continue;
+    const vo = ghepThread(r.full_thread, x.thread);
+    if (vo === (r.full_thread || '')) continue;
+    const chot = r.cham_boi === 'claude' || r.verdict === 'khong_lien_quan';
+    await rest('PATCH', `${BANG}?id=eq.${r.id}`, chot ? { full_thread: vo } : { full_thread: vo, verdict: 'chua_cham', cham_boi: null,
+      severity: null, suggestion: null, sai_quy_trinh: null, sale_reply: r.sale_reply || x.reply, sale_name: r.sale_name || x.sale_name,
+      issue: 'Bình luận → tư vấn qua tin nhắn riêng.' });
+    noiRieng++;
+  } } catch (e) { console.log('(nối tin nhắn riêng lỗi:', e.message + ')'); }
+  if (rieng.length) console.log(`Tin nhắn riêng chỉ có Sale: ${rieng.length} hội thoại, nối vào ${noiRieng} dòng bình luận`);
   const them = moi.map(({ _rep_at, _chiSale, ...x }) => x);
   for (let i = 0; i < them.length; i += 100) await rest('POST', BANG, them.slice(i, i + 100));
   NK.s.luot_them = them.length; NK.s.miss_cap_nhat = capNhat.length;

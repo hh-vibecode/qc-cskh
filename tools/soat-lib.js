@@ -40,7 +40,8 @@ function taoSoat(pk, sleep) {
     const sale = String(m.from?.id) === String(pageId);
     const who = !sale ? 'Khách' : BOT.has(bo(m.from?.admin_name || '')) || TU_DONG.test(bo(clean(m.message))) ? 'Bot'
       : (m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale');
-    return `[${ts}] ${who}: ${clean(m.message) || '(gửi ảnh/tệp)'}`;
+    const stk = (m.attachments || []).length && m.attachments.every(a => /sticker/i.test(a.type || ''));   // 13/10: like / sticker ghi rõ
+    return `[${ts}] ${who}: ${clean(m.message) || (stk ? '(sticker)' : '(gửi ảnh/tệp)')}`;
   };
   // Search của Pancake KHÔNG khớp khi tên có emoji ("Harri 🪷") → thử tên đăng nhập, tên bỏ emoji, tên đầy đủ
   const tenSach = s => (s || '').replace(/[^\p{L}\p{N}\s.'-]/gu, ' ').replace(/\s+/g, ' ').trim();
