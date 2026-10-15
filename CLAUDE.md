@@ -1,6 +1,6 @@
 # App QC CSKH — hướng dẫn cho mọi phiên Claude (máy anh Hải LẪN phiên cloud)
 
-> **Việc đầu tiên mỗi phiên: `git pull` rồi đọc `VIEC.md`** — rồi xem Nhật ký chạy có dòng đỏ **"Tài liệu quy trình thay đổi"** không: có thì chạy `tools/kiem-tai-lieu.js --in`, so với luật, cập nhật `.claude/agents/cham-qc.md` + `routine/cham-cloud.md` + trang Logic (anh chốt 12/10: SOP / bảng giá anh sửa thì luật chấm phải theo) (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
+> **Việc đầu tiên mỗi phiên: `git pull` rồi đọc `VIEC.md`** — rồi xem Nhật ký chạy có dòng đỏ **"Tài liệu quy trình thay đổi"** không: có thì chạy `tools/kiem-tai-lieu.js --in`, so với luật, cập nhật `.claude/agents/cham-qc.md` + `routine/cham-cloud.md` + trang Logic (anh chốt 12/10: SOP / bảng giá anh sửa thì luật chấm phải theo). **Rồi chép luật từ báo sai tự xử lý** (15/10): `select id, luat_de_xuat from sale_review_report where luat_de_xuat <> '' and not luat_da_ghi` → thêm vào `.claude/agents/cham-qc.md` + `routine/cham-cloud.md` + trang Logic, xong `update … set luat_da_ghi = true` (sổ việc: mục tiêu, việc đang nợ, câu chờ anh chốt, luật dùng chung, nhật ký).
 >
 > **TỰ GHI SỔ — KHÔNG ĐỢI ANH DẶN (anh Hải chốt 29/9/2026, áp cho mọi phiên, nhất là phiên cloud):**
 > - Anh giao việc mới → thêm ngay vào mục ĐANG NỢ của `VIEC.md`.
@@ -86,6 +86,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Chỉ quan tâm **tin khách hỏi mua**. Lời khấn "Nam mô…", tương tác, chat nội bộ → `khong_lien_quan`, ẩn khỏi trang.
 - Bình luận ↔ tin nhắn là 2 luồng riêng: tìm inbox của chính khách đó; có Sale nhắn riêng thì chấm cả đoạn tin nhắn, không có mới là miss.
 - Sale đã nhắn lại (dù muộn bao lâu) = **muộn**, không phải miss. Lỗi KHÔNG do Sale (vd Facebook chặn không nhắn được) → verdict `loi_nen_tang` (Lỗi nền tảng), chỉ gắn khi có căn cứ — anh chốt 1/10.
+- **Báo sai tự xử lý mỗi tối** (anh chốt 15/10): lịch chấm cloud từ 17h đọc báo mở (`qc_lo_bao_sai`, kèm ảnh) → sửa / giữ / để "CHỜ ANH:" (`qc_tu_xu_ly_bao_sai`). Anh không cần nhắc. Báo "CHỜ ANH" thì trình anh ở phiên tiếp theo.
 - Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý) → hiện ở Cài đặt › Lịch sử báo sai.
 
 ## Git

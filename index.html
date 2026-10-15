@@ -833,7 +833,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 13/10/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 15/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -859,6 +859,7 @@ function logicPage(){
     <h3>4. Chấm</h3>
     <ol>
       <li><b>Soát miss với Pancake thật</b> mỗi lượt kéo (30 ngày): Sale nhắn lại — <b>dù muộn bao lâu — là trả lời muộn, không phải miss</b>. Bình luận ↔ tin nhắn là 2 luồng: có Sale nhắn riêng cho chính khách đó thì chấm đoạn tin nhắn, không có mới là miss.</li>
+      <li><b>Báo sai tự xử lý mỗi tối</b> (15/10): từ 17h, lịch chấm cloud đọc các báo sai đang mở (ghi chú + ảnh chụp Pancake + cả hội thoại), xét theo luật chấm: sửa kết quả và đóng · giữ nguyên và ghi căn cứ · hoặc để mở "CHỜ ANH" khi cần anh quyết nghiệp vụ. Kiểu lỗi chấm chung rút ra được áp ngay ở các lượt chấm sau.</li>
       <li><b>Tin nhắn riêng nối vào bình luận</b> (13/10): Sale nhắn riêng cho khách bình luận mà khách chưa nhắn lại → job kéo nối phần tin nhắn riêng vào dòng bình luận (khớp mã khách Pancake, cùng page, trong 7 ngày) rồi chấm lại cả đoạn. Khách đã nhắn trong tin nhắn riêng → tin nhắn có dòng chấm riêng, dòng bình luận chỉ xét Sale có dẫn về không — không chấm nội dung 2 lần.</li>
       <li><b>Lượt cuối chỉ là "ok / cảm ơn / sticker"</b> (13/10): không đè kết quả hội thoại thật — chỉ nối thêm vào thread. Sticker / nút like ghi là "(sticker)", không phải ảnh mẫu.</li>
       <li><b>AI chấm cả đoạn hội thoại</b>, tra <code>product_faq</code> khi là câu hỏi kiến thức, đối chiếu <b>giá KiotViet hiện tại của từng mã</b> khi Sale báo giá (cập nhật hằng ngày; bảng khoảng giá chỉ dùng cho quy trình báo khoảng).</li>

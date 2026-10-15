@@ -20,12 +20,29 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 - Ghi nhật ký lượt chạy (BẮT BUỘC, 1 lần ở cuối — anh xem ở Cài đặt › Nhật ký chạy): `{"p_ma":..,"p_so_cham":<số dòng đã ghi chấm>,"p_so_soat":<số miss đã soát>,"p_ghi_chu":"1 dòng: vd 12 đúng · 3 thiếu · 1 sai","p_loi":null}` → `$U/rpc/qc_ghi_nhat_ky_cham`. Trả về `{"ok":true,"id":..}` là ĐÃ GHI — gọi **đúng 1 lần**, không gọi lại để kiểm (2/10 có lượt gọi 2 lần → nhật ký trùng). Gặp lỗi làm dừng giữa chừng (CSDL trả lỗi, mã chấm sai…) thì vẫn gọi với `p_loi` = mô tả lỗi ngắn (không chứa mã / khoá).
 - KHÔNG in `MA_CHAM` ra màn hình hay vào tóm tắt. Dùng python3 hoặc jq để dựng JSON cho đúng (có dấu tiếng Việt, ngoặc kép).
 
+- **Báo sai (từ 17h giờ VN)** — lấy báo đang mở + luật đang chờ ghi: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_bao_sai -d "{\"p_ma\":\"$MA_CHAM\"}" > baosai.json` → `{"bao":[{bao_id, nguoi_bao, ghi_chu_bao, anh:[data URI], dong:{id, page, khach, sale, verdict, issue, sai_quy_trinh, la_binh_luan, thread…}, dong_cung_khach:[…]}], "luat_cho_ghi":[{bao_id, luat}]}`.
+- Ghi xử lý báo sai: `{"p_ma":..,"p_rows":[{"bao_id":..,"ket":"sua"|"giu"|"cho_anh","ghi_chu":"1–2 câu căn cứ","luat_de_xuat":null|"1 câu luật chung","verdict":..,"severity":..,"issue":..,"suggestion":..,"sai_quy_trinh":..}]}` → `$U/rpc/qc_tu_xu_ly_bao_sai`. Trả `{"ghi":n}`; có `"loi"` thì sửa đúng dòng rồi gửi lại.
+
 ## Quy trình
+0. **Mọi lượt, trước khi chấm:** gọi `qc_lo_bao_sai`, đọc `luat_cho_ghi` — đó là luật rút từ báo sai đã xử lý nhưng chưa chép vào file này → ÁP DỤNG như luật chấm bên dưới (mâu thuẫn thì luật mới hơn thắng).
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
 3. Ghi nhật ký lượt chạy (lệnh ở trên) — **mọi lượt**, kể cả khi lô rỗng (0 dòng) hoặc bị lỗi; đúng 1 lần.
 4. Đánh giá nhân sự nếu có kỳ đến hạn (mục ĐÁNH GIÁ NHÂN SỰ).
+4b. **Từ 17h giờ VN: tự xử lý báo sai** (mục TỰ XỬ LÝ BÁO SAI) — mỗi lượt sau 17h đều làm, hết báo mở thì thôi. Số báo đã xử lý ghi thêm vào `p_ghi_chu` của nhật ký ("báo sai: 2 sửa · 1 giữ · 1 chờ anh") — nếu đã gọi nhật ký ở bước 3 thì gộp: làm bước 4b TRƯỚC bước 3.
 5. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
+
+## TỰ XỬ LÝ BÁO SAI CUỐI NGÀY (anh Hải chốt 15/10/2026: "tool cuối ngày rà lỗi báo sai và clear luôn, t đỡ phải báo")
+Báo sai do Sale / anh gửi từ trang (nút báo sai): kèm ghi chú + ảnh chụp Pancake. Với từng báo trong `baosai.json`:
+1. **Xem ảnh**: giải mã từng data URI ra file (python3: `base64.b64decode(u.split(',',1)[1])` → `bao<id>-<i>.jpg`) rồi MỞ xem ảnh. Ảnh là chụp màn hình Pancake thật — thấy Sale đã trả lời / nhắn riêng / báo giá mà `thread` không có → tin ảnh (thread mình kéo có thể thiếu, vd tin nhắn riêng, tin sau lúc chấm).
+2. **Đọc cả `thread`** + `dong_cung_khach` (dòng khác của cùng khách cùng page: vd bình luận ↔ tin nhắn riêng — nội dung đã chấm ở dòng tin nhắn thì dòng bình luận chỉ xét việc dẫn về, không chấm 2 lần). Báo giá → tra `qc_tra_gia_kiot`.
+3. **Xét theo đúng luật chấm của file này**, không theo ý người báo: người báo thường là chính Sale bị chấm — đúng thì sửa, sai thì GIỮ và ghi rõ căn cứ (trích tin cụ thể). Chỉ xét phần từ 1/10/2026 (đoạn tháng 9 ngoài phạm vi).
+4. Chọn `ket`:
+   - `sua`: kết quả cũ sai → ghi verdict / issue / severity / suggestion / sai_quy_trinh MỚI cho dòng (issue nêu "(báo sai #<bao_id>)"); `thieu`/`sai` vẫn bắt buộc severity + suggestion.
+   - `giu`: kết quả cũ đúng → ghi_chu nói vì sao (vd "khách hỏi cả đèn chùm, Sale chưa đáp").
+   - `cho_anh`: cần anh QUYẾT NGHIỆP VỤ mà luật chưa có (giá KM chưa xác nhận, chính sách mới, quy định nội bộ) → báo để mở, ghi_chu = câu hỏi ngắn cho anh. KHÔNG dùng `cho_anh` để né việc khó — đủ căn cứ thì tự quyết.
+5. `luat_de_xuat`: khi báo ĐÚNG và lộ ra một kiểu lỗi chấm chung (sẽ lặp ở khách khác) → 1 câu luật tổng quát (vd "Tin cuối của khách là '(sticker)' → không tính miss"). Không đề xuất cho ca lẻ.
+6. Ghi tất cả bằng `qc_tu_xu_ly_bao_sai` (1 lần, mảng nhiều báo). Tóm tắt cuối: từng báo — #id, khách, kết quả, 1 câu căn cứ; liệt kê báo `cho_anh` kèm câu hỏi.
 
 ## ĐÁNH GIÁ NHÂN SỰ (anh Hải chốt 8/10/2026) — làm SAU khi chấm xong, mỗi lượt đều kiểm
 1. `curl -s "${H[@]}" -X POST $U/rpc/qc_ky_can_danh_gia -d "{\"p_ma\":\"$MA_CHAM\"}"` → danh sách kỳ đến hạn chưa đánh giá (`[]` thì bỏ qua mục này). Tuần = thứ Hai → Chủ nhật cắt theo tháng (đến hạn từ sáng thứ Hai), tháng = tổng kết từ ngày 1.

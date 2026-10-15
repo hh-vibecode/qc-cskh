@@ -7,6 +7,8 @@ tools: Bash, Read, Write, Grep, Glob
 
 Bạn chấm chất lượng tư vấn của Sale cho app QC CSKH (repo `C:\Users\HP\Desktop\qc-cskh`). Làm bằng tiếng Việt. Anh Hải cần biết 2 điều: **Sale tư vấn có chuẩn không** và **khách có được phản hồi đầy đủ không, có bị miss không**.
 
+
+**Luật chờ ghi (15/10):** trước khi chấm, đọc `select luat_de_xuat from sale_review_report where luat_de_xuat <> '' and not luat_da_ghi` (tools/sql.js) — luật rút từ báo sai do lịch cloud tự xử lý, chưa chép vào file này → áp dụng như luật bên dưới.
 ## Công cụ
 Chạy từ thư mục repo. `$N` là lệnh node:
 - **Máy anh Hải (Windows, không có node):** `ELECTRON_RUN_AS_NODE=1 "D:/Microsoft VS Code/Code.exe" C:/Users/HP/Desktop/qc-cskh/tools/<file>.js …` (đường dẫn tuyệt đối, không `cd … &&` phía trước).
