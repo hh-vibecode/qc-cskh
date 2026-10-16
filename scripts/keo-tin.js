@@ -428,6 +428,20 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       headers: { apikey: SBK, Authorization: 'Bearer ' + SBK, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
     console.log('mốc mới:', BAT_DAU.toISOString(), r.ok ? 'ok' : 'LỖI ' + r.status + ' ' + (await r.text()).slice(0, 200));
   }
+  // 16/10: lịch chấm cloud (tài khoản khác) dừng từ 16h 14/10 mà 2 ngày không ai biết, tồn 234 dòng. Mỗi lượt kéo kiểm:
+  // 8h–22h giờ VN mà > 3 giờ không có lượt chấm nào → ghi 1 dòng ĐỎ ở Nhật ký chạy (tối đa 1 dòng / 3 giờ).
+  if (!DRY && !CHI_PAGE.length) try {
+    const gio = new Date(Date.now() + 7 * 36e5).getUTCHours(), moc = new Date(Date.now() - 3 * 36e5).toISOString();
+    if (gio >= 8 && gio < 22) {
+      const g = await rest('GET', `qc_nhat_ky_chay?select=id&loai=eq.cham&bat_dau=gte.${moc}&limit=1`);
+      if (!g?.length) {
+        const cuoi = (await rest('GET', 'qc_nhat_ky_chay?select=bat_dau&loai=eq.cham&trang_thai=neq.loi&order=bat_dau.desc&limit=1'))?.[0]?.bat_dau;
+        await rest('POST', 'qc_nhat_ky_chay', { loai: 'cham', trang_thai: 'loi', ket_thuc: new Date().toISOString(), so_cham: 0,
+          loi: `Lịch chấm cloud KHÔNG chạy hơn 3 giờ (lượt chấm cuối: ${cuoi ? gioVN(new Date(cuoi)) : 'không rõ'}) — kiểm routine ở tài khoản Monsieur THT (hết lượt dùng / bị tắt), trong lúc đó chấm tay bằng agent cham-qc.` });
+        console.log('CẢNH BÁO: lịch chấm cloud không chạy > 3 giờ — đã ghi Nhật ký chạy');
+      }
+    }
+  } catch (e) { console.log('(không kiểm được lịch chấm:', e.message + ')'); }
   // 12/10 anh Hải: kiểm tài liệu quy trình (SOP, bảng giá) mỗi sáng — lượt quét 6h20 (chế độ khoảng, buổi sáng, chạy đủ page)
   if (!DRY && CHE_DO === 'khoang' && !CHI_PAGE.length && new Date(Date.now() + 7 * 36e5).getUTCHours() < 12) {
     try { await require('../tools/kiem-tai-lieu.js').kiemTaiLieu(); } catch (e) { console.log('(kiểm tài liệu lỗi:', e.message + ')'); }
