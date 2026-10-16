@@ -343,13 +343,19 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const convs = [...new Set(pairs.map(x => x.conv_id))], cu = new Map();
   for (let i = 0; i < convs.length; i += 80) {
     const ds = convs.slice(i, i + 80).map(x => `"${x.replace(/"/g, '\\"')}"`).join(',');
-    const rows = await rest('GET', `${BANG}?select=id,conv_id,conv_at,verdict,sale_reply,full_thread,issue,cham_boi&conv_id=in.(${encodeURIComponent(ds)})&conv_date=gte.${TU_HT}&order=conv_at.desc&limit=5000`);
+    const rows = await rest('GET', `${BANG}?select=id,conv_id,conv_at,verdict,sale_reply,full_thread,issue,cham_boi,noi_bo&conv_id=in.(${encodeURIComponent(ds)})&conv_date=gte.${TU_HT}&order=conv_at.desc&limit=5000`);
     rows.forEach(r => { if (!cu.has(r.conv_id)) cu.set(r.conv_id, r); });
   }
   const moi = [], capNhat = [], vaThread = [];
   for (const x of pairs) {
     const r = cu.get(x.conv_id);
     if (!r) { if (!x._chiSale) moi.push(x); continue; }   // hội thoại cũ chưa có dòng mà chỉ Sale nhắn → không tạo dòng mới
+    // 16/10 anh Hải: hội thoại đã xác định NỘI BỘ / NHÀ CUNG CẤP (noi_bo) → chỉ nối thread, không chấm lại mỗi lần bên kia nhắn
+    if (r.noi_bo) {
+      const vo = ghepThread(r.full_thread, x.full_thread);
+      if (vo !== (r.full_thread || '')) vaThread.push({ id: r.id, full_thread: vo, khach_id: x.khach_id });
+      continue;
+    }
     // 13/10: lượt mới CHỈ là "ok / cảm ơn / sticker" (khong_lien_quan) → KHÔNG đè kết quả hội thoại thật, chỉ nối thread.
     // Trước đó 10 hội thoại thật (có cái 26 tin khách) bị ẩn thành "không liên quan" vì khách cảm ơn ở cuối.
     if (x.verdict === 'khong_lien_quan' && r.verdict !== 'khong_lien_quan') {
