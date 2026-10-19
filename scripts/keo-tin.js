@@ -451,7 +451,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       if (!g?.length) {
         const cuoi = (await rest('GET', 'qc_nhat_ky_chay?select=bat_dau&loai=eq.cham&trang_thai=neq.loi&order=bat_dau.desc&limit=1'))?.[0]?.bat_dau;
         await rest('POST', 'qc_nhat_ky_chay', { loai: 'cham', trang_thai: 'loi', ket_thuc: new Date().toISOString(), so_cham: 0,
-          loi: `Lịch chấm cloud KHÔNG chạy hơn 3 giờ (lượt chấm cuối: ${cuoi ? gioVN(new Date(cuoi)) : 'không rõ'}) — kiểm routine ở tài khoản Monsieur THT (hết lượt dùng / bị tắt), trong lúc đó chấm tay bằng agent cham-qc.` });
+          loi: `Lịch chấm cloud KHÔNG chạy hơn 3 giờ (lượt chấm cuối: ${cuoi ? gioVN(new Date(cuoi)) : 'không rõ'}) — kiểm routine trig_016fSohzMtudxRE1Y3th5S4R (RemoteTrigger list_runs / get_run_log: hết lượt dùng, bị tắt, lỗi chạy), trong lúc đó chấm tay bằng agent cham-qc.` });
         console.log('CẢNH BÁO: lịch chấm cloud không chạy > 3 giờ — đã ghi Nhật ký chạy');
       }
     }

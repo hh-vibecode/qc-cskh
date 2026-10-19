@@ -103,6 +103,7 @@ a{color:var(--accent);font-weight:700;text-decoration:none}
 .sb-bottom{margin-top:auto;border-top:1.5px solid var(--border);padding:8px 0 10px}
 .sb-tools{display:flex;gap:6px;padding:6px 16px 0}
 .sb-tools .btn{flex:1;padding:5px 8px;font-size:11.5px}
+.sb-ver{padding:8px 18px 0;font-size:10px;color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums}
 .main{flex:1;min-width:0}
 .bar .right,.top .right{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 /* ô chọn gọn kiểu app MKT/Sale */
@@ -143,6 +144,10 @@ input.sel{font-weight:600;cursor:text}
 // ── Cấu hình ──────────────────────────────────────────────────────────────
 // Khoá công khai (anon) chỉ gọi được các hàm qc_* — hàm tự kiểm MÃ TRUY CẬP rồi mới trả dữ liệu
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
+// Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
+// APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
+const APP_SO='1.44';
+const APP_VERSION='19/10/2026 09:24';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -182,6 +187,7 @@ function shell(content){
         ${item('nhatky',nkLoiGan()?'<span class="nav-badge">!</span>':'')}
         ${item('logic')}
         <div class="sb-tools"><button class="btn" onclick="changeCode()">Đổi mã</button><button class="btn" onclick="lock()">Khoá</button></div>
+        <div class="sb-ver" title="Cập nhật lúc ${APP_VERSION} — bấm để tải lại bản mới nhất" onclick="location.reload()">Phiên bản <b>v${APP_SO}</b> · ${APP_VERSION.slice(0,5)} ${APP_VERSION.slice(11)}</div>
       </div>
     </aside>
     <main class="main"><div class="wrap">${content}</div></main>

@@ -90,6 +90,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý) → hiện ở Cài đặt › Lịch sử báo sai.
 
 ## Git
+- **Sửa index.html thì chạy tools/dong-dau.js ngay trước git add** (anh chốt 19/10): đóng dấu phiên bản v1.N + giờ VN, hiện ở cuối menu trái như app MKT/Sale và Kế toán.
 - Trước mỗi commit: `git diff --cached --stat`, chỉ commit đúng file mình sửa. Commit xong push ngay.
 - **Luôn đưa lên nhánh `main`** — trang GitHub Pages, workflow kéo tin và lịch chấm cloud đều chạy theo `main`. Phiên cloud
   thường tự mở nhánh riêng (`claude/...`): làm xong phải `git pull --rebase origin main` rồi gộp vào `main` và push `main`

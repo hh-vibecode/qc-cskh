@@ -24,7 +24,8 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 - Ghi xử lý báo sai: `{"p_ma":..,"p_rows":[{"bao_id":..,"ket":"sua"|"giu"|"cho_anh","ghi_chu":"1–2 câu căn cứ","luat_de_xuat":null|"1 câu luật chung","verdict":..,"severity":..,"issue":..,"suggestion":..,"sai_quy_trinh":..}]}` → `$U/rpc/qc_tu_xu_ly_bao_sai`. Trả `{"ghi":n}`; có `"loi"` thì sửa đúng dòng rồi gửi lại.
 
 ## Quy trình
-0. **Mọi lượt, trước khi chấm:** gọi `qc_lo_bao_sai`, đọc `luat_cho_ghi` — đó là luật rút từ báo sai đã xử lý nhưng chưa chép vào file này → ÁP DỤNG như luật chấm bên dưới (mâu thuẫn thì luật mới hơn thắng).
+0. **Lịch chạy 7h50–20h50 giờ VN** (cron `50 0-13 * * *` UTC, anh chốt 19/10). Lời gọi của lịch có câu "lô chờ chấm và lô miss đều rỗng thì dừng" — từ 17h VẪN phải làm bước 4b (báo sai) và ghi nhật ký rồi mới dừng.
+   **Mọi lượt, trước khi chấm:** gọi `qc_lo_bao_sai`, đọc `luat_cho_ghi` — đó là luật rút từ báo sai đã xử lý nhưng chưa chép vào file này → ÁP DỤNG như luật chấm bên dưới (mâu thuẫn thì luật mới hơn thắng).
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
 3. Ghi nhật ký lượt chạy (lệnh ở trên) — **mọi lượt**, kể cả khi lô rỗng (0 dòng) hoặc bị lỗi; đúng 1 lần.
