@@ -24,6 +24,7 @@
 const fs = require('fs');
 const K = require('../tools/keys.js');
 const { taoSoat } = require('../tools/soat-lib.js');
+const { laLoiKhan, laKetBan } = require('../tools/loc-khan.js');
 const TOK = K.pancake, SBK = K.qc, SB = K.url;
 if (!TOK || !SBK) { console.error('Thiếu PANCAKE_SESSION_TOKEN hoặc QC_SUPABASE_KEY'); process.exit(1); }
 
@@ -93,6 +94,10 @@ const KHAN_THUAN = /^(con |xin |con xin )?(nam ?mo|nammo|nam ?o ?a ?di ?da|mo a 
 const CAU_XA_GIAO = /^((ok+|oke+|okie|okay|vang|da+|uh+|um+|ukm|cam on|camon|thanks?|thank you|tks|ty|alo|hi|hello|xin chao|chao)( (a|ah|nha|nhe|nhe|shop|em|ban|anh|chi|c|e|a|nhieu|nhiu|lam|ca nha|moi nguoi))*)+$/;
 function locKhongHoi(ask) {
   const t = bo(ask).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // 19/10: lời khấn xét TRƯỚC từ ý mua — "Thích Ca Mâu Ni" (= "mau") và "con xin" từng khớp INTENT nên ~410 lời khấn lọt
+  // sang Sonnet. laLoiKhan chặt (đo tháng 10: nhầm 0 khách thật), có từ mua / số thì không lọc.
+  if (laLoiKhan(ask)) return 'lời khấn';
+  if (laKetBan(ask)) return 'tin kết bạn Zalo';   // 19/10 anh Hải: bỏ qua tin kết bạn (trừ lời mời có viết kèm ý mua)
   if (INTENT.test(ask) || INTENT_KD.test(t)) return null;
   if (!t && ask) return 'chỉ sticker / emoji';
   if (KHAN_THUAN.test(t)) return 'lời khấn';
@@ -249,6 +254,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const CHI_PAGE = (process.env.PAGE_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
   const pages = (pj?.categorized?.activated || []).filter(p => !CHI_PAGE.length || CHI_PAGE.includes(String(p.id)));
   console.log('pages:', pages.length);
+  // 19/10: PAGE_IDS gõ nhầm → 0 page nhưng token vẫn tốt — KHÔNG được báo token hết hạn / chuyển đỏ mọi kênh
+  if (!pages.length && CHI_PAGE.length && (pj?.categorized?.activated || []).length)
+    throw new Error(`PAGE_IDS không khớp page nào đang kích hoạt: ${CHI_PAGE.join(',')}`);
   if (!pages.length) {
     await kenhDoTatCa('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn');
     throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
