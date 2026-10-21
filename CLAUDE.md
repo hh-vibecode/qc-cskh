@@ -86,6 +86,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Chỉ quan tâm **tin khách hỏi mua**. Lời khấn "Nam mô…", tương tác, chat nội bộ → `khong_lien_quan`, ẩn khỏi trang.
 - Bình luận ↔ tin nhắn là 2 luồng riêng: tìm inbox của chính khách đó; có Sale nhắn riêng thì chấm cả đoạn tin nhắn, không có mới là miss.
 - Sale đã nhắn lại (dù muộn bao lâu) = **muộn**, không phải miss. Lỗi KHÔNG do Sale (vd Facebook chặn không nhắn được) → verdict `loi_nen_tang` (Lỗi nền tảng), chỉ gắn khi có căn cứ — anh chốt 1/10.
+- **2 lịch chấm cloud (anh chốt 21/10, anh có 2 tài khoản Claude):** CHÍNH trig_016fSohzMtudxRE1Y3th5S4R (tài khoản Monsieur Henry, phút 50, 7h50–20h50 VN) · DỰ PHÒNG trig_01KkiVcyVinHtNPk3yyBARbZ (tài khoản MONSIEUR HENRY 2, phút 20, 8h20–21h20 VN — chỉ chấm khi lô còn tồn, tức lịch chính hết lượt / dừng; tải routine/cham-cloud.md qua raw.githubusercontent vì tài khoản 2 chưa nối GitHub). Mỗi phiên chỉ xem / sửa được lịch của tài khoản mình đang đăng nhập (RemoteTrigger). Sửa luật ở routine/cham-cloud.md là CẢ 2 lịch dùng.
 - **Báo sai tự xử lý mỗi tối** (anh chốt 15/10): lịch chấm cloud từ 17h đọc báo mở (`qc_lo_bao_sai`, kèm ảnh) → sửa / giữ / để "CHỜ ANH:" (`qc_tu_xu_ly_bao_sai`). Anh không cần nhắc. Báo "CHỜ ANH" thì trình anh ở phiên tiếp theo.
 - Báo sai xử lý xong → đóng (`status='fixed'`, `resolve_note` ghi cách xử lý) → hiện ở Cài đặt › Lịch sử báo sai.
 
