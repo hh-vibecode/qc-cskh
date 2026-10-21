@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.44';
-const APP_VERSION='19/10/2026 09:24';
+const APP_SO='1.45';
+const APP_VERSION='21/10/2026 16:58';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -839,7 +839,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 19/10/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 21/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -865,6 +865,7 @@ function logicPage(){
     <h3>4. Chấm</h3>
     <ol>
       <li><b>Soát miss với Pancake thật</b> mỗi lượt kéo (30 ngày): Sale nhắn lại — <b>dù muộn bao lâu — là trả lời muộn, không phải miss</b>. Bình luận ↔ tin nhắn là 2 luồng: có Sale nhắn riêng cho chính khách đó thì chấm đoạn tin nhắn, không có mới là miss.</li>
+      <li><b>Lỗi nền tảng cần căn cứ</b> (21/10, từ báo sai #65/#70): thread có lỗi gửi tin Facebook #551 "Người này hiện không có mặt" sau tin khách → Lỗi nền tảng, không tính Sale miss; chỉ báo "khách chặn" mà không có ảnh / dòng lỗi → vẫn tính miss.</li>
       <li><b>Lọc lời khấn lúc kéo — bản chặt</b> (19/10): chỉ lọc khi có dấu hiệu khấn rõ (Nam mô, A Di Đà Phật, niệm, lạy) và cả câu toàn từ ngữ cầu khấn; có số hoặc từ hỏi mua (giá, mua, thỉnh, tượng, mẫu…) thì để AI chấm. Tên các ngài đứng một mình ("quan âm", "địa tạng") là khách gọi tên tượng — không lọc. Đo tháng 10: nhầm 0 khách thật, bớt ~290 hội thoại phải đưa AI chấm. <b>Tin kết bạn Zalo</b> (lời mời / đồng ý kết bạn) cũng bỏ qua, trừ lời mời có viết kèm ý mua.</li>
       <li><b>Hội thoại nội bộ / nhà cung cấp</b> (16/10): chat mà Sale là bên mua / thanh toán (hoá đơn, kế toán, công nợ), chat đồng nghiệp → không liên quan với nhãn "Nội bộ / NCC"; hội thoại đã gắn nhãn được đánh dấu, tin mới chỉ nối vào, không chấm lại. Đổi kết quả khác (vd báo sai) thì tự bỏ đánh dấu.</li>
       <li><b>Báo động lịch chấm</b> (16/10): mỗi lượt kéo kiểm — từ 8h đến 22h mà hơn 3 giờ không có lượt chấm nào thì ghi dòng đỏ ở Nhật ký chạy.</li>
