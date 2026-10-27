@@ -37,7 +37,7 @@
 - **Dữ liệu cũ:** app đọc chính bảng `sale_response_review` → toàn bộ lịch sử đã chấm hiện luôn, KHÔNG chép sang bảng mới.
 
 ## 1. ĐANG CHỜ ANH HẢI
-- **E12 (13/10)** — Bộ Ta Bà 30cm: Sale báo 7,2tr (Vàng Đá Thạch Anh) và 11,4tr (Lá Đề), Kiot niêm yết 11,4–16,2tr (thấp hơn 22–37%), Sale nói "giá đã được giảm". Đây có phải bảng giá KM được duyệt không? Tạm chấm Đúng (#55/#60, #61/#62 ngày 16/10); không phải KM thì chuyển Sai. **16/10 thêm #11359: Sale báo bộ Ta Bà 40cm 7,2tr "đang giảm" — Kiot 40cm thấp nhất 21,9tr (−67%), chính Sale ở #62 báo 40cm còn 11,4tr → nghi báo nhầm.** Cùng nhóm: #11521 ngũ sự sứ 25cm báo 4,3tr, cao hơn Kiot 28%.
+- ~~E12~~ — ĐÃ CHỐT 27/10: giá (KM / xả kho / giá đã giảm) nghe theo Sale.
 
 | # | Việc | Ghi chú |
 |---|---|---|
@@ -195,6 +195,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **27/10/2026** — Anh chốt: báo sai về giá thì nghe theo Sale. Lượt tự xử lý báo sai 26/10 giữ Sai nhầm #80–82 (đèn 5 bông "từ 3 triệu": AI chỉ tra ra mã rẻ 700k–1,4tr, Kiot thật có hàng chục mã 2,0–4,8tr) → sửa 3 dòng về Đúng, luật vào 2 file + Logic, chốt E12. Xuất báo cáo phản hồi online Chánh Tâm 2 khung giờ cửa hàng bỏ trống (23/10 18h30, 27/10 12h50) cho chị quản lý.
 - **21/10/2026** — Lịch chính ngừng chấm từ 9h57 (tài khoản 1 hết lượt); lịch dự phòng tài khoản 2 bị chặn mạng tới Supabase (403) — chờ anh mở Network access môi trường Default. Chấm tay bằng 2 agent. Chép luật báo sai #65/#70 (lỗi #551 = lỗi nền tảng; báo "khách chặn" không bằng chứng = giữ miss) vào 2 file + Logic — lần đầu tự xử lý báo sai sinh luật.
 - **21/10/2026** — Anh: dùng cloud tài khoản 2 (MONSIEUR HENRY 2) chấm hỗ trợ khi tài khoản kia hết lượt. Tạo lịch DỰ PHÒNG trig_01KkiVcyVinHtNPk3yyBARbZ, phút 20 (8h20–21h20 VN): kiểm lô trước, rỗng thì dừng ngay (không tải luật, gần như không tốn); có tồn mới tải routine/cham-cloud.md từ raw GitHub và chấm, nhật ký ghi tiền tố "DỰ PHÒNG:".
 - **19/10/2026** — Lịch chấm cloud: dừng 14/10 16h01 → chạy lại 18/10 8h13 (chưa rõ nguyên nhân dừng). Anh chốt chỉ chạy 7h50–20h50 giờ VN → đổi cron `50 0-13 * * *` (UTC), bớt ~40% số lượt. Dặn routine vẫn xử lý báo sai từ 17h dù lô rỗng. Thêm phiên bản app (v1.N · giờ VN, cuối menu trái) + tools/dong-dau.js như app Kế toán.
