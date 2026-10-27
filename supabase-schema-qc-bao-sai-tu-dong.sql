@@ -43,6 +43,9 @@ begin
     if coalesce(r->>'ket','') not in ('sua','giu','cho_anh') then loi := loi || format('báo #%s: ket "%s" không hợp lệ', r->>'bao_id', r->>'ket');
     elsif coalesce(trim(r->>'ghi_chu'),'') = '' then loi := loi || format('báo #%s: thiếu ghi_chu', r->>'bao_id');
     elsif not exists (select 1 from sale_review_report where id = (r->>'bao_id')::bigint and status = 'open') then loi := loi || format('báo #%s: không còn mở', r->>'bao_id');
+    -- 27/10 anh Hải: "mấy cái chấm sai mà ngta feedback phải nhớ vào, không phải để ấy" → báo ĐÚNG (sửa) BẮT BUỘC kèm luật rút ra
+    elsif r->>'ket' = 'sua' and length(coalesce(trim(r->>'luat_de_xuat'),'')) < 15 then
+      loi := loi || format('báo #%s: sửa kết quả thì BẮT BUỘC có luat_de_xuat (1 câu luật chung để không chấm sai lại)', r->>'bao_id');
     elsif r->>'ket' = 'sua' and coalesce(r->>'verdict','') not in ('dung','thieu','sai','khong_lien_quan','khong_tra_loi','loi_nen_tang') then
       loi := loi || format('báo #%s: verdict "%s" không hợp lệ', r->>'bao_id', r->>'verdict');
     elsif r->>'ket' = 'sua' and r->>'verdict' in ('thieu','sai') and (coalesce(r->>'severity','') not in ('cao','trung','thap')

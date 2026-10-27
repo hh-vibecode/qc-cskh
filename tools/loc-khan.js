@@ -48,7 +48,14 @@ function laKetBan(ask) {
   const conLai = t.replace(/ban nhan duoc loi moi ket ban|xin chao|minh la [a-z ]{1,40}?(?= ket| minh|$)|ket ban voi minh nhe|minh biet ban qua (so dien thoai|nhom chung|[a-z ]{1,20})/g, ' ');
   return !Y_MUA_KB.test(conLai);
 }
-module.exports = { laLoiKhan, laKetBan };
+// KHÔNG PHẢI CÂU HỎI (anh Hải 27/10: "khách cảm ơn là hết rồi; ngta hỏi tiếp mà k trả lời thì mới là miss"):
+// tin rỗng (ảnh / sticker), câu xã giao (ok, vâng, cảm ơn, để mình xem / tham khảo thêm), lời khấn, tin kết bạn.
+const XA_GIAO = /^((ok+|oke+|okie|okay|vang|da+|uh+|um+|ukm|cam on|camon|thanks?|thank you|tks|ty|alo|hi|hello|xin chao|chao|de .{0,20} xem( lai)?( da)?|minh tham khao( them)?|tham khao( them)?|de minh (xem|suy nghi|tinh)( da| them| lai)?)( (a|ah|nha|nhe|shop|em|ban|anh|chi|c|e|nhieu|nhiu|lam|ca nha|moi nguoi|lai|da|vay|thi|nao))*\s*)+$/;
+function laKhongHoi(text) {
+  const t = bo(text).replace(/\(gui anh\/tep\)|\(sticker\)/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return !t || XA_GIAO.test(t) || laLoiKhan(text) || laKetBan(text);
+}
+module.exports = { laLoiKhan, laKetBan, laKhongHoi };
 
 if (require.main === module && process.argv.includes('--do')) (async () => {
   // ĐO trên dữ liệu thật tháng 10: lọc trúng bao nhiêu dòng AI đã chấm khong_lien_quan (bắt được) và bao nhiêu dòng

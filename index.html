@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.46';
-const APP_VERSION='27/10/2026 14:02';
+const APP_SO='1.47';
+const APP_VERSION='27/10/2026 14:42';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -865,6 +865,8 @@ function logicPage(){
     <h3>4. Chấm</h3>
     <ol>
       <li><b>Soát miss với Pancake thật</b> mỗi lượt kéo (30 ngày): Sale nhắn lại — <b>dù muộn bao lâu — là trả lời muộn, không phải miss</b>. Bình luận ↔ tin nhắn là 2 luồng: có Sale nhắn riêng cho chính khách đó thì chấm đoạn tin nhắn, không có mới là miss.</li>
+      <li><b>Miss chỉ khi khách hỏi tiếp mà không ai trả lời</b> (27/10): Sale đã trả lời, sau đó khách chỉ cảm ơn / ok / gửi ảnh / sticker / khấn → không tính miss. Bước soát miss mỗi giờ lấy câu hỏi thật cuối cùng của khách làm mốc, không lấy tin cuối.</li>
+      <li><b>Báo sai đúng thì phải thành luật</b> (27/10): mỗi báo sai được sửa kết quả bắt buộc kèm 1 câu luật chung; luật áp ngay cho các lượt chấm sau và được chép vào bộ luật. Khách nêu rõ mã sản phẩm → so giá với đúng mã đó (báo sai #79).</li>
       <li><b>Giá thì nghe theo Sale</b> (27/10): Sale báo giá xả kho / khuyến mãi / giá đã giảm, hoặc báo khoảng "từ X trở lên" cho cả một loại → không chấm sai giá; báo sai về giá thì sửa theo Sale. Chỉ chấm sai giá khi báo con số cho đúng 1 mẫu, lệch > 20% Kiot và không nói xả kho / khuyến mãi.</li>
       <li><b>Lỗi nền tảng cần căn cứ</b> (21/10, từ báo sai #65/#70): thread có lỗi gửi tin Facebook #551 "Người này hiện không có mặt" sau tin khách → Lỗi nền tảng, không tính Sale miss; chỉ báo "khách chặn" mà không có ảnh / dòng lỗi → vẫn tính miss.</li>
       <li><b>Lọc lời khấn lúc kéo — bản chặt</b> (19/10): chỉ lọc khi có dấu hiệu khấn rõ (Nam mô, A Di Đà Phật, niệm, lạy) và cả câu toàn từ ngữ cầu khấn; có số hoặc từ hỏi mua (giá, mua, thỉnh, tượng, mẫu…) thì để AI chấm. Tên các ngài đứng một mình ("quan âm", "địa tạng") là khách gọi tên tượng — không lọc. Đo tháng 10: nhầm 0 khách thật, bớt ~290 hội thoại phải đưa AI chấm. <b>Tin kết bạn Zalo</b> (lời mời / đồng ý kết bạn) cũng bỏ qua, trừ lời mời có viết kèm ý mua.</li>

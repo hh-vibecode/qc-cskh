@@ -6,6 +6,7 @@
 //   { ket:'miss_that' | 'khong_mo_duoc' | 'inbox_khong_thay' }
 // `them` = các dòng hội thoại từ lúc khách hỏi (định dạng "[YYYY-MM-DD HH:MM] Ai: nội dung", GIỜ VIỆT NAM từ 7/10).
 // Monsieur Claude
+const { laKhongHoi } = require('./loc-khan.js');
 function taoSoat(pk, sleep) {
   // chốt chặn giờ (7/10): thread phải ghi giờ VIỆT NAM, giống gioThread của keo-tin
   if (new Date(new Date('2026-10-07T00:55:00Z').getTime() + 7 * 36e5).toISOString().slice(0, 16).replace('T', ' ') !== '2026-10-07 07:55') throw new Error('soat-lib: giờ thread không phải giờ Việt Nam');
@@ -68,6 +69,16 @@ function taoSoat(pk, sleep) {
     if (rep && r.verdict !== 'tra_loi_inbox') {
       return { ket: 'da_tra_loi', muon: (utc(rep.inserted_at) - hoi) / 36e5, sale: rep.from?.admin_name || null,
         text: clean(rep.message) || '(gửi ảnh/tệp)', them: g.msgs.filter(m => utc(m.inserted_at) >= hoi).slice(0, 60).map(m => fmt(m, pageId)) };
+    }
+    // 27/10 anh Hải ("khách cảm ơn là hết rồi; hỏi tiếp mà không trả lời mới là miss", ca Nhung Tran #3219): mốc không phải tin
+    // CUỐI của khách mà là CÂU HỎI THẬT cuối — Sale đã trả lời nó và sau đó khách chỉ cảm ơn / ok / ảnh / sticker / khấn → hết miss.
+    if (!rep && r.verdict !== 'tra_loi_inbox') {
+      const kh = g.msgs.filter(m => String(m.from?.id) !== String(pageId));
+      const that = [...kh].reverse().find(m => !laKhongHoi(clean(m.message || m.original_message || '')));
+      const t0 = that ? utc(that.inserted_at) : null;
+      const rep2 = t0 && t0 < hoi ? g.msgs.find(m => utc(m.inserted_at) > t0 && tinSale(m, pageId)) : null;
+      if (rep2) return { ket: 'da_tra_loi', muon: (utc(rep2.inserted_at) - t0) / 36e5, sale: rep2.from?.admin_name || null,
+        text: clean(rep2.message) || '(gửi ảnh/tệp)', them: g.msgs.filter(m => utc(m.inserted_at) >= t0).slice(0, 60).map(m => fmt(m, pageId)) };
     }
     // Bình luận ↔ tin nhắn là 2 luồng riêng (anh chốt 28/9, ca Harri): tìm inbox của CHÍNH khách đó
     if ((g.conv?.type || '').toUpperCase() === 'COMMENT') {
