@@ -164,7 +164,7 @@ function tachLuot(page, c, msgs, userMap) {
     out.push({
       conv_date: vnDay(first), conv_at: first.toISOString(), page_name: page.name, page_id: String(page.id), conv_id: c.id,
       customer_name: c.customers?.[0]?.name || c.from?.name || '', phone: (c.recent_phone_numbers || [])[0]?.phone_number || null,
-      sale_name: sale || (c.assignee_ids || []).map(id => userMap[id]).find(Boolean) || null,
+      sale_name: sale || null,   // 28/10 anh Hải: Sale = người TRẢ LỜI; chưa ai trả lời → trigger qc_sale_theo_thuong_hieu điền theo thương hiệu (không lấy người được giao)
       khach_id: c.customers?.[0]?.id ? String(c.customers[0].id) : null,   // 13/10: nối bình luận ↔ tin nhắn riêng cùng khách
       customer_ask: (ask || (chiStk ? '(sticker)' : '(gửi ảnh/tệp)')).slice(0, 700), sale_reply: reply ? reply.slice(0, 1000) : null, verdict,
       severity: null, source_faq: null, suggestion: null, cham_boi: loc ? 'luat' : null,

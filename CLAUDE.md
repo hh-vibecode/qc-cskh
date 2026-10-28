@@ -12,6 +12,11 @@
 > Phiên cloud KHÔNG đọc được bộ nhớ trên máy anh — mọi luật cần nhớ phải nằm trong repo (file này, `VIEC.md`,
 > `.claude/agents/cham-qc.md`, `routine/cham-cloud.md`). Học được luật mới từ anh thì ghi vào đây / VIEC.md, đừng chỉ nhớ trong phiên.
 
+> **LỌC TRƯỚC, XỬ LÝ SAU — ÁP CHO MỌI VIỆC (anh Hải 28/10/2026: "làm gì thì làm lọc qua trước, rồi xử lý đống tin nhắn đã qua bộ lọc thôi; sau làm gì cũng thế, không phải cứ cào hết vào"):**
+> mọi bước gán Sale, tính thời gian, chấm, soát, thống kê, báo cáo, sửa hàng loạt CHỈ làm trên hội thoại ĐÃ QUA BỘ LỌC (`verdict <> 'khong_lien_quan'`).
+> Tin không qua bộ lọc (khấn, nội bộ / NCC, spam, tin hệ thống, kết bạn…) chỉ LƯU để đối chiếu — không gán, không tính, không chấm lại.
+> (Khác với bài học 1 "không lọc ở bước KÉO": kéo vẫn lưu đủ, nhưng XỬ LÝ thì lọc trước.) 28/10 suýt gán Sale cho 12.487 dòng, đúng ra chỉ 156.
+
 ## Người dùng & cách làm việc
 - Làm bằng **tiếng Việt**, gọi người dùng là **anh** (anh Hải). Mọi thứ Claude tạo (file, commit, trang) ký **Monsieur Claude**.
 - **MINH BẠCH TUYỆT ĐỐI (anh chốt 30/9/2026):** anh rất fair, không quan tâm Claude làm sai nhiều hay gặp vấn đề — điều anh cần
@@ -61,6 +66,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - **Lọc đúng nghiệp vụ rồi mới trình anh** — dòng không tính thì không đưa vào bảng; nghi ngờ thì tách riêng, nói rõ vì sao.
 - Dựng / sửa số liệu: **đối chiếu với con số đã biết** (vd đếm thẳng SQL) trước khi báo xong, không chỉ "chạy không lỗi".
 - **Không kiểm một mối nối bằng dữ liệu mượn từ chính bên kia.** Thiếu dữ liệu ≠ khớp; mặc định là NGỜ.
+- **Lọc trước rồi mới xử lý** (anh chốt 28/10): mọi truy vấn xử lý / thống kê / sửa hàng loạt thêm `verdict <> 'khong_lien_quan'` trước tiên.
 - **Kéo đủ rồi mới lọc** (anh chốt 7/10): job kéo tin không được bỏ lượt khách vì "không giống câu hỏi" — lưu hết, lọc ở bước xử lý. Kiểm job kéo bằng cách so với Pancake thật, không so với job cũ.
 - Bảng cũ giữ lại có chủ đích — kiểm trước khi nói "mất dữ liệu".
 - Đổi logic chấm: đo trước–sau trên dữ liệu thật (`cham-luat.js --do` phải lệch 0 mới được thêm luật).
@@ -87,6 +93,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Luật chấm đầy đủ: `.claude/agents/cham-qc.md` (phiên trên máy / agent) và `routine/cham-cloud.md` (lịch chấm cloud mỗi giờ). Sửa luật thì sửa CẢ HAI.
 - Chỉ quan tâm **tin khách hỏi mua**. Lời khấn "Nam mô…", tương tác, chat nội bộ → `khong_lien_quan`, ẩn khỏi trang.
 - Bình luận ↔ tin nhắn là 2 luồng riêng: tìm inbox của chính khách đó; có Sale nhắn riêng thì chấm cả đoạn tin nhắn, không có mới là miss.
+- **Gán Sale (anh chốt 28/10, bỏ gán cứng):** tên người trả lời trên Pancake; không phân biệt được người → theo thương hiệu: Hiền Thủy + TTV = Vân Ngọc · Shidai (gồm Thời Đại) = Nguyên Khánh · Chánh Tâm = Lệ (trigger `qc_sale_theo_thuong_hieu`, chỉ cho dòng đã qua bộ lọc).
 - Sale đã nhắn lại (dù muộn bao lâu) = **muộn**, không phải miss. Lỗi KHÔNG do Sale (vd Facebook chặn không nhắn được) → verdict `loi_nen_tang` (Lỗi nền tảng), chỉ gắn khi có căn cứ — anh chốt 1/10.
 - **2 lịch chấm cloud (anh chốt 21/10, anh có 2 tài khoản Claude):** CHÍNH trig_016fSohzMtudxRE1Y3th5S4R (tài khoản Monsieur Henry, phút 50, 7h50–20h50 VN) · DỰ PHÒNG trig_01KkiVcyVinHtNPk3yyBARbZ (tài khoản MONSIEUR HENRY 2, phút 20, 8h20–21h20 VN — chỉ chấm khi lô còn tồn, tức lịch chính hết lượt / dừng; tải routine/cham-cloud.md qua raw.githubusercontent vì tài khoản 2 chưa nối GitHub). Mỗi phiên chỉ xem / sửa được lịch của tài khoản mình đang đăng nhập (RemoteTrigger). Sửa luật ở routine/cham-cloud.md là CẢ 2 lịch dùng.
 - **Báo sai tự xử lý mỗi tối** (anh chốt 15/10): lịch chấm cloud từ 17h đọc báo mở (`qc_lo_bao_sai`, kèm ảnh) → sửa / giữ / để "CHỜ ANH:" (`qc_tu_xu_ly_bao_sai`). Anh không cần nhắc. Báo "CHỜ ANH" thì trình anh ở phiên tiếp theo.

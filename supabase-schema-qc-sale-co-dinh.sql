@@ -1,30 +1,35 @@
--- SALE CỐ ĐỊNH THEO PAGE (anh Hải 7/10/2026: "từ tháng 10/2026 tất cả tin nhắn tới từ Hiền Thủy, Shidai và Nến Tự Tại Viên
--- đều là của Vân Ngọc"). Tên admin Pancake không đáng tin (tài khoản dùng chung, trống tên, người khác trả lời hộ) → gán cứng.
--- Cấu hình ở qc_cau_hinh khoa 'sale_co_dinh' = {"<page_id>": {"sale": "...", "tu": "YYYY-MM-DD"}, ...}.
--- Trigger chạy cho MỌI lần ghi (job kéo tin, soát miss, chấm) nên không phải sửa từng công cụ. Monsieur Claude
-create or replace function public.qc_gan_sale_co_dinh() returns trigger
-language plpgsql security definer set search_path = public, extensions as $$
-declare c jsonb;
+-- GÁN SALE (anh Hải 28/10/2026 — THAY quy tắc gán cứng 7 page = Vân Ngọc từ 1/10, trigger qc_sale_co_dinh ĐÃ GỠ):
+--   1. Sale = TÊN NGƯỜI trả lời trên Pancake ("Sale (Tên): …", người nhắn cuối trong hội thoại) — job kéo / soát miss ghi.
+--   2. Không phân biệt được người (chưa ai trả lời, hoặc tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin")
+--      → theo THƯƠNG HIỆU: Hiền Thủy + Tự Tại Viên = Vân Ngọc · Shidai (gồm Thời Đại) = Nguyên Khánh · Chánh Tâm = Lệ.
+-- Trigger qc_sale_theo_thuong_hieu chỉ điền khi sale_name trống / tài khoản chung — không bao giờ đè tên người thật.
+-- Cấu hình cũ giữ trong qc_cau_hinh 'sale_co_dinh' (ngung 28/10) để tra lịch sử. Monsieur Claude
+drop trigger if exists qc_sale_co_dinh on public.sale_response_review;
+
+create or replace function public.qc_sale_mac_dinh(p_page_id text, p_page_name text) returns text
+language sql immutable set search_path = public as $$
+  select case
+    when p_page_id in ('105133802417722','107792638827892','ttm_-000uG5lXadOZHV4VWlMRAHc5FZGkQtuyxY3','pzl_1927214341338004925','pzl_716330578937743406','100667699549693')
+      then 'Vân Ngọc'
+    when p_page_id in ('506247572578559','pzl_421283811192749346','pzl_636053762312360623') then 'Nguyên Khánh'
+    when p_page_id in ('107224335550589','1212423508625663','ttm_-000fnwmEFDETu8kL8prpYMAbgrdue0Cc0hG','pzl_355233102341719971','pzl_357024678860117283','ttm_-000wff5HiYIrt76uNDUJiL1kfVVtVkiURi-')
+      then 'Lệ'
+    -- page mới chưa có trong danh sách: đoán theo tên page (CSDL chung không có unaccent — không tự cài)
+    when lower(coalesce(p_page_name,'')) ~ 'hiền th|hien th|tự tại|tu tai|nến bơ|cao cấp' then 'Vân Ngọc'
+    when lower(coalesce(p_page_name,'')) ~ 'shidai|thời đại|thoi dai' then 'Nguyên Khánh'
+    when lower(coalesce(p_page_name,'')) ~ 'chánh tâm|chanh tam|hoàng dương|ming ying' then 'Lệ'
+  end $$;
+
+create or replace function public.qc_sale_theo_thuong_hieu() returns trigger
+language plpgsql set search_path = public as $$
 begin
-  select gia_tri::jsonb into c from qc_cau_hinh where khoa = 'sale_co_dinh';
-  if c is not null and new.page_id is not null and c ? new.page_id
-     and new.conv_date >= coalesce((c -> new.page_id ->> 'tu')::date, '1900-01-01') then
-    new.sale_name := c -> new.page_id ->> 'sale';
+  -- anh Hải 28/10: LỌC TRƯỚC, chỉ xử lý tin đã qua bộ lọc — dòng "không liên quan" (khấn, nội bộ, spam…) không gán Sale
+  if new.verdict = 'khong_lien_quan' then return new; end if;
+  if coalesce(trim(new.sale_name), '') = '' or new.sale_name ~* '^(pancake tht holding|sales? admin|botcake)$' then
+    new.sale_name := coalesce(qc_sale_mac_dinh(new.page_id, new.page_name), nullif(trim(new.sale_name), ''));
   end if;
   return new;
 end $$;
-revoke execute on function public.qc_gan_sale_co_dinh() from public, anon, authenticated;
-
-drop trigger if exists qc_sale_co_dinh on public.sale_response_review;
-create trigger qc_sale_co_dinh before insert or update on public.sale_response_review
-  for each row execute function public.qc_gan_sale_co_dinh();
-
-insert into qc_cau_hinh (khoa, gia_tri) values ('sale_co_dinh', '{
-  "105133802417722": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Siêu Thị Phật Giáo Hiền Thuỷ (FB)"},
-  "107792638827892": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Hiền Thủy - Siêu Thị Đồ Thờ & Đồ Mã (FB)"},
-  "ttm_-000uG5lXadOZHV4VWlMRAHc5FZGkQtuyxY3": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Hiền Thuỷ (TikTok)"},
-  "pzl_1927214341338004925": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Siêu Thị Phật Giáo Hiền Thủy (Zalo)"},
-  "pzl_716330578937743406": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Siêu Thị Đồ Thờ Cao Cấp (Zalo, Hiền Thủy)"},
-  "100667699549693": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Nến Bơ - Tự Tại Viên (FB)"},
-  "506247572578559": {"sale": "Vân Ngọc", "tu": "2026-10-01", "ghi_chu": "Thời Đại - Tổng Kho Sỉ (FB, Shidai)"}
-}') on conflict (khoa) do update set gia_tri = excluded.gia_tri;
+drop trigger if exists qc_sale_theo_thuong_hieu on public.sale_response_review;
+create trigger qc_sale_theo_thuong_hieu before insert or update of sale_name, page_id, verdict on public.sale_response_review
+  for each row execute function public.qc_sale_theo_thuong_hieu();

@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.47';
-const APP_VERSION='27/10/2026 14:42';
+const APP_SO='1.48';
+const APP_VERSION='28/10/2026 14:29';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -839,7 +839,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 27/10/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 28/10/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -916,9 +916,10 @@ function logicPage(){
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>
     <ul>
-      <li>Từ 01/10/2026 mọi tin của <b>Hiền Thủy</b> (Facebook, TikTok, Zalo), <b>Nến Bơ - Tự Tại Viên</b> và page <b>Thời Đại</b> (Shidai) tính cho Sale <b>Vân Ngọc</b>.</li>
+      <li><b>Lọc trước, xử lý sau</b> (28/10): mọi bước gán / tính / chấm chỉ làm trên hội thoại đã qua bộ lọc. Tin không qua bộ lọc (lời khấn, nội bộ, spam, tin hệ thống…) để "Không liên quan", không gán Sale, không xử lý thêm.</li>
+      <li><b>Gán Sale</b> (28/10, thay quy tắc gán cứng 7 page = Vân Ngọc từ 1/10): Sale là <b>tên người trả lời trên Pancake</b> (người nhắn cuối trong hội thoại). Không phân biệt được người (chưa ai trả lời, hoặc tài khoản dùng chung "PANCAKE THT HOLDING") thì theo thương hiệu: <b>Hiền Thủy, Tự Tại Viên → Vân Ngọc</b> · <b>Shidai (gồm Thời Đại) → Nguyên Khánh</b> · <b>Chánh Tâm → Lệ</b>.</li>
       <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau.</li>
-      <li>Tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin" không dùng làm tên Sale, nhưng tin viết tay từ các tài khoản này vẫn tính là người thật trả lời.</li>
+      <li>Tài khoản dùng chung "PANCAKE THT HOLDING", "Sales Admin" không dùng làm tên Sale (ghi theo thương hiệu), nhưng tin viết tay từ các tài khoản này vẫn tính là người thật trả lời.</li>
     </ul>
     <h3>9. Đánh giá nhân sự (từ 10/2026)</h3>
     <ul>
