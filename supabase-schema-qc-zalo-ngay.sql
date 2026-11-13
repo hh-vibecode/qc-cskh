@@ -68,8 +68,12 @@ select sn.ngay,
        true as da_tra_loi,
        (kn.id is not null) as khach_nhan,
        h.page_name as kenh,
-       nullif(sn.sk, '') as sale_pancake
-from sale_ngay sn
+       nullif(sn.sk_goc, '') as sale_pancake
+from (   -- 13/11: người đã nghỉ → từ mốc ngày tính cho người nhận (qc_sale_chuyen, vd Tuấn → Diệp từ 2/11); sale_pancake vẫn giữ tên gốc
+  select s0.id, s0.ngay, s0.sk as sk_goc,
+         coalesce((select c.ten_moi from public.qc_sale_chuyen c where c.ten_cu = s0.sk and s0.ngay >= c.tu_ngay order by c.tu_ngay desc limit 1), s0.sk) as sk
+  from sale_ngay s0
+) sn
 join hoi h on h.id = sn.id
 left join khach_ngay kn on kn.id = sn.id and kn.ngay = sn.ngay
 left join public.qc_sale_ten t1 on t1.ten_pancake = sn.sk

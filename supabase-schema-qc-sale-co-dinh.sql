@@ -24,14 +24,36 @@ language sql immutable set search_path = public as $$
     when lower(coalesce(p_page_name,'')) ~ 'chánh tâm|chanh tam|hoàng dương|ming ying' then 'Lệ'
   end $$;
 
+-- CHUYỂN NGƯỜI THEO MỐC NGÀY (anh Hải 13/11: "từ 2/11 tất cả data của anh Tuấn đều là của Diệp, Tuấn nghỉ rồi"):
+-- tài khoản Pancake của người đã nghỉ vẫn có tin trả lời → từ tu_ngay (giờ VN) tính cho người mới. Thêm người nghỉ = thêm 1 dòng.
+create table if not exists public.qc_sale_chuyen (
+  ten_cu  text not null,          -- tên Pancake / tên sale_name cũ
+  tu_ngay date not null,          -- từ ngày này (giờ VN) trở đi
+  ten_moi text not null,          -- tên Pancake của người nhận (khớp qc_sale_ten.ten_pancake)
+  ghi_chu text,
+  primary key (ten_cu, tu_ngay)
+);
+alter table public.qc_sale_chuyen enable row level security;
+drop policy if exists "doc qc_sale_chuyen" on public.qc_sale_chuyen;
+create policy "doc qc_sale_chuyen" on public.qc_sale_chuyen for select to authenticated using (true);
+grant select on public.qc_sale_chuyen to authenticated;
+insert into public.qc_sale_chuyen values ('Đức Tuấn Chánh Tâm', '2026-11-02', 'Chánh Tâm Ngọc Diệp', 'Tuấn nghỉ — từ 2/11 data của Tuấn là của Diệp (anh Hải 13/11)')
+on conflict (ten_cu, tu_ngay) do update set ten_moi = excluded.ten_moi, ghi_chu = excluded.ghi_chu;
+
 create or replace function public.qc_sale_theo_thuong_hieu() returns trigger
 language plpgsql set search_path = public as $$
+declare moi text;
 begin
   -- anh Hải 28/10: LỌC TRƯỚC, chỉ xử lý tin đã qua bộ lọc — dòng "không liên quan" (khấn, nội bộ, spam…) không gán Sale
   if new.verdict = 'khong_lien_quan' then return new; end if;
   if coalesce(trim(new.sale_name), '') = '' or new.sale_name ~* '^(pancake tht holding|sales? admin|botcake)$' then
     new.sale_name := coalesce(qc_sale_mac_dinh(new.page_id, new.page_name), nullif(trim(new.sale_name), ''));
   end if;
+  -- người đã nghỉ: từ mốc ngày tính cho người nhận (qc_sale_chuyen)
+  select c.ten_moi into moi from qc_sale_chuyen c
+   where c.ten_cu = new.sale_name and (coalesce(new.conv_at, now()) at time zone 'Asia/Ho_Chi_Minh')::date >= c.tu_ngay
+   order by c.tu_ngay desc limit 1;
+  if moi is not null then new.sale_name := moi; end if;
   return new;
 end $$;
 drop trigger if exists qc_sale_theo_thuong_hieu on public.sale_response_review;
