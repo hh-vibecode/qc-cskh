@@ -30,7 +30,8 @@ insert into public.qc_sale_ten (ten_pancake, ten_nhan_su, ghi_chu) values
   ('Đức Tuấn Chánh Tâm', 'Nguyễn Đức Anh Tuấn', 'anh Hải xác nhận 13/11'),
   ('Nguyễn Thảo Ngọc', 'Nguyễn Thảo Ngọc', null),
   ('PANCAKE THT HOLDING', null, 'tài khoản dùng chung'),
-  ('Sales Admin', null, 'tài khoản dùng chung')
+  ('Sales Admin', null, 'tài khoản dùng chung'),
+  ('Cửa hàng Hiền Thủy', null, 'Zalo Siêu Thị Phật Giáo Hiền Thủy = Sale cửa hàng Hiền Thủy, không có trong sale_nhan_su (anh Hải 13/11)')
 on conflict (ten_pancake) do update set ten_nhan_su = excluded.ten_nhan_su, ghi_chu = excluded.ghi_chu;
 
 -- 13/11 (2) anh Hải: báo cáo cho app chỉ cần "trong ngày Sale TRẢ LỜI khách nào" — không quan tâm tin trước đã trả lời hay chưa.

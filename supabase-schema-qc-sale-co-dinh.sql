@@ -9,10 +9,11 @@ drop trigger if exists qc_sale_co_dinh on public.sale_response_review;
 create or replace function public.qc_sale_mac_dinh(p_page_id text, p_page_name text) returns text
 language sql immutable set search_path = public as $$
   select case
-    when p_page_id in ('105133802417722','107792638827892','ttm_-000uG5lXadOZHV4VWlMRAHc5FZGkQtuyxY3','pzl_1927214341338004925','pzl_716330578937743406','100667699549693')
+    when p_page_id in ('105133802417722','107792638827892','ttm_-000uG5lXadOZHV4VWlMRAHc5FZGkQtuyxY3','pzl_716330578937743406','100667699549693')
       then 'Vân Ngọc'
     -- 13/11 anh Hải: Zalo cá nhân theo CHỦ Zalo (tin gửi từ điện thoại không mang tên): Shidai = Nguyên, Oanh Bùi = Oanh, Cao Cấp = Vân Ngọc, Đồ Thờ Chánh Tâm + Zalo Hoàng Dương = Diệp
     when p_page_id = 'pzl_636053762312360623' then 'Oanhh Bùi'
+    when p_page_id = 'pzl_1927214341338004925' then 'Cửa hàng Hiền Thủy'   -- Zalo Siêu Thị Phật Giáo Hiền Thủy (0912235458) = Sale cửa hàng Hiền Thủy, không phải Vân Ngọc (anh Hải 13/11)
     when p_page_id in ('pzl_355233102341719971','pzl_357024678860117283') then 'Chánh Tâm Ngọc Diệp'   -- Zalo Đồ Thờ Chánh Tâm (0973763458) là của Diệp (anh Hải 13/11)
     when p_page_id in ('506247572578559','pzl_421283811192749346') then 'Nguyên Khánh'
     when p_page_id in ('107224335550589','1212423508625663','ttm_-000fnwmEFDETu8kL8prpYMAbgrdue0Cc0hG','pzl_355233102341719971','pzl_357024678860117283','ttm_-000wff5HiYIrt76uNDUJiL1kfVVtVkiURi-')
