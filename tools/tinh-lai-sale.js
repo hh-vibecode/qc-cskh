@@ -13,7 +13,7 @@ const SD = ['506247572578559', 'pzl_421283811192749346'];   // Zalo Oanh Bùi (p
 const CT = ['107224335550589', '1212423508625663', 'ttm_-000fnwmEFDETu8kL8prpYMAbgrdue0Cc0hG', 'pzl_355233102341719971', 'pzl_357024678860117283', 'ttm_-000wff5HiYIrt76uNDUJiL1kfVVtVkiURi-'];
 function macDinh(id, ten) {
   if (id === 'pzl_636053762312360623') return 'Oanhh Bùi';
-  if (id === 'pzl_355233102341719971') return 'Chánh Tâm Ngọc Diệp';   // Zalo Đồ Thờ Chánh Tâm = Diệp (13/11)
+  if (id === 'pzl_355233102341719971' || id === 'pzl_357024678860117283') return 'Chánh Tâm Ngọc Diệp';   // Zalo Đồ Thờ Chánh Tâm = Diệp (13/11)
   if (VN.includes(id)) return 'Vân Ngọc'; if (SD.includes(id)) return 'Nguyên Khánh'; if (CT.includes(id)) return 'Lệ';
   const t = (ten || '').toLowerCase();
   if (/hiền th|hien th|tự tại|tu tai|nến bơ|cao cấp/.test(t)) return 'Vân Ngọc';

@@ -196,6 +196,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **13/11/2026 (5)** — Anh chốt: Zalo Hoàng Dương - Ming Ying cũng là của Diệp.
 - **13/11/2026 (4)** — Anh chốt: Zalo "Đồ Thờ Chánh Tâm" (0973763458) là của Diệp → chủ Zalo = Chánh Tâm Ngọc Diệp (Đinh Ngọc Diệp) trong qc_sale_mac_dinh; chuyển 47 hội thoại đã qua lọc (trước ghi mặc định Lệ) sang Diệp. Chủ Zalo hiện tại: Shidai = Nguyên · Oanh Bùi = Oanh · Cao Cấp + Hiền Thủy = Vân Ngọc · Đồ Thờ Chánh Tâm = Diệp · Hoàng Dương = Lệ (mặc định CT).
 - **13/11/2026 (3)** — Anh chốt: Zalo "Oanh Bùi Tổng Kho Sỉ" là của Oanh (Bùi Thị Kim Oanh); "Đức Tuấn Chánh Tâm" trên Pancake = Nguyễn Đức Anh Tuấn. Đã ghi qc_sale_ten.
 - **13/11/2026 (2)** — Facebook về lại: lượt GitHub 14h25 thấy lại 5 page FB (tài khoản sau token GitHub có quyền lại). Token mới anh đưa (hạn 11/02/2027) đã thay vào qc-keys.local.txt + mkt-sale-app/supabase-keys.local.txt (KHÔNG thay secret GitHub — chưa cần). Kéo bù 12–13/11 đủ 14 kênh: thêm 48 + cập nhật 15 hội thoại, nối 4 tin nhắn riêng, gỡ 1 miss. Đối chiếu Pancake: Nến Bơ không có tin khách từ 10/11 17h30, Hiền Thủy FB chỉ 1 tin (12/11 20h10) — đúng thực tế, không phải kéo thiếu. Gỡ khỏi bảng kênh: Kế Toán Tht (Zalo kế toán), Hiền Thủy - Đồ Thờ & Đồ Mã (FB, không còn trên Pancake).
