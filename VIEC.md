@@ -157,6 +157,7 @@
 | X6 | Bổ sung `product_faq` mục nhận diện tượng: thực tế dòng tượng Đài Loan A Di Đà / Bổn Sư chung khuôn (áo trễ, chữ Vạn, khác pháp khí) — FAQ hiện chỉ ghi "Thích Ca không có chữ Vạn" khiến chấm sai oan (báo sai #42) | chủ bảng product_faq (phiên MKT/Sale / anh) | 5/10 QC đã né bằng luật chấm, chờ sửa FAQ gốc |
 | X7 | QC ĐỌC bảng `kt_kiot_hang` (giá KiotViet từng mã, app kế toán) qua RPC `qc_tra_gia_kiot` để chấm đúng / sai giá — app kế toán đổi tên / cấu trúc bảng thì báo QC | app kế toán | 9/10 bắt đầu dùng |
 | X8 | App MKT/Sale ĐỌC view `qc_zalo_phan_hoi_ngay` (QC sở hữu; Báo cáo công việc v573) + bảng `qc_sale_ten`; QC ĐỌC `sale_nhan_su.ten` để khớp tên. **Đổi cột view: chỉ THÊM, không đổi tên / xoá.** Nhân sự mới / đổi tên Pancake → thêm dòng qc_sale_ten | app MKT/Sale | 13/11 dựng |
+| X9 | App MKT/Sale ĐỌC view `qc_phan_hoi_ngay` (QC sở hữu, 13/11): mọi kênh FB + Zalo + TikTok, cột nen_tang, phut_cho (phút làm việc), tra_loi_muon (>60). App MKT thêm cột "phản hồi FB" từ nen_tang = facebook. **Đổi cột: chỉ THÊM.** | app MKT/Sale | 13/11 dựng |
 
 ## 5c. CHUYỂN HẲN KÉO TIN + CHẤM SANG QC (anh muốn, 29/9) — thứ tự không hở dữ liệu
 1. Job `keo-tin.yml` (repo qc-cskh) chạy xanh ≥ 1–2 ngày, ghi bảng thử `qc_review_thu` (pg_cron `qc-keo-6h` / `qc-keo-18h` kích).
@@ -194,6 +195,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **13/11/2026 (11)** — Anh: đưa cả Facebook cho app MKT, quy tắc như Zalo, kèm số trả lời muộn. Dựng view qc_phan_hoi_ngay (supabase-schema-qc-phan-hoi-ngay.sql). 7 ngày: FB 592 dòng / 125 muộn · Zalo 248 / 35 · TikTok 25 / 1. Anh hỏi thêm tin miss → chờ anh chốt cách gán miss cho Sale.
 - **13/11/2026 (10)** — Anh: Tuấn (Đức Tuấn Chánh Tâm) đã nghỉ, từ 2/11 mọi data của Tuấn là của Diệp. Thêm bảng qc_sale_chuyen (ten_cu, tu_ngay, ten_moi) — trigger qc_sale_theo_thuong_hieu + view qc_zalo_phan_hoi_ngay đều áp. Chuyển 145 hội thoại từ 2/11 sang Diệp; 208 hội thoại trước 2/11 giữ Tuấn; view: 0 dòng Tuấn sau 2/11. Người nghỉ sau này: thêm 1 dòng qc_sale_chuyen.
 - **13/11/2026 (9)** — Thay token Pancake mới (hạn 11/02/2027) vào GitHub secret PANCAKE_SESSION_TOKEN của CẢ 2 repo (qc-cskh + mkt-sale-app) bằng tools/dat-secret-gh.js (sealed box viết tay, kiểm 6 bộ số chuẩn). Chạy thử job GitHub qc-cskh sau khi thay: đọc 14 kênh, 5 page FB xanh. Báo phiên MKT: secret GitHub mkt-sale-app đã thay; secret Edge Supabase "pancake-note" (nếu dùng token này) phiên MKT tự kiểm.
 - **13/11/2026 (8)** — Anh chốt: Zalo "Siêu Thị Phật Giáo Hiền Thủy" (0912235458) là của Sale CỬA HÀNG Hiền Thủy, không phải Vân Ngọc → chủ Zalo = "Cửa hàng Hiền Thủy" (qc_sale_mac_dinh + qc_sale_ten, ten_nhan_su null vì không có trong sale_nhan_su); chuyển 80 hội thoại không có tên người trả lời. 5 hội thoại có tên Pancake giữ đúng tên.

@@ -1,0 +1,77 @@
+-- PHẢN HỒI KHÁCH THEO NGÀY — MỌI KÊNH (Facebook + Zalo + TikTok) CHO APP MKT/SALE (anh Hải 13/11/2026: "bổ cả tin nhắn FB vào
+-- cho bên app MKT, thêm 1 cột phản hồi FB, quy tắc như Zalo; đưa số liệu QC đã xử lý sang: bao nhiêu tin phản hồi, bao nhiêu
+-- tin trả lời muộn"). App MKT CHỈ ĐỌC. Đổi cột về sau: CHỈ THÊM, không đổi tên / xoá. View Zalo cũ qc_zalo_phan_hoi_ngay giữ nguyên.
+-- 1 dòng = 1 khách × 1 Sale × 1 ngày (giờ VN) mà Sale CÓ trả lời khách, từ 01/10/2026. LỌC TRƯỚC: chỉ hội thoại đã qua bộ lọc
+-- QC (bỏ khấn, rác, nội bộ / NCC, tin hệ thống), bỏ nhóm Zalo pzl_g_, bỏ tin Bot.
+--   nen_tang      : facebook | zalo | tiktok — app MKT lấy cột "phản hồi FB" = nen_tang 'facebook'.
+--   sale          : sale_nhan_su.ten (qua qc_sale_chuyen → qc_sale_ten). Facebook / TikTok: chỉ tin "Sale (Tên)"; tin "Sale:" không
+--                   tên là tự động → bỏ. Zalo: tin không tên = chủ Zalo trả lời. Tài khoản chung (PANCAKE THT HOLDING) → mặc định kênh.
+--   khach_nhan    : khách có nhắn trong ngày (false = Sale nhắn chủ động).
+--   phut_cho      : phút LÀM VIỆC (8h–17h30, qc_phut_lam_viec) từ tin khách ĐẦU lượt cần trả lời trong ngày tới tin đầu tiên của
+--                   Sale này sau đó. Khách nhắn ngoài giờ tính từ 8h. null khi khách không nhắn trong ngày.
+--   tra_loi_muon  : phut_cho > 60 (chuẩn "đúng giờ" của trang QC, DUNG_GIO = 60).
+--   la_binh_luan  : dòng là bình luận Facebook (phần nhắn riêng nếu có đã nối vào).
+-- Monsieur Claude
+create or replace view public.qc_phan_hoi_ngay with (security_invoker = true) as
+with hoi as (
+  select s.id, s.page_id, s.page_name, s.conv_id, s.customer_name, s.phone,
+         coalesce(s.khach_id, nullif(regexp_replace(s.conv_id, '^pzl_u_\d+_', ''), s.conv_id)) as khach_id, s.full_thread,
+         case when s.page_id like 'pzl\_%' then 'zalo' when s.page_id like 'ttm\_%' then 'tiktok' else 'facebook' end as nen_tang,
+         (s.page_id not like 'pzl\_%' and s.page_id not like 'ttm\_%' and s.conv_id not like s.page_id || '\_%') as la_binh_luan
+  from public.sale_response_review s
+  where s.conv_date >= '2026-10-01' and s.conv_id not like 'pzl\_g\_%'
+    and s.verdict <> 'khong_lien_quan' and not coalesce(s.noi_bo, false)
+),
+dong as (   -- [YYYY-MM-DD HH:MM] Ai: nội dung (giờ VN)
+  select h.id, h.nen_tang, m[1]::date as ngay, (m[1] || ' ' || m[2])::timestamp as luc, m[3] as ai, lower(trim(m[4])) as nd
+  from hoi h, regexp_split_to_table(h.full_thread, E'\n') l,
+       regexp_match(l, '^\[(\d{4}-\d\d-\d\d) (\d\d:\d\d)\] ([^:]+): ?(.*)$') m
+  where m is not null and m[1] >= '2026-10-01'
+),
+tin as (
+  select id, ngay, luc, ai = 'Khách' as la_khach,
+         case when ai = 'Khách' then null
+              when ai ~ '^Sale \(.+\)$' and substring(ai from '^Sale \((.+)\)$') !~* '^(pancake tht holding|sales? admin)$'
+                then substring(ai from '^Sale \((.+)\)$')
+              else '' end as sk,                       -- '' = chủ kênh (Zalo tin không tên / tài khoản chung)
+         -- tin "Khách" cần trả lời: bỏ tin máy (sinh nhật, kết bạn) + xã giao / ảnh / sticker (không cần trả lời)
+         ai = 'Khách' and nd !~ '(sinh nhật của .* hãy gửi lời chúc|đã đồng ý kết bạn|lời mời kết bạn|vừa kết bạn với)'
+           and not (nd ~ '^(ok\w*|oke\w*|vâng\w*|vg|dạ\w*|ừ\w*|uh\w*|cảm ơn|cám ơn|camon|thanks?|thank you|tks|\(gửi ảnh/tệp\)|\(sticker\))([^a-z0-9à-ỹ]|$)' and length(nd) <= 40) as can_tl,
+         ai = 'Khách' and nd !~ '(sinh nhật của .* hãy gửi lời chúc|đã đồng ý kết bạn|lời mời kết bạn|vừa kết bạn với)' as khach_that
+  from dong
+  where ai = 'Khách'
+     or ai ~ '^Sale \(.+\)$'
+     or (ai = 'Sale' and nen_tang = 'zalo')             -- FB / TikTok: "Sale:" không tên là tin tự động → bỏ
+),
+sale_ngay as (   -- Sale nhắn khách trong ngày + tin đầu tiên của Sale đó trong ngày
+  select t.id, t.ngay, t.sk, min(t.luc) as sale_dau
+  from tin t where not t.la_khach group by t.id, t.ngay, t.sk
+),
+khach_ngay as (   -- khách có nhắn trong ngày; tin cần trả lời ĐẦU TIÊN của ngày
+  select id, ngay, bool_or(khach_that) as khach_nhan, min(luc) filter (where can_tl) as kh_dau
+  from tin where la_khach group by id, ngay
+)
+select sn.ngay, h.nen_tang, h.page_name as kenh,
+       case when sn.sk = '' then t2.ten_nhan_su else t1.ten_nhan_su end as sale,
+       nullif(sn.sk_goc, '') as sale_pancake,
+       h.conv_id, h.khach_id, h.customer_name as ten_khach, h.phone as sdt,
+       coalesce(kn.khach_nhan, false) as khach_nhan,
+       pc.phut as phut_cho,
+       pc.phut > 60 as tra_loi_muon,
+       h.la_binh_luan
+from (   -- người đã nghỉ → từ mốc ngày tính cho người nhận (qc_sale_chuyen); sale_pancake giữ tên gốc
+  select s0.id, s0.ngay, s0.sale_dau, s0.sk as sk_goc,
+         coalesce((select c.ten_moi from public.qc_sale_chuyen c where c.ten_cu = s0.sk and s0.ngay >= c.tu_ngay order by c.tu_ngay desc limit 1), s0.sk) as sk
+  from sale_ngay s0
+) sn
+join hoi h on h.id = sn.id
+left join khach_ngay kn on kn.id = sn.id and kn.ngay = sn.ngay
+left join lateral (   -- phút làm việc từ tin khách đầu lượt cần trả lời tới tin đầu tiên của Sale này sau đó
+  select public.qc_phut_lam_viec(kn.kh_dau, (select min(x.luc) from tin x where x.id = sn.id and not x.la_khach and x.sk = sn.sk_goc and x.luc >= kn.kh_dau)) as phut
+  where kn.kh_dau is not null
+) pc on true
+left join public.qc_sale_ten t1 on t1.ten_pancake = sn.sk
+left join public.qc_sale_ten t2 on t2.ten_pancake = public.qc_sale_mac_dinh(h.page_id, h.page_name);
+
+grant select on public.qc_phan_hoi_ngay to authenticated;
+revoke all on public.qc_phan_hoi_ngay from anon;
