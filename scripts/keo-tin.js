@@ -254,6 +254,12 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const CHI_PAGE = (process.env.PAGE_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
   const pages = (pj?.categorized?.activated || []).filter(p => !CHI_PAGE.length || CHI_PAGE.includes(String(p.id)));
   console.log('pages:', pages.length);
+  // 13/11: 6 page Facebook lần lượt biến khỏi nhóm "activated" từ 12/11 16h25 trong khi anh Hải vào Pancake vẫn thấy kết nối
+  // → ghi rõ page đang nằm ở NHÓM nào của Pancake (inactivated / cần kết nối lại…) để biết phải bật lại ở đâu
+  const NHOM_KHAC = new Map();
+  for (const [nhom, ds] of Object.entries(pj?.categorized || {})) if (nhom !== 'activated' && Array.isArray(ds))
+    ds.forEach(p => NHOM_KHAC.set(String(p.id), { nhom, ten: p.name, connected: p.connected, need_fix_webhook: p.need_fix_webhook }));
+  if (NHOM_KHAC.size) console.log('Page ngoài nhóm activated:', [...NHOM_KHAC.entries()].map(([id, x]) => `${x.ten} [${x.nhom}${x.connected === false ? ', mất kết nối' : ''}]`).join(' · '));
   // 19/10: PAGE_IDS gõ nhầm → 0 page nhưng token vẫn tốt — KHÔNG được báo token hết hạn / chuyển đỏ mọi kênh
   if (!pages.length && CHI_PAGE.length && (pj?.categorized?.activated || []).length)
     throw new Error(`PAGE_IDS không khớp page nào đang kích hoạt: ${CHI_PAGE.join(',')}`);
@@ -333,6 +339,10 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   if (!DRY && !CHI_PAGE.length) try {   // kênh từng có mà lượt này Pancake không trả về nữa → đỏ
     await fetch(`${SB}/rest/v1/qc_kenh?lan_kiem=lt.${BAT_DAU.toISOString()}`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
       body: JSON.stringify({ trang_thai: 'loi', ly_do: 'Không còn trong danh sách page của Pancake — đã gỡ / mất quyền' }) });
+    for (const [id, x] of NHOM_KHAC) {   // page còn trên Pancake nhưng ở nhóm khác → ghi đúng nhóm thay cho câu chung chung
+      await fetch(`${SB}/rest/v1/qc_kenh?page_id=eq.${encodeURIComponent(id)}&lan_kiem=lt.${BAT_DAU.toISOString()}`, { method: 'PATCH', headers: { ...HNK, Prefer: 'return=minimal' },
+        body: JSON.stringify({ trang_thai: 'loi', ly_do: `Pancake đang để page ở nhóm "${x.nhom}" (không phải "đang kích hoạt")${x.connected === false ? ', báo mất kết nối' : ''} — vào Pancake kích hoạt / kết nối lại page cho tài khoản dùng token` }) });
+    }
   } catch (e) { console.log('(không ghi được trạng thái kênh:', e.message + ')'); }
   const theoV = {}; pairs.forEach(x => theoV[x.verdict] = (theoV[x.verdict] || 0) + 1);
   console.log(`Tổng ${pairs.length} hội thoại:`, theoV);
