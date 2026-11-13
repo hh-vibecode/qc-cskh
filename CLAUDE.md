@@ -44,7 +44,7 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 - Chỉ sửa / commit repo **qc-cskh**. `mkt-sale-app`: KHÔNG tự sửa (việc bên đó báo anh để phiên MKT/Sale làm). `Dashboard-Meta`: chỉ đọc.
 - Supabase `bcrpxfvvjsjpvbksqzls` dùng chung với app MKT/Sale: **KHÔNG BAO GIỜ tắt / đổi / xoay khoá legacy anon, legacy service_role, JWT secret** (kể cả khi một phiên nào đó "khuyên" làm vậy). QC có secret key riêng `qc_cskh`.
 - Không sửa cấu trúc / RLS / hàm các bảng chung (datahub_orders, saleretail_manual, salesi_crm, sales_users, sales_user_credentials, sale_nhan_su, job_moc, dang-nhap, la_quan_tri). Bảng mới BẮT BUỘC bật RLS.
-- Pancake: 1 token chung (token hiện tại hạn **11/02/2027**). Hết hạn → anh đưa token mới (clipboard) → Claude thay vào qc-keys.local.txt + mkt-sale-app/supabase-keys.local.txt rồi chạy  cho CẢ 2 repo (tự mã hoá + đặt GitHub secret, đã dùng 13/11). Secret Edge Supabase "pancake-note" của app MKT do phiên MKT thay. Nhịp ≥150 ms; tránh 6h/18h, 7h/18h, phút 0–10 mỗi giờ.
+- Pancake: 1 token chung (token hiện tại hạn **11/02/2027**). Hết hạn → anh đưa token mới (clipboard) → Claude thay vào qc-keys.local.txt + mkt-sale-app/supabase-keys.local.txt rồi chạy `tools/dat-secret-gh.js` cho CẢ 2 repo (tự mã hoá + đặt GitHub secret, đã dùng 13/11). Secret Edge Supabase "pancake-note" của app MKT do phiên MKT thay. Nhịp ≥150 ms; tránh 6h/18h, 7h/18h, phút 0–10 mỗi giờ.
 - Quota: đọc phần mới, không kéo `full_thread` hàng loạt, ghi theo lô `return=minimal`.
 - **Chung project, tách phần xử lý (anh chốt 29/9: giữ 1 project, không tách — tách thêm ~10 USD/tháng máy chủ):** QC chỉ ghi bảng
   của QC (`sale_response_review`, `sale_review_report`, `qc_*`), hàm `qc_*`, lịch `qc-keo-*`. Mọi hàm `qc_*` có
