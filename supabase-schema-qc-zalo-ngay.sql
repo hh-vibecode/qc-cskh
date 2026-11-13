@@ -24,10 +24,10 @@ grant select on public.qc_sale_ten to authenticated;
 insert into public.qc_sale_ten (ten_pancake, ten_nhan_su, ghi_chu) values
   ('Vân Ngọc', 'Trịnh Lê Vân Ngọc', null),
   ('Nguyên Khánh', 'Nguyễn Khánh Nguyên', 'Zalo Tổng Kho Sỉ Đồ Thờ Shidai là của Nguyên (anh Hải 13/11)'),
-  ('Oanhh Bùi', 'Bùi Thị Kim Oanh', null),
+  ('Oanhh Bùi', 'Bùi Thị Kim Oanh', 'Zalo Oanh Bùi Tổng Kho Sỉ là của Oanh (anh Hải xác nhận 13/11)'),
   ('Lệ', 'Phạm Thị Lệ', 'mặc định Chánh Tâm'),
   ('Chánh Tâm Ngọc Diệp', 'Đinh Ngọc Diệp', null),
-  ('Đức Tuấn Chánh Tâm', 'Nguyễn Đức Anh Tuấn', 'CHƯA CHẮC — chờ anh Hải xác nhận'),
+  ('Đức Tuấn Chánh Tâm', 'Nguyễn Đức Anh Tuấn', 'anh Hải xác nhận 13/11'),
   ('Nguyễn Thảo Ngọc', 'Nguyễn Thảo Ngọc', null),
   ('PANCAKE THT HOLDING', null, 'tài khoản dùng chung'),
   ('Sales Admin', null, 'tài khoản dùng chung')
