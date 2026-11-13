@@ -11,6 +11,7 @@
 --                   Sale này sau đó. Khách nhắn ngoài giờ tính từ 8h. null khi khách không nhắn trong ngày.
 --   tra_loi_muon  : phut_cho > 60 (chuẩn "đúng giờ" của trang QC, DUNG_GIO = 60).
 --   la_binh_luan  : dòng là bình luận Facebook (phần nhắn riêng nếu có đã nối vào).
+--   la_miss       : (thêm 13/11) true = dòng MISS (khách hỏi, chưa Sale nào trả lời) — xem quy tắc ở phần union bên dưới.
 -- Monsieur Claude
 create or replace view public.qc_phan_hoi_ngay with (security_invoker = true) as
 with hoi as (
@@ -58,7 +59,8 @@ select sn.ngay, h.nen_tang, h.page_name as kenh,
        coalesce(kn.khach_nhan, false) as khach_nhan,
        pc.phut as phut_cho,
        pc.phut > 60 as tra_loi_muon,
-       h.la_binh_luan
+       h.la_binh_luan,
+       false as la_miss
 from (   -- người đã nghỉ → từ mốc ngày tính cho người nhận (qc_sale_chuyen); sale_pancake giữ tên gốc
   select s0.id, s0.ngay, s0.sale_dau, s0.sk as sk_goc,
          coalesce((select c.ten_moi from public.qc_sale_chuyen c where c.ten_cu = s0.sk and s0.ngay >= c.tu_ngay order by c.tu_ngay desc limit 1), s0.sk) as sk
@@ -71,7 +73,38 @@ left join lateral (   -- phút làm việc từ tin khách đầu lượt cần 
   where kn.kh_dau is not null
 ) pc on true
 left join public.qc_sale_ten t1 on t1.ten_pancake = sn.sk
-left join public.qc_sale_ten t2 on t2.ten_pancake = public.qc_sale_mac_dinh(h.page_id, h.page_name);
+left join public.qc_sale_ten t2 on t2.ten_pancake = public.qc_sale_mac_dinh(h.page_id, h.page_name)
+
+union all
+
+-- TIN MISS (anh Hải 13/11: "cuối ngày Sale phải chụp báo cáo, nên tin miss để hết hôm nay mới update vào báo cáo hôm trước cho chuẩn,
+-- đỡ cãi"). Miss ngày D (ngày khách hỏi) chỉ hiện từ ngày D+1 (giờ VN) VÀ khi khách đã chờ > 60 phút LÀM VIỆC mà chưa Sale nào
+-- trả lời (tin tối hôm trước → tính từ 8h, khoảng 9h mới hiện). Sale trả lời sau đó → dòng miss tự mất, thay bằng dòng
+-- tra_loi_muon ở ngày Sale trả lời. Miss theo quy tắc QC: verdict khong_tra_loi / chi_bot SAU soát miss mỗi giờ với Pancake
+-- (đã loại: trả lời muộn, chỉ cảm ơn / ảnh sau khi Sale đáp, lỗi nền tảng #551, nhắn riêng bình luận, gọi điện có thời lượng).
+-- Sale = chủ kênh mặc định (qc_sale_mac_dinh → qc_sale_ten); phut_cho = phút làm việc khách đã chờ tới lúc đọc view.
+select (s.conv_at at time zone 'Asia/Ho_Chi_Minh')::date as ngay,
+       case when s.page_id like 'pzl\_%' then 'zalo' when s.page_id like 'ttm\_%' then 'tiktok' else 'facebook' end as nen_tang,
+       s.page_name as kenh,
+       tm.ten_nhan_su as sale,
+       null::text as sale_pancake,
+       s.conv_id,
+       coalesce(s.khach_id, nullif(regexp_replace(s.conv_id, '^pzl_u_\d+_', ''), s.conv_id)) as khach_id,
+       s.customer_name as ten_khach, s.phone as sdt,
+       true as khach_nhan,
+       public.qc_phut_lam_viec((s.conv_at at time zone 'Asia/Ho_Chi_Minh'), (now() at time zone 'Asia/Ho_Chi_Minh')) as phut_cho,
+       null::boolean as tra_loi_muon,
+       (s.page_id not like 'pzl\_%' and s.page_id not like 'ttm\_%' and s.conv_id not like s.page_id || '\_%') as la_binh_luan,
+       true as la_miss
+from public.sale_response_review s
+left join public.qc_sale_ten tm on tm.ten_pancake = coalesce(
+       (select c.ten_moi from public.qc_sale_chuyen c where c.ten_cu = public.qc_sale_mac_dinh(s.page_id, s.page_name)
+          and (s.conv_at at time zone 'Asia/Ho_Chi_Minh')::date >= c.tu_ngay order by c.tu_ngay desc limit 1),
+       public.qc_sale_mac_dinh(s.page_id, s.page_name))
+where s.verdict in ('khong_tra_loi', 'chi_bot') and s.conv_date >= '2026-10-01' and s.conv_id not like 'pzl\_g\_%'
+  and not coalesce(s.noi_bo, false) and s.conv_at is not null
+  and (s.conv_at at time zone 'Asia/Ho_Chi_Minh')::date < (now() at time zone 'Asia/Ho_Chi_Minh')::date
+  and public.qc_phut_lam_viec((s.conv_at at time zone 'Asia/Ho_Chi_Minh'), (now() at time zone 'Asia/Ho_Chi_Minh')) > 60;
 
 grant select on public.qc_phan_hoi_ngay to authenticated;
 revoke all on public.qc_phan_hoi_ngay from anon;
