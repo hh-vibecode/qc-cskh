@@ -6,7 +6,7 @@
 --   sale       : tên ở sale_nhan_su.ten. Lấy từ tên người trả lời trên Pancake qua bảng qc_sale_ten; ngày khách nhắn mà chưa
 --                Sale nào trả lời → Sale mặc định theo thương hiệu (quy tắc QC 28/10: HT+TTV Vân Ngọc · Shidai Nguyên · CT Lệ).
 --                Không khớp được tên nhân sự → null.
---   da_tra_loi : có tin Sale (người thật) SAU tin cuối của khách trong ngày đó (kể cả trả lời sang ngày sau). null khi khách không nhắn.
+--   da_tra_loi : luôn true từ 13/11 (2) — view chỉ còn ngày Sale có trả lời khách.
 --   khach_nhan : khách có nhắn trong ngày; false = Sale nhắn chủ động.
 --   ma_kh      : CHƯA CÓ — QC chưa đọc ghi chú khách Pancake (để null, bổ sung sau).
 -- View chạy theo quyền người đọc (security_invoker) — authenticated đọc được như sale_response_review. Monsieur Claude
@@ -33,9 +33,10 @@ insert into public.qc_sale_ten (ten_pancake, ten_nhan_su, ghi_chu) values
   ('Sales Admin', null, 'tài khoản dùng chung')
 on conflict (ten_pancake) do update set ten_nhan_su = excluded.ten_nhan_su, ghi_chu = excluded.ghi_chu;
 
--- 13/11 sửa: trên ZALO tin Sale gửi từ điện thoại KHÔNG mang tên ("Sale: …") = CHỦ Zalo trả lời (anh Hải: Shidai = Nguyên,
--- Cao Cấp = Vân Ngọc…) → tính là trả lời, gán chủ Zalo (qc_sale_mac_dinh). Tin máy của khách (sinh nhật, kết bạn) bỏ hẳn.
--- da_tra_loi xét tin CẦN TRẢ LỜI cuối của khách — "ok / vâng / cảm ơn / ảnh / sticker" không cần trả lời (quy tắc QC 27/10).
+-- 13/11 (2) anh Hải: báo cáo cho app chỉ cần "trong ngày Sale TRẢ LỜI khách nào" — không quan tâm tin trước đã trả lời hay chưa.
+-- → CHỈ giữ ngày Sale có nhắn cho khách; ngày khách nhắn mà không Sale nào nhắn thì KHÔNG đưa vào. Cột giữ nguyên (app MKT đang đọc):
+-- da_tra_loi luôn true (= Sale đã trả lời khách trong ngày), khach_nhan = khách có nhắn trong ngày đó không (false = Sale nhắn chủ động).
+-- Trên ZALO tin Sale gửi từ điện thoại KHÔNG mang tên ("Sale: …") = CHỦ Zalo trả lời → gán chủ Zalo (qc_sale_mac_dinh).
 create or replace view public.qc_zalo_phan_hoi_ngay with (security_invoker = true) as
 with hoi as (
   select s.id, s.page_id, s.page_name, s.conv_id, s.customer_name, s.phone,
@@ -44,44 +45,33 @@ with hoi as (
   where s.page_id like 'pzl\_%' and s.conv_id not like 'pzl\_g\_%' and s.conv_date >= '2026-10-01'
     and s.verdict <> 'khong_lien_quan' and not coalesce(s.noi_bo, false)
 ),
-dong as (   -- [YYYY-MM-DD HH:MM] Ai: nội dung (giờ VN)
-  select h.id, m[1]::date as ngay, (m[1] || ' ' || m[2])::timestamp as luc, m[3] as ai, lower(trim(m[4])) as nd
+dong as (
+  select h.id, m[1]::date as ngay, m[2] as ai, lower(trim(m[3])) as nd
   from hoi h, regexp_split_to_table(h.full_thread, E'\n') l,
-       regexp_match(l, '^\[(\d{4}-\d\d-\d\d) (\d\d:\d\d)\] ([^:]+): ?(.*)$') m
+       regexp_match(l, '^\[(\d{4}-\d\d-\d\d) \d\d:\d\d\] ([^:]+): ?(.*)$') m
   where m is not null and m[1] >= '2026-10-01'
 ),
-tin as (
-  select id, ngay, luc, ai = 'Khách' as la_khach,
-         -- Sale có tên người (không phải tài khoản dùng chung); null = chủ Zalo (tin không tên / tài khoản chung)
-         case when ai ~ '^Sale \(.+\)$' and substring(ai from '^Sale \((.+)\)$') !~* '^(pancake tht holding|sales? admin)$'
-              then substring(ai from '^Sale \((.+)\)$') end as sale_pc,
-         ai = 'Khách' and not (nd ~ '^(ok\w*|oke\w*|vâng\w*|vg|dạ\w*|ừ\w*|uh\w*|cảm ơn|cám ơn|camon|thanks?|thank you|tks|\(gửi ảnh/tệp\)|\(sticker\))([^a-z0-9à-ỹ]|$)' and length(nd) <= 40) as can_tl
-  from dong
-  where (ai = 'Khách' and nd !~ '(sinh nhật của .* hãy gửi lời chúc|đã đồng ý kết bạn|lời mời kết bạn|vừa kết bạn với)')
-     or ai ~ '^Sale( \(.+\))?$'
+sale_ngay as (   -- ai nhắn cho khách trong ngày; khoá '' = chủ Zalo (tin không tên / tài khoản dùng chung)
+  select distinct id, ngay,
+         coalesce(case when ai ~ '^Sale \(.+\)$' and substring(ai from '^Sale \((.+)\)$') !~* '^(pancake tht holding|sales? admin)$'
+                       then substring(ai from '^Sale \((.+)\)$') end, '') as sk
+  from dong where ai ~ '^Sale( \(.+\))?$'
 ),
-ngay_khach as (
-  select id, ngay, bool_or(la_khach) as khach_nhan, max(luc) filter (where can_tl) as can_tl_cuoi
-  from tin group by id, ngay
-),
-sale_ngay as (   -- ai nhắn trong ngày; khoá '' = chủ Zalo
-  select distinct id, ngay, coalesce(sale_pc, '') as sk from tin where not la_khach
-),
-gop as (
-  select n.id, n.ngay, n.khach_nhan, n.can_tl_cuoi, coalesce(sn.sk, '') as sk
-  from ngay_khach n left join sale_ngay sn on sn.id = n.id and sn.ngay = n.ngay
+khach_ngay as (
+  select distinct id, ngay from dong
+  where ai = 'Khách' and nd !~ '(sinh nhật của .* hãy gửi lời chúc|đã đồng ý kết bạn|lời mời kết bạn|vừa kết bạn với)'
 )
-select g.ngay,
-       case when g.sk = '' then t2.ten_nhan_su else t1.ten_nhan_su end as sale,
+select sn.ngay,
+       case when sn.sk = '' then t2.ten_nhan_su else t1.ten_nhan_su end as sale,
        h.conv_id, h.khach_id, h.customer_name as ten_khach, h.phone as sdt, null::text as ma_kh,
-       case when g.khach_nhan then (g.can_tl_cuoi is null or exists (select 1 from tin x where x.id = g.id and not x.la_khach and x.luc >= g.can_tl_cuoi
-              and (x.luc > g.can_tl_cuoi or x.ngay > g.ngay))) end as da_tra_loi,
-       g.khach_nhan,
+       true as da_tra_loi,
+       (kn.id is not null) as khach_nhan,
        h.page_name as kenh,
-       nullif(g.sk, '') as sale_pancake
-from gop g
-join hoi h on h.id = g.id
-left join public.qc_sale_ten t1 on t1.ten_pancake = g.sk
+       nullif(sn.sk, '') as sale_pancake
+from sale_ngay sn
+join hoi h on h.id = sn.id
+left join khach_ngay kn on kn.id = sn.id and kn.ngay = sn.ngay
+left join public.qc_sale_ten t1 on t1.ten_pancake = sn.sk
 left join public.qc_sale_ten t2 on t2.ten_pancake = public.qc_sale_mac_dinh(h.page_id, h.page_name);
 
 grant select on public.qc_zalo_phan_hoi_ngay to authenticated;

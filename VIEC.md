@@ -194,6 +194,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **13/11/2026 (7)** — Anh chốt: view qc_zalo_phan_hoi_ngay chỉ cần "trong ngày Sale TRẢ LỜI khách nào", không quan tâm tin trước đã trả lời hay chưa → chỉ còn dòng ngày Sale có nhắn cho khách (da_tra_loi luôn true, khach_nhan = khách có nhắn hôm đó). Cột giữ nguyên. Còn 1.317 dòng, 7 ngày 248, sale null 2.
 - **13/11/2026 (6)** — Chép 7 luật tồn từ báo sai tự xử lý (#83 gọi điện có thời lượng = đã trả lời, #91 "tin nhắn đã gửi thành công" = nhắn riêng, #92/#96 tin đỏ + banner #551 = lỗi nền tảng; #85/#88/#89 trùng luật đã có) vào 2 file + Logic, luat_da_ghi = true. Đóng #93 (CHỜ ANH) = giữ theo luật #65 (không ảnh, không dòng lỗi). Gạch E9 (đã chốt chủ Zalo 13/11) và nợ #13 (điểm mù nhắn riêng — xong 13/10 bằng khach_id).
 - **13/11/2026 (5)** — Anh chốt: Zalo Hoàng Dương - Ming Ying cũng là của Diệp.
 - **13/11/2026 (4)** — Anh chốt: Zalo "Đồ Thờ Chánh Tâm" (0973763458) là của Diệp → chủ Zalo = Chánh Tâm Ngọc Diệp (Đinh Ngọc Diệp) trong qc_sale_mac_dinh; chuyển 47 hội thoại đã qua lọc (trước ghi mặc định Lệ) sang Diệp. Chủ Zalo hiện tại: Shidai = Nguyên · Oanh Bùi = Oanh · Cao Cấp + Hiền Thủy = Vân Ngọc · Đồ Thờ Chánh Tâm = Diệp · Hoàng Dương = Lệ (mặc định CT).
