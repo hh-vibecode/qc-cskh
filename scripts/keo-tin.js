@@ -252,7 +252,9 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   const pj = await pk('/pages');
   // PAGE_IDS (7/10): chạy bù song song theo nhóm page — khi đó KHÔNG ghi trạng thái kênh, KHÔNG soát miss (lượt thường lo)
   const CHI_PAGE = (process.env.PAGE_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
-  const pages = (pj?.categorized?.activated || []).filter(p => !CHI_PAGE.length || CHI_PAGE.includes(String(p.id)));
+  // 13/11 anh Hải: Zalo "Kế Toán Tht" (kế toán, không phải kênh bán hàng) — không đưa vào QC
+  const BO_QUA_PAGE = new Set(['pzl_714131186705158830']);
+  const pages = (pj?.categorized?.activated || []).filter(p => !BO_QUA_PAGE.has(String(p.id)) && (!CHI_PAGE.length || CHI_PAGE.includes(String(p.id))));
   console.log('pages:', pages.length);
   // 13/11: 6 page Facebook lần lượt biến khỏi nhóm "activated" từ 12/11 16h25 trong khi anh Hải vào Pancake vẫn thấy kết nối
   // → ghi rõ page đang nằm ở NHÓM nào của Pancake (inactivated / cần kết nối lại…) để biết phải bật lại ở đâu
