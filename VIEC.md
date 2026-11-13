@@ -42,7 +42,6 @@
 | # | Việc | Ghi chú |
 |---|---|---|
 | E1 | Danh sách email nhận báo cáo định kỳ + tần suất (ngày / tuần) | anh sẽ đưa |
-| E9 | 2 Zalo Shidai ("Tổng Kho Sỉ Đồ Thờ Shidai" pzl_421283811192749346, "Oanh Bùi Tổng Kho Sỉ" pzl_636053762312360623) tháng 10 đang ghi Sale **Oanhh Bùi** 50 lượt — cũng gán Vân Ngọc hay giữ Oanh Bùi? | anh chốt; thêm vào qc_cau_hinh.sale_co_dinh là xong |
 | E11 | **Khách SỈ hỏi giá:** SOP chỉ nói khách lẻ trên page Sỉ. Khách sỉ xin giá mà Sale chỉ xin SĐT / khu vực để chuyển bộ phận sỉ (#4907, #4772) — có tính "Né giá" không? Bảng giá hiện chỉ là giá lẻ (không có giá sỉ, tượng 70cm, đèn đồng) nên chưa kiểm được giá sỉ | chờ anh chốt + nếu có bảng giá sỉ thì gửi em |
 | E6 | "Ân hạn" trước khi ghi miss: câu hỏi chưa có Sale trả lời mà mới hỏi < 1 giờ thì lượt kéo chưa ghi, để lượt sau xét → trang không hiện miss tạm | em đề xuất 30/9, chờ anh chốt mốc (1 giờ?) |
 
@@ -53,7 +52,6 @@
 | 6 | Theo dõi độ khắt khe của Sonnet: đợt 15–27/9 ra 1,8% thiếu ý so với 7,4% đợt chấm tay trước 15/9 | soát mẫu thấy đúng luật, nhưng chênh lệch lớn — xem lại khi anh báo chấm sai |
 | 3 | Báo cáo định kỳ qua email | chờ E1 |
 | 9 | Đưa **tầng luật** vào job `keo-tin.yml` (soát miss ĐÃ đưa vào 30/9 qua `tools/soat-lib.js`) — cần viết lại `cham-luat.js` chạy bằng khoá `qc_cskh` (REST) thay Management API | để chấm cloud đỡ tốn |
-| 13 | **Điểm mù nhắn riêng:** Sale nhắn riêng cho khách bình luận mà khách CHƯA trả lời thì Pancake chưa tạo hội thoại tin nhắn → job không thấy, vẫn tính miss (theo anh chốt 1/10 đáng lẽ là muộn). Dấu `private_reply_conversation.id` dạng `m_…` trên bình luận KHÔNG tin được: không có giờ, và Botcake cũng tự nhắn riêng (ca Tùng Châm có dấu, ca Huỳnh Tuấn Dĩ Sale nhắn rồi lại không có). Tạm thời: Sale báo sai kèm ảnh → gỡ tay, nhãn muộn lấy mốc lúc báo (đã làm #880, #1117). Cần tìm API lấy tin nhắn riêng theo id / theo khách | phát hiện 1/10 qua báo sai #37–#38 |
 | 11 | Sửa lệch quy ước (kiểm 29/9): (a) `soat-miss-pancake.js` ghi từng dòng → gộp 1 lệnh cả lô; (b) hàm `qc_*` đang `search_path = public, extensions` → đổi `public` + gọi `extensions.crypt()` rõ tên; (c) workflow `keo-tin.yml` → đổi tên `qc-keo-tin.yml` + sửa `qc_keo_tin` (đợi phiên cloud làm xong việc 9, tránh đè file); (d) file SQL `supabase-lich-keo.sql`, `supabase-cham-cloud.sql`, `supabase-qc-review-thu.sql`, `supabase-gioi-han-qc.sql` → tên `supabase-schema-qc-*.sql` | em tự làm |
 | 10 | Chuyển việc làm hằng ngày sang phiên cloud: ĐÃ có `CLAUDE.md` + môi trường `QC Dev` (mạng Supabase / api.supabase.com / pancake.vn / api.github.com). Còn: anh dán 4 biến khoá vào `QC Dev` → mở phiên mới chạy thử (đọc khoá, gọi Supabase, Pancake, push main) | chờ anh dán khoá |
 
@@ -196,6 +194,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **13/11/2026 (6)** — Chép 7 luật tồn từ báo sai tự xử lý (#83 gọi điện có thời lượng = đã trả lời, #91 "tin nhắn đã gửi thành công" = nhắn riêng, #92/#96 tin đỏ + banner #551 = lỗi nền tảng; #85/#88/#89 trùng luật đã có) vào 2 file + Logic, luat_da_ghi = true. Đóng #93 (CHỜ ANH) = giữ theo luật #65 (không ảnh, không dòng lỗi). Gạch E9 (đã chốt chủ Zalo 13/11) và nợ #13 (điểm mù nhắn riêng — xong 13/10 bằng khach_id).
 - **13/11/2026 (5)** — Anh chốt: Zalo Hoàng Dương - Ming Ying cũng là của Diệp.
 - **13/11/2026 (4)** — Anh chốt: Zalo "Đồ Thờ Chánh Tâm" (0973763458) là của Diệp → chủ Zalo = Chánh Tâm Ngọc Diệp (Đinh Ngọc Diệp) trong qc_sale_mac_dinh; chuyển 47 hội thoại đã qua lọc (trước ghi mặc định Lệ) sang Diệp. Chủ Zalo hiện tại: Shidai = Nguyên · Oanh Bùi = Oanh · Cao Cấp + Hiền Thủy = Vân Ngọc · Đồ Thờ Chánh Tâm = Diệp · Hoàng Dương = Lệ (mặc định CT).
 - **13/11/2026 (3)** — Anh chốt: Zalo "Oanh Bùi Tổng Kho Sỉ" là của Oanh (Bùi Thị Kim Oanh); "Đức Tuấn Chánh Tâm" trên Pancake = Nguyễn Đức Anh Tuấn. Đã ghi qc_sale_ten.
