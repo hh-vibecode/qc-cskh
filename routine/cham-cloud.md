@@ -26,7 +26,7 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 - **Khách tiềm năng (lượt 12h50 và 20h50 giờ VN)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_tiem_nang -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > tn.json` (mỗi dòng: id, page_name, customer_name, sale_name, ngay, la_binh_luan, thread). Ghi: `{"p_ma":..,"p_ngay":"<ngay của lô>","p_rows":[{"id":..,"ket":"tiem_nang"|"da_chot"|"tu_choi"|"chua_du","ly_do":"1 câu"}]}` → `$U/rpc/qc_ghi_tiem_nang`. Lặp tới khi lô rỗng.
 
 ## Quy trình
-0. **Lịch chạy 7h50–20h50 giờ VN** (cron `50 0-13 * * *` UTC, anh chốt 19/10). Lời gọi của lịch có câu "lô chờ chấm và lô miss đều rỗng thì dừng" — từ 17h VẪN phải làm bước 4b (báo sai) và ghi nhật ký rồi mới dừng.
+0. **Lịch chạy 7h50–20h50 giờ VN** (cron `50 0-13 * * *` UTC, anh chốt 19/10). Lời gọi của lịch có câu "lô chờ chấm và lô miss đều rỗng thì dừng" — từ 17h VẪN phải làm bước 4b (báo sai), lượt 12h50 và 20h50 VẪN phải làm bước 4a (khách tiềm năng), và ghi nhật ký rồi mới dừng.
    **Mọi lượt, trước khi chấm:** gọi `qc_lo_bao_sai`, đọc `luat_cho_ghi` — đó là luật rút từ báo sai đã xử lý nhưng chưa chép vào file này → ÁP DỤNG như luật chấm bên dưới (mâu thuẫn thì luật mới hơn thắng).
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
