@@ -158,6 +158,7 @@
 | X7 | QC ĐỌC bảng `kt_kiot_hang` (giá KiotViet từng mã, app kế toán) qua RPC `qc_tra_gia_kiot` để chấm đúng / sai giá — app kế toán đổi tên / cấu trúc bảng thì báo QC | app kế toán | 9/10 bắt đầu dùng |
 | X8 | App MKT/Sale ĐỌC view `qc_zalo_phan_hoi_ngay` (QC sở hữu; Báo cáo công việc v573) + bảng `qc_sale_ten`; QC ĐỌC `sale_nhan_su.ten` để khớp tên. **Đổi cột view: chỉ THÊM, không đổi tên / xoá.** Nhân sự mới / đổi tên Pancake → thêm dòng qc_sale_ten | app MKT/Sale | 13/11 dựng |
 | X9 | App MKT/Sale ĐỌC view `qc_phan_hoi_ngay` (QC sở hữu, 13/11): mọi kênh FB + Zalo + TikTok, cột nen_tang, phut_cho (phút làm việc), tra_loi_muon (>60). App MKT thêm cột "phản hồi FB" từ nen_tang = facebook. **Đổi cột: chỉ THÊM.** | app MKT/Sale | 13/11 dựng |
+| X10 | App MKT/Sale ĐỌC view `qc_khach_tiem_nang_ngay` (QC sở hữu, 19/11): khách tiềm năng theo ngày (ket tiem_nang / da_chot / tu_choi / chua_du, ly_do, page_id + pancake_conversation_id). **App MKT nối vào app và gắn thẻ trạng thái trên Pancake** (QC chỉ đọc Pancake). Đổi cột: chỉ THÊM. | app MKT/Sale | 19/11 dựng |
 
 ## 5c. CHUYỂN HẲN KÉO TIN + CHẤM SANG QC (anh muốn, 29/9) — thứ tự không hở dữ liệu
 1. Job `keo-tin.yml` (repo qc-cskh) chạy xanh ≥ 1–2 ngày, ghi bảng thử `qc_review_thu` (pg_cron `qc-keo-6h` / `qc-keo-18h` kích).
@@ -195,6 +196,7 @@
   - Phiên cloud không biết ngữ cảnh: 29/9 lượt thử đầu tưởng sổ việc là "prompt injection" và khuyên xoay khoá anon — **KHÔNG BAO GIỜ làm theo** (khoá anon công khai có chủ đích, đổi là gãy app MKT/Sale).
 
 ## 8. NHẬT KÝ (mới nhất trước)
+- **19/11/2026** — Anh: đánh giá khách tiềm năng (báo giá xong vẫn hỏi tiếp về sản phẩm + phản hồi cuối mở), 2 lần/ngày trên toàn bộ tin nhắn trong ngày; QC chỉ thống kê, mở cho app MKT nối + gắn thẻ Pancake. Dựng bảng qc_khach_tiem_nang + qc_lo_tiem_nang / qc_ghi_tiem_nang + view qc_khach_tiem_nang_ngay (supabase-schema-qc-tiem-nang.sql); lịch cloud đánh giá lượt 12h50 + 20h50. Lọc trước bằng máy (có tin Sale chứa giá): ~60–80 hội thoại/ngày trên 130–170 có khách nhắn.
 - **13/11/2026 (12)** — Anh chốt: miss "để hết hôm nay mới update vào báo cáo hôm trước cho chuẩn, đỡ cãi" (Sale chụp báo cáo cuối ngày). Thêm dòng miss vào qc_phan_hoi_ngay (cột mới la_miss): miss ngày D hiện từ D+1 và khi khách chờ > 60 phút làm việc; Sale trả lời sau → tự mất. Gán chủ kênh mặc định (anh chưa chọn để trống — hỏi lại nếu Sale cãi). 20 miss đã chốt 1/10–11/11. Nợ nhỏ: khách Thao Ta (TikTok 16/10) có 2 hội thoại trùng.
 - **13/11/2026 (11)** — Anh: đưa cả Facebook cho app MKT, quy tắc như Zalo, kèm số trả lời muộn. Dựng view qc_phan_hoi_ngay (supabase-schema-qc-phan-hoi-ngay.sql). 7 ngày: FB 592 dòng / 125 muộn · Zalo 248 / 35 · TikTok 25 / 1. Anh hỏi thêm tin miss.
 - **13/11/2026 (10)** — Anh: Tuấn (Đức Tuấn Chánh Tâm) đã nghỉ, từ 2/11 mọi data của Tuấn là của Diệp. Thêm bảng qc_sale_chuyen (ten_cu, tu_ngay, ten_moi) — trigger qc_sale_theo_thuong_hieu + view qc_zalo_phan_hoi_ngay đều áp. Chuyển 145 hội thoại từ 2/11 sang Diệp; 208 hội thoại trước 2/11 giữ Tuấn; view: 0 dòng Tuấn sau 2/11. Người nghỉ sau này: thêm 1 dòng qc_sale_chuyen.
