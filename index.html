@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.58';
-const APP_VERSION='20/11/2026 14:42';
+const APP_SO='1.59';
+const APP_VERSION='20/11/2026 16:10';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -167,6 +167,8 @@ async function rpc(fn,args){
 // ── Trạng thái ────────────────────────────────────────────────────────────
 const S={ma:ls.get(LS_MA)||'',rows:[],reports:[],threads:{},open:new Set(),pg:0,
   plat:'social',from:'',to:'',brand:'all',sale:'all',verdict:'all',q:'',
+  // Tab Chất lượng / Tiềm năng (anh Hải 20/11: "tách dash tiềm năng vs data ra thành tab riêng như social vs zalo")
+  tab:ls.get('qc_tab')==='tn'?'tn':'cl',
   view:(()=>{try{return localStorage.getItem('qc_view')||'report'}catch(e){return'report'}})()};
 // Các trang của app (thanh menu trái). Nhóm "Báo cáo" hôm nay mới có 1 trang; Training / Chatbot sẽ thêm nhóm riêng.
 const VIEWS={report:'Chất lượng phản hồi',nhansu:'Đánh giá nhân sự',history:'Lịch sử báo sai',nhatky:'Nhật ký chạy',logic:'Logic xử lý dữ liệu'};
@@ -310,6 +312,7 @@ async function setRange(days){
 }
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
 function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';}render();}
+function setTab(t){if(t!==S.tab){S.tab=t;ls.set('qc_tab',t);S.pg=0;S.verdict='all';S.open.clear();}render();}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
 // Trả lời muộn (anh Hải 7/10): CHỈ lượt khách nhắn trong giờ làm 8h–17h30 mà chờ > 60 phút làm việc. Khách nhắn ngoài giờ → thẻ
 // "ngoài giờ", không tính muộn. Dòng cũ chưa có số đo (trước tháng 10) dùng nhãn "Trả lời muộn" cũ trong issue.
@@ -433,22 +436,25 @@ function render(keepFocus){
     return true;
   });
   S._tnMap=tnTrongKhoang();
-  const tnBase=[...S._tnMap.values()].filter(x=>platOf(x)===S.plat&&(S.brand==='all'||brandOf(x)===S.brand)&&(S.sale==='all'||saleOf(x)===S.sale)
-      &&(!q||noDau([x.customer_name,x.phone,x.sale_name,x.ly_do].join(' ')).includes(q)))
+  const tnAll=[...S._tnMap.values()].filter(x=>platOf(x)===S.plat)
     .map(x=>({id:x.review_id,conv_date:x.ngay,conv_at:null,page_id:x.page_id,page_name:x.page_name,conv_id:x.conv_id,customer_name:x.customer_name,
       phone:x.phone,sale_name:x.sale_name,verdict:x.verdict,pancake_url:x.pancake_url,_tn:x}));
+  const tnBase=tnAll.filter(r=>(S.brand==='all'||brandOf(r)===S.brand)&&(S.sale==='all'||saleOf(r)===S.sale)
+      &&(!q||noDau([r.customer_name,r.phone,r.sale_name,r._tn.ly_do].join(' ')).includes(q)))
+    .sort((a,b)=>b._tn.ngay.localeCompare(a._tn.ngay)||b.id-a.id);
   const tnDem=k=>tnBase.filter(r=>r._tn.ket===k).length;
-  const laTN=S.verdict.startsWith('tn_');
+  const laTN=S.verdict.startsWith('tn_'),tabTN=S.tab==='tn';
   const rows=S.verdict==='tn_ckt'?tnBase.filter(r=>r._tn.ckt)
-    :laTN?tnBase.filter(r=>r._tn.ket===S.verdict.slice(3)).sort((a,b)=>b._tn.ngay.localeCompare(a._tn.ngay)||b.id-a.id)
+    :laTN?tnBase.filter(r=>r._tn.ket===S.verdict.slice(3))
+    :tabTN?tnBase
     :base.filter(r=>verdictMatch(r,S.verdict));
   const T=tally(base);
 
   // badge cập nhật
   const maxOf=k=>platRows.reduce((m,r)=>r[k]&&r[k]>m?r[k]:m,'');
-  const rev=maxOf('reviewed_at'),conv=maxOf('conv_at');
+  const rev=tabTN?(S.tn||[]).filter(x=>platOf(x)===S.plat).reduce((m,x)=>x.danh_gia_luc&&x.danh_gia_luc>m?x.danh_gia_luc:m,''):maxOf('reviewed_at'),conv=maxOf('conv_at');
   const stale=rev&&(Date.now()-new Date(rev))/36e5>36;
-  const upd=rev?`<span class="badge${stale?' stale':''}" title="Hội thoại mới nhất: ${esc(fmtDT(conv))}">Cập nhật ${esc(fmtDT(rev))}</span>`:'';
+  const upd=rev?`<span class="badge${stale?' stale':''}" title="${tabTN?'Lần đánh giá tiềm năng mới nhất':'Hội thoại mới nhất: '+esc(fmtDT(conv))}">Cập nhật ${esc(fmtDT(rev))}</span>`:'';
   const openRep=S.reports.filter(r=>r.status==='open').length;
 
   // lựa chọn lọc
@@ -456,9 +462,10 @@ function render(keepFocus){
   const countBy=(list,f)=>{const m=new Map();for(const r of list){const k=f(r);m.set(k,(m.get(k)||0)+1);}return[...m].sort((a,b)=>b[1]-a[1]);};
   // 4 thương hiệu luôn hiện đủ, thứ tự cố định (Khác chỉ hiện nếu có page lạ chưa xếp)
   const THU_TU=['CT','TTV','HT','Shidai'];
-  const demB=Object.fromEntries(countBy(dated,r=>brandOf(r)));
+  const nguon=tabTN?tnAll:dated;   // số trong ô lọc theo đúng tab đang xem
+  const demB=Object.fromEntries(countBy(nguon,r=>brandOf(r)));
   const brandOpts=[...THU_TU,...(demB.Khac?['Khac']:[])].map(b=>[b,demB[b]||0]);
-  const saleOpts=countBy(dated,saleOf);
+  const saleOpts=countBy(nguon,saleOf);
   // Bộ lọc gọn kiểu app MKT/Sale: ô chọn nhỏ "Brand: tất cả", ô đang lọc viền màu nhấn; chọn nhanh ngày gom 1 ô.
   const sel=(k,label,cur,opts)=>`<select class="sel${cur!=='all'?' on':''}" onchange="setF('${k}',this.value)">
     ${opt('all',`${label}: tất cả`,cur)}${opts.map(([v,l])=>opt(v,l,cur)).join('')}</select>`;
@@ -483,6 +490,23 @@ function render(keepFocus){
   const sumHead=first=>`<colgroup><col style="width:20%">${'<col style="width:8.88%">'.repeat(9)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã chấm</th><th class="num">Đúng</th><th class="num">Thiếu</th><th class="num">Sai</th><th class="num">Miss</th><th class="num">Chờ chấm</th><th class="num">Tỉ lệ đúng</th><th class="num">Đúng giờ</th><th class="num">TB phản hồi</th></tr></thead>`;
   const byBrand=[...THU_TU,...(base.some(r=>brandOf(r)==='Khac')?['Khac']:[])].map(b=>sumRow(BRANDS[b]||b,tally(base.filter(r=>brandOf(r)===b)),`setF('brand','${b}')`)).join('');
   const bySale=countBy(base,saleOf).map(([s])=>sumRow(s,tally(base.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join('');
+  // Tab Tiềm năng: bảng theo thương hiệu / Sale đếm theo kết quả đánh giá (cột cố định để 2 bảng gióng thẳng)
+  const tnTally=l=>({n:l.length,tn:l.filter(r=>r._tn.ket==='tiem_nang').length,chot:l.filter(r=>r._tn.ket==='da_chot').length,
+    tc:l.filter(r=>r._tn.ket==='tu_choi').length,cd:l.filter(r=>r._tn.ket==='chua_du').length,ckt:l.filter(r=>r._tn.ckt).length});
+  const tnRow=(name,t,onclick)=>`<tr class="click" onclick="${onclick}">
+    <td class="name">${esc(name)}</td><td class="num">${num(t.n)}</td>
+    <td class="num" style="color:var(--info);font-weight:700">${num(t.tn)}</td>
+    <td class="num" style="color:var(--ok);font-weight:700">${num(t.chot)}</td>
+    <td class="num" style="color:var(--bad);font-weight:700">${num(t.tc)}</td>
+    <td class="num">${num(t.cd)}</td>
+    <td class="num" style="color:${t.ckt?'var(--warn)':'var(--muted)'};font-weight:700">${num(t.ckt)}</td>
+    <td class="num" style="font-weight:700">${pct(t.tn,t.n)}</td>
+    <td class="num" style="font-weight:800">${pct(t.chot,t.n)}</td></tr>`;
+  const tnHead=first=>`<colgroup><col style="width:20%">${'<col style="width:10%">'.repeat(8)}</colgroup><thead><tr><th>${first}</th><th class="num">Đã đánh giá</th><th class="num">Tiềm năng</th><th class="num">Đã chốt</th><th class="num">Từ chối</th><th class="num">Chưa đủ ĐK</th><th class="num">Chưa khai thác hết</th><th class="num">Tỉ lệ tiềm năng</th><th class="num">Tỉ lệ chốt</th></tr></thead>`;
+  const tnByBrand=tabTN?[...THU_TU,...(tnBase.some(r=>brandOf(r)==='Khac')?['Khac']:[])].map(b=>tnRow(BRANDS[b]||b,tnTally(tnBase.filter(r=>brandOf(r)===b)),`setF('brand','${b}')`)).join(''):'';
+  const tnBySale=tabTN?countBy(tnBase,saleOf).map(([s])=>tnRow(s,tnTally(tnBase.filter(r=>saleOf(r)===s)),`setF('sale',${esc(JSON.stringify(s))})`)).join(''):'';
+  const TN_C={tiem_nang:'info',da_chot:'ok',tu_choi:'bad',chua_du:'grey'};
+  const tnBadge=k=>`<span class="vb" style="background:var(--${TN_C[k]||'grey'}-bg);color:var(--${TN_C[k]||'grey'})">${esc(TN_L[k]||k)}</span>`;
 
   // bảng chi tiết
   // 30 dòng / trang (anh Hải 28/9)
@@ -495,15 +519,18 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${tnOf(r)?.ket==='tiem_nang'?'<span class="late" style="background:var(--info-bg);color:var(--info)" title="Khách tiềm năng — lần đánh giá mới nhất trong khoảng ngày đang xem">tiềm năng</span>':''}${cktOf(r)?'<span class="late" title="Sale hứa quay lại rồi bỏ lửng — lỗi Sale">chưa khai thác hết</span>':''}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
+      ${tabTN?`<td>${tnBadge(r._tn.ket)}${r._tn.ckt?'<span class="late" title="Sale hứa quay lại rồi bỏ lửng — lỗi Sale">chưa khai thác hết</span>':''}</td>
+      <td><div class="muted" style="max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r._tn.ly_do||'')}">${esc(r._tn.ly_do||'')}</div></td>`
+      :`<td>${vb(r.verdict)}${tnOf(r)?.ket==='tiem_nang'?'<span class="late" style="background:var(--info-bg);color:var(--info)" title="Khách tiềm năng — lần đánh giá mới nhất trong khoảng ngày đang xem">tiềm năng</span>':''}${cktOf(r)?'<span class="late" title="Sale hứa quay lại rồi bỏ lửng — lỗi Sale">chưa khai thác hết</span>':''}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>`}
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
-  }).join('')||`<tr><td colspan="7" class="muted" style="padding:30px;text-align:center">Không có lượt nào khớp bộ lọc</td></tr>`;
+  }).join('')||`<tr><td colspan="${tabTN?8:7}" class="muted" style="padding:30px;text-align:center">Không có lượt nào khớp bộ lọc</td></tr>`;
 
   app.innerHTML=shell(`
     <div class="top">
-      <div class="title" style="margin-right:6px">Chất Lượng Phản Hồi Sale</div>
+      <div class="title" style="margin-right:6px">${tabTN?'Khách Tiềm Năng':'Chất Lượng Phản Hồi Sale'}</div>
+      <span class="seg"><button class="${!tabTN?'on':''}" onclick="setTab('cl')">Chất lượng</button><button class="${tabTN?'on':''}" onclick="setTab('tn')">Tiềm năng</button></span>
       <span class="seg"><button class="${S.plat==='social'?'on':''}" onclick="setPlat('social')">Social</button><button class="${S.plat==='zalo'?'on':''}" onclick="setPlat('zalo')">Zalo</button></span>
       <div class="right">
         ${upd}
@@ -524,7 +551,7 @@ function render(keepFocus){
         <input type="date" class="sel" value="${esc(S.to)}" onchange="setF('to',this.value)">
       </div>
     </div>
-    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge" style="font-size:12px;color:var(--text)">${num(base.length)} hội thoại</span><span class="badge">${num(T.den)} đã chấm</span>${T.pend?`<span class="badge">${num(T.pend)} chờ chấm</span>`:''}${dongSo()}</div>
+    ${tabTN?'':`<div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge" style="font-size:12px;color:var(--text)">${num(base.length)} hội thoại</span><span class="badge">${num(T.den)} đã chấm</span>${T.pend?`<span class="badge">${num(T.pend)} chờ chấm</span>`:''}${dongSo()}</div>
     <div class="kpi-row kpi4">
       ${kpi('dung','Tư vấn đúng',num(T.dung),pct(T.dung,T.den),'ok','dung')}
       ${kpi('thieu','Thiếu ý',num(T.thieu),pct(T.thieu,T.den),'warn','thieu')}
@@ -536,19 +563,21 @@ function render(keepFocus){
       ${kpi('tb_tg','Phản hồi trung bình',fmtPhut(T.tbTg),'','info','muon')}
       ${kpi('muon','Phản hồi chậm',num(base.filter(lateOf).length),'','warn','muon')}
     </div>
-    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Khách tiềm năng <span class="badge">${num(tnBase.length)} hội thoại đã đánh giá</span><span class="badge">Tự đánh giá 12h · 20h</span>${(()=>{const n=tnBase.filter(r=>r._tn.ckt).length;return n?`<span class="badge" style="cursor:pointer;background:var(--warn-bg);color:var(--warn)${S.verdict==='tn_ckt'?';outline:2px solid var(--warn)':''}" title="Sale hứa quay lại rồi bỏ lửng quá 1 ngày làm việc — lỗi Sale" onclick="toggleVerdict('tn_ckt')">${num(n)} chưa khai thác hết</span>`:'';})()}</div>
+    <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div>
+    <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div>`}
+    ${!tabTN?'':`<div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Tổng quan <span class="badge">${num(tnBase.length)} hội thoại đã đánh giá</span><span class="badge">Tự đánh giá 12h · 20h</span>${(()=>{const n=tnBase.filter(r=>r._tn.ckt).length;return n?`<span class="badge" style="cursor:pointer;background:var(--warn-bg);color:var(--warn)${S.verdict==='tn_ckt'?';outline:2px solid var(--warn)':''}" title="Sale hứa quay lại rồi bỏ lửng quá 1 ngày làm việc — lỗi Sale" onclick="toggleVerdict('tn_ckt')">${num(n)} chưa khai thác hết</span>`:'';})()}</div>
     <div class="kpi-row kpi4">
       ${kpi('tn_tiem_nang','Khách tiềm năng',num(tnDem('tiem_nang')),pct(tnDem('tiem_nang'),tnBase.length),'info','tiem')}
       ${kpi('tn_da_chot','Đã chốt',num(tnDem('da_chot')),pct(tnDem('da_chot'),tnBase.length),'ok','chot')}
       ${kpi('tn_tu_choi','Từ chối',num(tnDem('tu_choi')),pct(tnDem('tu_choi'),tnBase.length),'bad','sai')}
       ${kpi('tn_chua_du','Chưa đủ điều kiện',num(tnDem('chua_du')),pct(tnDem('chua_du'),tnBase.length),'grey','chuadu')}
     </div>
-    <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div>
-    <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div>
+    <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${tnHead('Thương hiệu')}<tbody>${tnByBrand}</tbody></table></div>
+    <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${tnHead('Sale')}<tbody>${tnBySale}</tbody></table></div>`}
     <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} hội thoại</span>
       ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Phản hồi chậm':S.verdict==='ngoai_gio'?'Ngoài giờ làm':S.verdict==='cham_gio'?'Phản hồi chậm':laTN?TN_L[S.verdict.slice(3)]:S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
-    <div class="card scroll"><table style="min-width:860px">
-      <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
+    <div class="card scroll"><table style="min-width:${tabTN?980:860}px">
+      <thead><tr><th>${tabTN?'Ngày đánh giá':'Ngày'}</th><th>Page</th><th>Khách</th><th>Sale</th><th>${tabTN?'Đánh giá':'Kết quả'}</th>${tabTN?'<th>Lý do</th>':''}<th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
       ${pager(pg,nPg,rows.length)}
     </div>`);
@@ -592,8 +621,8 @@ function detailRow(r){
         ${t.issue&&!['dung'].includes(t.verdict)?`<div style="margin-top:4px"><b>Vấn đề:</b> ${esc(t.issue)}</div>`:''}
         ${t.suggestion?`<div style="margin-top:4px;color:var(--sale-fg)"><b>Nên trả lời:</b> ${esc(t.suggestion)}</div>`:''}
         <div style="margin-top:6px"><button class="btn" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();openReport(${t.id})">Báo sai lượt này</button></div></div>`;}).join(''):'';
-  if(r.turns)return`<tr class="detail"><td colspan="7">${thread}${tnBox(r)}${luot}</td></tr>`;
-  return`<tr class="detail"><td colspan="7">
+  if(r.turns)return`<tr class="detail"><td colspan="${S.view==='report'&&S.tab==='tn'?8:7}">${thread}${tnBox(r)}${luot}</td></tr>`;
+  return`<tr class="detail"><td colspan="${S.view==='report'&&S.tab==='tn'?8:7}">
     ${thread}
     ${tnBox(r)}
     ${r.issue?`<div class="box" style="background:var(--${x.c}-bg)"><div class="h" style="color:var(--${x.c})">Vấn đề</div>${esc(r.issue)}</div>`:''}
@@ -938,7 +967,7 @@ function logicPage(){
       <li>Ảnh page tự gửi khi khách bấm quảng cáo không tính là Sale trả lời. Chỉ đo lượt khách nhắn từ 01/10/2026.</li>
     </ul>
     <h3>7. Khách tiềm năng (thay chấm quy trình — anh chốt 20/11/2026)</h3>
-    <p><b>Bỏ chấm quy trình</b> (20/11): không chấm "sai quy trình" nữa, dữ liệu cũ đã xoá (165 hội thoại, có sao lưu). Thay bằng phần <b>Khách tiềm năng</b> trên trang Chất lượng phản hồi để anh check chéo.</p>
+    <p><b>Bỏ chấm quy trình</b> (20/11): không chấm "sai quy trình" nữa, dữ liệu cũ đã xoá (165 hội thoại, có sao lưu). Thay bằng phần <b>Khách tiềm năng</b> trên trang Chất lượng phản hồi để anh check chéo — từ 20/11 là <b>tab riêng "Tiềm năng"</b> (nút Chất lượng | Tiềm năng cạnh Social | Zalo): thẻ số, bảng theo thương hiệu / Sale (đã đánh giá, tiềm năng, đã chốt, từ chối, chưa đủ, chưa khai thác hết, tỉ lệ tiềm năng, tỉ lệ chốt) và danh sách kèm lý do; tab Chất lượng chỉ còn số chấm phản hồi.</p>
     <ul>
       <li><b>Tiềm năng</b>: Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở. Khác: <b>đã chốt</b> (cọc / chuyển khoản / gửi địa chỉ / lên đơn), <b>từ chối</b>, <b>chưa đủ điều kiện</b> (chưa báo giá thật, khách không hỏi thêm, chỉ ok / cảm ơn).</li>
       <li>Đánh giá <b>2 lần mỗi ngày</b> (khung 12h–13h59 và 20h–21h59) trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>
