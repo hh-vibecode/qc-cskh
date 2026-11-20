@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.57';
-const APP_VERSION='20/11/2026 13:58';
+const APP_SO='1.58';
+const APP_VERSION='20/11/2026 14:42';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -338,7 +338,9 @@ const ICON={
 };
 // KHÁCH TIỀM NĂNG (anh Hải 19–20/11, thay thẻ "Sai quy trình" đã bỏ): đánh giá theo NGÀY tin nhắn, 2 lần/ngày (qc_khach_tiem_nang).
 // Lọc theo NGÀY ĐÁNH GIÁ trong khoảng đang xem — không theo conv_date (= ngày nhắn cuối, có thể muộn hơn). Mỗi hội thoại lấy lần đánh giá mới nhất trong khoảng.
-const TN_L={tiem_nang:'Khách tiềm năng',da_chot:'Đã chốt',tu_choi:'Từ chối',chua_du:'Chưa đủ điều kiện'};
+const TN_L={tiem_nang:'Khách tiềm năng',da_chot:'Đã chốt',tu_choi:'Từ chối',chua_du:'Chưa đủ điều kiện',ckt:'Chưa khai thác hết'};
+// Chưa khai thác hết (anh Hải 20/11, ca Thiện Minh): Sale hứa quay lại (kiểm kho, gửi sau…) rồi bỏ lửng quá 1 ngày làm việc → lỗi Sale (thiếu) + thẻ này.
+const cktOf=r=>(tnOf(r)&&tnOf(r).ckt)||(/Chưa khai thác hết:/.test(r.issue||'')?'x':'');
 const tnTrong=x=>(!S.from||x.ngay>=S.from)&&(!S.to||x.ngay<=S.to);
 function tnTrongKhoang(){
   const m=new Map();
@@ -353,7 +355,8 @@ const tnOf=r=>r._tn||(S._tnMap&&S._tnMap.get(r.conv_id||('#'+r.id)));
 function tnBox(r){
   const ds=(S.tn||[]).filter(x=>(r.conv_id?x.conv_id===r.conv_id:x.review_id===r.id)&&tnTrong(x));
   if(!ds.length)return'';
-  return`<div class="box" style="background:var(--info-bg)"><div class="h" style="color:var(--info)">Đánh giá khách tiềm năng</div>${ds.map(x=>`<div style="margin-top:3px"><b>${esc(x.ngay.slice(8,10)+'/'+x.ngay.slice(5,7))} · ${esc(TN_L[x.ket]||x.ket)}:</b> ${esc(x.ly_do||'')}</div>`).join('')}</div>`;
+  const ckt=ds.map(x=>x.ckt).find(Boolean);
+  return`<div class="box" style="background:var(--info-bg)"><div class="h" style="color:var(--info)">Đánh giá khách tiềm năng</div>${ds.map(x=>`<div style="margin-top:3px"><b>${esc(x.ngay.slice(8,10)+'/'+x.ngay.slice(5,7))} · ${esc(TN_L[x.ket]||x.ket)}:</b> ${esc(x.ly_do||'')}</div>`).join('')}${ckt?`<div style="margin-top:6px;color:var(--warn)"><b>Chưa khai thác hết (lỗi Sale):</b> ${esc(ckt)}</div>`:''}</div>`;
 }
 function verdictMatch(r,v){
   if(v==='all')return true;
@@ -436,7 +439,8 @@ function render(keepFocus){
       phone:x.phone,sale_name:x.sale_name,verdict:x.verdict,pancake_url:x.pancake_url,_tn:x}));
   const tnDem=k=>tnBase.filter(r=>r._tn.ket===k).length;
   const laTN=S.verdict.startsWith('tn_');
-  const rows=laTN?tnBase.filter(r=>r._tn.ket===S.verdict.slice(3)).sort((a,b)=>b._tn.ngay.localeCompare(a._tn.ngay)||b.id-a.id)
+  const rows=S.verdict==='tn_ckt'?tnBase.filter(r=>r._tn.ckt)
+    :laTN?tnBase.filter(r=>r._tn.ket===S.verdict.slice(3)).sort((a,b)=>b._tn.ngay.localeCompare(a._tn.ngay)||b.id-a.id)
     :base.filter(r=>verdictMatch(r,S.verdict));
   const T=tally(base);
 
@@ -491,7 +495,7 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${tnOf(r)?.ket==='tiem_nang'?'<span class="late" style="background:var(--info-bg);color:var(--info)" title="Khách tiềm năng — lần đánh giá mới nhất trong khoảng ngày đang xem">tiềm năng</span>':''}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
+      <td>${vb(r.verdict)}${tnOf(r)?.ket==='tiem_nang'?'<span class="late" style="background:var(--info-bg);color:var(--info)" title="Khách tiềm năng — lần đánh giá mới nhất trong khoảng ngày đang xem">tiềm năng</span>':''}${cktOf(r)?'<span class="late" title="Sale hứa quay lại rồi bỏ lửng — lỗi Sale">chưa khai thác hết</span>':''}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
@@ -532,7 +536,7 @@ function render(keepFocus){
       ${kpi('tb_tg','Phản hồi trung bình',fmtPhut(T.tbTg),'','info','muon')}
       ${kpi('muon','Phản hồi chậm',num(base.filter(lateOf).length),'','warn','muon')}
     </div>
-    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Khách tiềm năng <span class="badge">${num(tnBase.length)} hội thoại đã đánh giá</span><span class="badge">Tự đánh giá 12h · 20h</span></div>
+    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Khách tiềm năng <span class="badge">${num(tnBase.length)} hội thoại đã đánh giá</span><span class="badge">Tự đánh giá 12h · 20h</span>${(()=>{const n=tnBase.filter(r=>r._tn.ckt).length;return n?`<span class="badge" style="cursor:pointer;background:var(--warn-bg);color:var(--warn)${S.verdict==='tn_ckt'?';outline:2px solid var(--warn)':''}" title="Sale hứa quay lại rồi bỏ lửng quá 1 ngày làm việc — lỗi Sale" onclick="toggleVerdict('tn_ckt')">${num(n)} chưa khai thác hết</span>`:'';})()}</div>
     <div class="kpi-row kpi4">
       ${kpi('tn_tiem_nang','Khách tiềm năng',num(tnDem('tiem_nang')),pct(tnDem('tiem_nang'),tnBase.length),'info','tiem')}
       ${kpi('tn_da_chot','Đã chốt',num(tnDem('da_chot')),pct(tnDem('da_chot'),tnBase.length),'ok','chot')}
@@ -939,6 +943,10 @@ function logicPage(){
       <li><b>Tiềm năng</b>: Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở. Khác: <b>đã chốt</b> (cọc / chuyển khoản / gửi địa chỉ / lên đơn), <b>từ chối</b>, <b>chưa đủ điều kiện</b> (chưa báo giá thật, khách không hỏi thêm, chỉ ok / cảm ơn).</li>
       <li>Đánh giá <b>2 lần mỗi ngày</b> (khung 12h–13h59 và 20h–21h59) trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>
       <li>Thẻ số theo <b>ngày đánh giá</b> trong khoảng đang xem (không theo ngày nhắn cuối), cùng bộ lọc kênh / thương hiệu / Sale / tìm kiếm; mỗi hội thoại tính theo lần đánh giá mới nhất trong khoảng. Bấm thẻ → danh sách; mở dòng → lý do từng ngày.</li>
+      <li><b>Từ chối (siết 20/11)</b>: khách chê đắt / không ưng / không lấy / so giá chỗ khác, hoặc Sale báo không có đúng thứ khách cần, mà sau đó khách không hỏi phương án khác → từ chối (không còn là tiềm năng). Vẫn tiềm năng khi sau lời chê khách hỏi tiếp phương án (mẫu rẻ hơn, mẫu khác) hoặc mặc cả cụ thể. Hỏi cửa hàng ở đâu / cách mua sau báo giá vẫn là hỏi tiếp.</li>
+      <li><b>Chống trùng</b>: bình luận và tin nhắn riêng của cùng 1 khách (cùng page) chỉ tính 1 — giữ hội thoại tin nhắn riêng, lấy kết quả mạnh nhất (đã chốt › tiềm năng › từ chối › chưa đủ). TikTok: bình luận có mã đuôi số, tin nhắn riêng đuôi mã hoá.</li>
+      <li><b>Chưa khai thác hết = lỗi Sale (20/11, ca Thiện Minh)</b>: hội thoại đã báo giá mà tin cuối là Sale hứa quay lại (kiểm kho, hỏi xưởng, gửi ảnh / giá sau…) hoặc khách hỏi phương án mà Sale chỉ "dạ để em xem", rồi quá 1 ngày làm việc không quay lại → gắn thẻ "chưa khai thác hết" và dòng chấm chuyển <b>Thiếu ý</b> (mức trung bình). Máy lọc ứng viên, AI đọc đoạn cuối xác nhận; lịch cloud rà mỗi ngày cùng lượt tiềm năng.</li>
+      <li><b>App MKT chỉ nhận tiềm năng thật</b> (20/11): view qc_khach_tiem_nang_ngay chỉ giữ hội thoại mà lần đánh giá mới nhất là tiềm năng — đã chốt / từ chối / chưa đủ tự rơi khỏi tệp; kèm cột chưa khai thác hết.</li>
       <li>Tháng 11/2026 chạy bù 1–19/11 bằng máy (20/11). Dữ liệu mở cho app MKT (view qc_khach_tiem_nang_ngay) để giao việc hằng ngày và gắn thẻ Pancake.</li>
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>
@@ -947,6 +955,7 @@ function logicPage(){
       <li><b>Zalo cá nhân</b> (13/11): tin Sale gửi từ điện thoại không mang tên trên Pancake → tính là chủ Zalo trả lời: Tổng Kho Sỉ Shidai = Nguyên Khánh, Oanh Bùi = Oanhh Bùi, Siêu Thị Đồ Thờ Cao Cấp = Vân Ngọc, Siêu Thị Phật Giáo Hiền Thủy = Sale cửa hàng Hiền Thủy, Đồ Thờ Chánh Tâm = Diệp, Hoàng Dương - Ming Ying = Diệp. Dữ liệu Zalo đã lọc theo ngày cấp cho app MKT qua view qc_zalo_phan_hoi_ngay (chỉ đọc).</li>
       <li><b>Khách tiềm năng</b> (19/11): Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở → tiềm năng (khác: đã chốt / từ chối / chưa đủ). Đánh giá 2 lần mỗi ngày (12h50, 20h50) trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin báo giá. Dữ liệu mở cho app MKT (view qc_khach_tiem_nang_ngay) để nối vào app và gắn thẻ trạng thái trên Pancake.</li>
       <li><b>Miss cho báo cáo cuối ngày của Sale</b> (13/11): miss ngày nào chốt sau khi hết ngày đó — chỉ tính khi đã sang hôm sau VÀ khách đã chờ quá 60 phút làm việc mà chưa Sale nào trả lời (tin tối tính chờ từ 8h sáng). Sale trả lời sau đó thì dòng miss tự mất, thành "trả lời muộn" ở ngày trả lời. Miss gán chủ kênh mặc định.</li>
+      <li><b>Phản hồi theo ngày cho app MKT — chống trùng</b> (20/11): view qc_phan_hoi_ngay 1 dòng = 1 khách (kênh + mã khách) × 1 Sale × 1 ngày. Trước đó tách theo từng hội thoại và từng tên Pancake nên cùng 1 khách bị đếm nhiều lần (tin Zalo có tên + không tên của cùng Sale, bình luận + tin nhắn riêng): 818 dòng thừa. Dòng miss bỏ nếu trong ngày khách đã được trả lời ở luồng khác.</li>
       <li><b>Người đã nghỉ</b> (13/11): tài khoản Pancake của người đã nghỉ mà vẫn có tin trả lời thì từ mốc ngày tính cho người nhận — Đức Tuấn (Chánh Tâm) từ 02/11/2026 tính cho Diệp.</li>
       <li><b>Gán Sale</b> (28/10, thay quy tắc gán cứng 7 page = Vân Ngọc từ 1/10): Sale là <b>tên người trả lời trên Pancake</b> (người nhắn cuối trong hội thoại). Không phân biệt được người (chưa ai trả lời, hoặc tài khoản dùng chung "PANCAKE THT HOLDING") thì theo thương hiệu: <b>Hiền Thủy, Tự Tại Viên → Vân Ngọc</b> · <b>Shidai (gồm Thời Đại) → Nguyên Khánh</b> · <b>Chánh Tâm → Lệ</b>.</li>
       <li>Nhân viên nội bộ đóng vai khách: Đức Tuấn, Đinh Ngọc Diệp (Chánh Tâm, 0973763458); tài khoản mang tên chính các kho / thương hiệu nhắn nhau.</li>

@@ -87,6 +87,8 @@ việc ảnh hưởng app khác ghi vào VIEC.md mục "Phụ thuộc chéo" + b
 14. **Bình luận ↔ tin nhắn riêng nối bằng `khach_id`** — Sale nhắn riêng mà khách chưa nhắn lại vẫn phải vào dòng bình luận (13/10, báo sai #52).
 15. **Báo sai đúng = phải thành luật** (anh Hải 27/10: "mấy cái chấm sai mà ngta feedback phải nhớ vào, chứ không phải để ấy"): xử lý báo sai (tay hay tự động) mà SỬA kết quả → BẮT BUỘC ghi `luat_de_xuat` + chép vào 2 file luật + Logic ngay (hàm `qc_tu_xu_ly_bao_sai` từ chối nếu thiếu). Báo #61/#62/#80–82 từng bị sửa tay mà không lưu luật.
 16. **Miss = khách hỏi tiếp mà không ai trả lời** — cảm ơn / ok / ảnh / sticker sau câu trả lời của Sale không phải câu hỏi; soát miss lấy câu hỏi THẬT cuối làm mốc (27/10, #3219).
+17. **Chống trùng theo KHÁCH, không theo hội thoại** (anh Hải 20/11: "để ý k bị dup data"): bình luận + tin nhắn riêng, tin Zalo có tên + không tên của cùng Sale là CÙNG 1 khách / 1 Sale — mọi số liệu đưa đi (tiềm năng, phản hồi ngày) gộp theo page + khach_id. TikTok: bình luận đuôi số, tin nhắn riêng đuôi mã hoá (`qc_la_inbox`). 20/11 view phản hồi ngày thừa 818 dòng, tiềm năng thừa 26.
+18. **Đổi view app khác đọc → đo tốc độ trước khi thay** (vai trò authenticated giới hạn 8 giây): tạo view tên tạm, so thời gian với bản cũ, rồi mới thay. 20/11 bản gộp đầu tham chiếu kết quả trung gian 2 lần → 30 giây, chạy thật ~15 phút mới phát hiện, đã trả bản cũ rồi viết lại.
 10. **Không bao giờ ghi đè full_thread** — mọi chỗ ghi (kéo tin, soát miss, vá) phải NỐI bằng `ghepThread`. 8/10 soát miss ghi đè làm mất đoạn đầu → AI chấm sai (báo sai #45).
 
 ## Chấm

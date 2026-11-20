@@ -1,7 +1,7 @@
 -- PHẢN HỒI KHÁCH THEO NGÀY — MỌI KÊNH (Facebook + Zalo + TikTok) CHO APP MKT/SALE (anh Hải 13/11/2026: "bổ cả tin nhắn FB vào
 -- cho bên app MKT, thêm 1 cột phản hồi FB, quy tắc như Zalo; đưa số liệu QC đã xử lý sang: bao nhiêu tin phản hồi, bao nhiêu
 -- tin trả lời muộn"). App MKT CHỈ ĐỌC. Đổi cột về sau: CHỈ THÊM, không đổi tên / xoá. View Zalo cũ qc_zalo_phan_hoi_ngay giữ nguyên.
--- 1 dòng = 1 khách × 1 Sale × 1 ngày (giờ VN) mà Sale CÓ trả lời khách, từ 01/10/2026. LỌC TRƯỚC: chỉ hội thoại đã qua bộ lọc
+-- 1 dòng = 1 khách × 1 Sale × 1 ngày (giờ VN) mà Sale CÓ trả lời khách (gộp đúng từ 20/11 — xem CHỐNG TRÙNG cuối view), từ 01/10/2026. LỌC TRƯỚC: chỉ hội thoại đã qua bộ lọc
 -- QC (bỏ khấn, rác, nội bộ / NCC, tin hệ thống), bỏ nhóm Zalo pzl_g_, bỏ tin Bot.
 --   nen_tang      : facebook | zalo | tiktok — app MKT lấy cột "phản hồi FB" = nen_tang 'facebook'.
 --   sale          : sale_nhan_su.ten (qua qc_sale_chuyen → qc_sale_ten). Facebook / TikTok: chỉ tin "Sale (Tên)"; tin "Sale:" không
@@ -14,6 +14,7 @@
 --   la_miss       : (thêm 13/11) true = dòng MISS (khách hỏi, chưa Sale nào trả lời) — xem quy tắc ở phần union bên dưới.
 -- Monsieur Claude
 create or replace view public.qc_phan_hoi_ngay with (security_invoker = true) as
+with goc as (
 with hoi as (
   select s.id, s.page_id, s.page_name, s.conv_id, s.customer_name, s.phone,
          coalesce(s.khach_id, nullif(regexp_replace(s.conv_id, '^pzl_u_\d+_', ''), s.conv_id)) as khach_id, s.full_thread,
@@ -104,7 +105,38 @@ left join public.qc_sale_ten tm on tm.ten_pancake = coalesce(
 where s.verdict in ('khong_tra_loi', 'chi_bot') and s.conv_date >= '2026-10-01' and s.conv_id not like 'pzl\_g\_%'
   and not coalesce(s.noi_bo, false) and s.conv_at is not null
   and (s.conv_at at time zone 'Asia/Ho_Chi_Minh')::date < (now() at time zone 'Asia/Ho_Chi_Minh')::date
-  and public.qc_phut_lam_viec((s.conv_at at time zone 'Asia/Ho_Chi_Minh'), (now() at time zone 'Asia/Ho_Chi_Minh')) > 60;
+  and public.qc_phut_lam_viec((s.conv_at at time zone 'Asia/Ho_Chi_Minh'), (now() at time zone 'Asia/Ho_Chi_Minh')) > 60
+),
+-- ── CHỐNG TRÙNG (20/11, anh Hải "để ý k bị dup data"): trước đây 1 dòng = 1 hội thoại × 1 TÊN PANCAKE × 1 ngày → cùng 1 khách nhiều dòng
+-- (Zalo tin có tên + tin không tên của cùng 1 Sale; bình luận + tin nhắn riêng; nhiều bình luận): 708 khách-ngày thừa 818 dòng.
+-- Nay 1 dòng = 1 KHÁCH (kênh + khach_id) × 1 SALE (tên nhân sự; chưa map thì tên Pancake) × 1 ngày. conv_id ưu tiên tin nhắn riêng;
+-- phut_cho = lượt trả lời nhanh nhất của Sale đó với khách trong ngày. Dòng MISS bỏ nếu cùng ngày khách đã được Sale trả lời ở luồng khác.
+-- goc chỉ tham chiếu 1 lần (bản đầu tham chiếu 2 lần → 30 giây, vượt giới hạn 8 giây của app MKT — đã trả lại bản cũ 20/11).
+a as (
+  select ngay, nen_tang, kenh, coalesce(khach_id, conv_id) as khach_key, coalesce(sale, 'pk:' || sale_pancake, '') as sale_key, la_miss,
+         (array_agg(sale) filter (where sale is not null))[1] as sale,
+         (array_agg(sale_pancake order by sale_pancake nulls last))[1] as sale_pancake,
+         (array_agg(conv_id order by la_binh_luan, conv_id))[1] as conv_id,
+         (array_agg(khach_id) filter (where khach_id is not null))[1] as khach_id,
+         (array_agg(ten_khach order by la_binh_luan))[1] as ten_khach,
+         (array_agg(sdt) filter (where sdt is not null))[1] as sdt,
+         bool_or(khach_nhan) as khach_nhan,
+         min(phut_cho) as phut_min, max(phut_cho) as phut_max,
+         bool_and(la_binh_luan) as la_binh_luan
+  from goc
+  group by ngay, nen_tang, kenh, coalesce(khach_id, conv_id), coalesce(sale, 'pk:' || sale_pancake, ''), la_miss
+),
+b as (
+  select a.*, bool_or(not a.la_miss) over (partition by a.ngay, a.nen_tang, a.kenh, a.khach_key) as co_tra_loi
+  from a
+)
+select ngay, nen_tang, kenh, sale, case when la_miss then null::text else sale_pancake end as sale_pancake,
+       conv_id, khach_id, ten_khach, sdt, khach_nhan,
+       case when la_miss then phut_max else phut_min end as phut_cho,
+       case when la_miss then null::boolean else phut_min > 60 end as tra_loi_muon,
+       la_binh_luan, la_miss
+from b
+where not (la_miss and co_tra_loi);
 
 grant select on public.qc_phan_hoi_ngay to authenticated;
 revoke all on public.qc_phan_hoi_ngay from anon;

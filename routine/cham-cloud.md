@@ -23,6 +23,7 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 - Ghi xử lý báo sai: `{"p_ma":..,"p_rows":[{"bao_id":..,"ket":"sua"|"giu"|"cho_anh","ghi_chu":"1–2 câu căn cứ","luat_de_xuat":null|"1 câu luật chung","verdict":..,"severity":..,"issue":..,"suggestion":..,"sai_quy_trinh":null}]}` → `$U/rpc/qc_tu_xu_ly_bao_sai`. Trả `{"ghi":n}`; có `"loi"` thì sửa đúng dòng rồi gửi lại.
 
 - **Khách tiềm năng (các lượt từ 12h đến 13h59 và từ 20h đến 21h59 giờ VN — lịch chính lẫn dự phòng)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_tiem_nang -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > tn.json` (mỗi dòng: id, page_name, customer_name, sale_name, ngay, la_binh_luan, thread). Ghi: `{"p_ma":..,"p_ngay":"<ngay của lô>","p_rows":[{"id":..,"ket":"tiem_nang"|"da_chot"|"tu_choi"|"chua_du","ly_do":"1 câu"}]}` → `$U/rpc/qc_ghi_tiem_nang`. Lặp tới khi lô rỗng.
+- **Chưa khai thác hết (cùng các lượt khách tiềm năng)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_chua_khai_thac -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > ckt.json` (mỗi dòng: id, page_name, customer_name, sale_name, verdict, tin_cuoi_luc, phut_cho, doan_cuoi = 10 tin cuối). Ghi: `{"p_ma":..,"p_rows":[{"id":..,"tin_cuoi_luc":"<giữ nguyên từ lô>","ket":true|false,"ly_do":"1 câu"}]}` → `$U/rpc/qc_ghi_chua_khai_thac` (trả `{"ghi":n,"loi_sale":m}`). Lặp tới khi lô rỗng.
 
 ## Quy trình
 0. **Lịch chạy 7h50–20h50 giờ VN** (cron `50 0-13 * * *` UTC, anh chốt 19/10). Lời gọi của lịch có câu "lô chờ chấm và lô miss đều rỗng thì dừng" — từ 17h VẪN phải làm bước 4b (báo sai), lượt 12h–13h59 và 20h–21h59 VẪN phải làm bước 4a (khách tiềm năng), và ghi nhật ký rồi mới dừng.
@@ -31,7 +32,7 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
 3. Ghi nhật ký lượt chạy (lệnh ở trên) — **mọi lượt**, kể cả khi lô rỗng (0 dòng) hoặc bị lỗi; đúng 1 lần.
 4. Đánh giá nhân sự nếu có kỳ đến hạn (mục ĐÁNH GIÁ NHÂN SỰ).
-4a. **Các lượt từ 12h–13h59 và 20h–21h59 giờ VN: đánh giá khách tiềm năng** (mục ĐÁNH GIÁ KHÁCH TIỀM NĂNG) — sau khi chấm xong, trước báo sai. Ghi số vào `p_ghi_chu` của nhật ký ("tiềm năng: 12 · đã chốt 3 · …").
+4a. **Các lượt từ 12h–13h59 và 20h–21h59 giờ VN: đánh giá khách tiềm năng** (mục ĐÁNH GIÁ KHÁCH TIỀM NĂNG) rồi rà **chưa khai thác hết** (mục CHƯA KHAI THÁC HẾT) — sau khi chấm xong, trước báo sai. Ghi số vào `p_ghi_chu` của nhật ký ("tiềm năng: 12 · đã chốt 3 · …").
 4b. **Từ 17h giờ VN: tự xử lý báo sai** (mục TỰ XỬ LÝ BÁO SAI) — mỗi lượt sau 17h đều làm, hết báo mở thì thôi. Số báo đã xử lý ghi thêm vào `p_ghi_chu` của nhật ký ("báo sai: 2 sửa · 1 giữ · 1 chờ anh") — nếu đã gọi nhật ký ở bước 3 thì gộp: làm bước 4b TRƯỚC bước 3.
 5. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
 
@@ -40,10 +41,17 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 Đọc CẢ `thread`, xếp mỗi hội thoại vào ĐÚNG 1 loại:
 - `tiem_nang`: (1) Sale ĐÃ báo giá sản phẩm (con số hoặc khoảng giá — không tính phí ship / cước lẻ), VÀ (2) SAU tin báo giá khách vẫn hỏi tiếp về sản phẩm (kích thước, chất liệu, mẫu khác, còn hàng, xin ảnh / video thật, hình thức mua / thanh toán / giao hàng, mặc cả "không phải 35 hả", "có bớt không"), VÀ (3) phản hồi cuối còn MỞ — chưa chốt đơn, khách chưa từ chối; tin cuối là câu hỏi / đề nghị bước tiếp của một bên đang chờ bên kia. Ví dụ: Lê Tuấn Đạt — báo giá đèn rồi khách hỏi "Hình thức mua hàng sao bạn", Sale đáp "mình ưng mẫu nào em kiểm tra kho"; Phan Dung — báo 55,8tr giảm còn 49,5tr, khách "ko phải 35 hả", Sale gửi thêm ảnh + thông tin.
 - `da_chot`: khách đã đặt / chuyển khoản / xin số tài khoản / gửi địa chỉ nhận hàng / Sale lên đơn.
-- `tu_choi`: khách nói không mua, đắt quá thôi, để dịp khác, đã mua chỗ khác, hoặc im lặng sau khi nói không ưng.
-- `chua_du`: thiếu một trong 3 điều trên — chưa báo giá thật (chỉ phí ship, chỉ "từ X" mà khách không hỏi gì thêm), khách KHÔNG hỏi gì thêm sau báo giá, hoặc chỉ "ok / cảm ơn / để em xem" rồi dừng.
+- `tu_choi`: khách nói không mua, đắt quá thôi, để dịp khác, đã mua chỗ khác, hoặc im lặng sau khi nói không ưng. **Siết 20/11 (anh Hải: "từ chối rồi gắn tiềm năng làm chi")**: khách chê đắt / "cao quá" / "cao vậy" / không ưng / không lấy / so giá chỗ khác rẻ hơn, HOẶC Sale báo KHÔNG CÓ đúng thứ khách cần (màu, chất liệu, size, loại) — mà SAU ĐÓ khách KHÔNG hỏi phương án khác → `tu_choi` (kể cả tin cuối là Sale giải thích giá / gợi ý). Chỉ giữ `tiem_nang` khi sau lời chê khách VẪN hỏi tiếp phương án (mẫu rẻ hơn — "có mẫu nào vài triệu không", mẫu khác, mặc cả cụ thể "bớt được không", "không phải 35 hả"). App MKT lọc bỏ khách `tu_choi` khỏi tệp giao việc.
+- `chua_du`: thiếu một trong 3 điều trên — chưa báo giá thật (chỉ phí ship, chỉ "từ X" mà khách không hỏi gì thêm), khách KHÔNG hỏi gì thêm sau báo giá, hoặc chỉ "ok / cảm ơn / để em xem / để tham khảo, có gì nhắn lại" rồi dừng.
 `ly_do` 1 câu cụ thể: khách hỏi gì sau báo giá, tin cuối của ai và nói gì (vd "Báo 3,9tr đèn 7 bông; khách hỏi hình thức mua; Sale hỏi khách ưng mẫu nào — đang chờ khách").
 Không chép số điện thoại / mã chấm vào `ly_do`.
+
+## CHƯA KHAI THÁC HẾT — LỖI SALE (anh Hải chốt 20/11/2026, ca Thiện Minh)
+"Mấy data như này gắn thêm thẻ chưa khai thác hết … cái này là lỗi sale nha, sale bảo check kho xong tới nay vẫn chưa phản hồi, vừa gắn thẻ lỗi vừa gắn thẻ chưa khai thác hết." Lô đã lọc trước bằng máy: hội thoại đã báo giá (kết quả tiềm năng mới nhất là tiem_nang / chua_du), tin cuối (bỏ Bot) là của Sale, đã quá 1 ngày làm việc (8h–17h30) không có tin nào sau. Đọc `doan_cuoi`:
+- `ket = true` khi Sale còn NỢ khách một việc rồi bỏ lửng: hứa kiểm kho / hỏi lại kho, xưởng, quản lý / gửi ảnh, video, giá sau / "để em xem rồi báo" / "lát em gửi"…; hoặc khách vừa hỏi phương án (mẫu rẻ hơn, mẫu khác, size khác) mà Sale chỉ đáp "dạ" / "để em xem" rồi không đưa phương án. Ví dụ: Thiện Minh — báo 22,4tr, khách "có mẫu nào vài triệu ko em, cao quá", Sale "dạ để em kiểm tra lại kho bên em ạ" (03/11 13:54) rồi không quay lại.
+- `ket = false` khi tin cuối của Sale đã TRẢ ĐỦ (báo giá, gửi ảnh, trả lời câu hỏi, chốt lịch) và đang chờ khách quyết, hoặc Sale đã chào kết / khách đã từ chối, hoặc Sale đã làm điều đã hứa (gửi ảnh / báo kết quả) ngay trong các tin cuối.
+- `ly_do` 1 câu: Sale hứa gì, lúc nào (giờ trong đoạn), khách đang chờ gì — vd "Hứa kiểm tra kho mẫu vài triệu 03/11 13:54, tới nay chưa phản hồi".
+- `ket = true` → hệ thống tự gắn thẻ "chưa khai thác hết" (view qc_khach_tiem_nang_ngay cột chua_khai_thac) và LỖI SALE: dòng chấm đang `dung` thành `thieu` (mức trung), issue mở đầu "Chưa khai thác hết:". **Luật chấm nội dung đi kèm:** khi chấm lại cả đoạn, Sale hứa quay lại mà tới tin khách sau đó / tới lúc chấm đã quá 1 ngày làm việc vẫn không quay lại → `thieu`, issue mở đầu "Chưa khai thác hết:".
 
 ## TỰ XỬ LÝ BÁO SAI CUỐI NGÀY (anh Hải chốt 15/10/2026: "tool cuối ngày rà lỗi báo sai và clear luôn, t đỡ phải báo")
 Báo sai do Sale / anh gửi từ trang (nút báo sai): kèm ghi chú + ảnh chụp Pancake. Với từng báo trong `baosai.json`:
