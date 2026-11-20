@@ -33,7 +33,7 @@ console.log(`${rows.length} dòng:`, count);
 if (thu) process.exit(0);
 
 const data = JSON.stringify(rows.map(r => ({ id: r.id, verdict: r.verdict, severity: r.severity || null,
-  issue: r.issue || null, suggestion: r.suggestion || null, source_faq: r.source_faq || null, sai_quy_trinh: r.sai_quy_trinh || null })));
+  issue: r.issue || null, suggestion: r.suggestion || null, source_faq: r.source_faq || null, sai_quy_trinh: null })));  // bỏ chấm quy trình 20/11
 const tag = 'qc' + Date.now();   // dollar-quote tag riêng để nội dung không phá câu SQL
 const v = `with v as (select * from jsonb_to_recordset($${tag}$${data}$${tag}$::jsonb)
   as x(id bigint, verdict text, severity text, issue text, suggestion text, source_faq text, sai_quy_trinh text))`;

@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.56';
-const APP_VERSION='19/11/2026 17:06';
+const APP_SO='1.57';
+const APP_VERSION='20/11/2026 13:58';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -265,8 +265,8 @@ function lock(){ls.del(LS_MA);S.ma='';S.rows=[];renderGate();}
 // Chỉ tải đúng khoảng ngày đang xem (29/9: quota egress chung với app MKT/Sale — trước đây mỗi lần mở tải cả bảng ~1,5 MB).
 // S.tai = khoảng đã tải ({tu,den}, '' = không giới hạn). Khoảng mới nằm trong khoảng đã tải thì lọc tại chỗ, không gọi lại.
 async function load(){
-  const [rows,reps]=await Promise.all([rpc('qc_ds_cham',{p_tu:S.from||null,p_den:S.to||null}),rpc('qc_ds_bao_sai')]);
-  S.rows=rows||[];S.reports=reps||[];S.tai={tu:S.from,den:S.to};
+  const [rows,reps,tn]=await Promise.all([rpc('qc_ds_cham',{p_tu:S.from||null,p_den:S.to||null}),rpc('qc_ds_bao_sai'),rpc('qc_ds_tiem_nang').catch(()=>[])]);
+  S.rows=rows||[];S.reports=reps||[];S.tn=tn||[];S.tai={tu:S.from,den:S.to};
 }
 const nam=(a,b)=>!b.tu||(a.tu&&a.tu>=b.tu);                 // khoảng a bắt đầu không sớm hơn b
 const trongKhoang=()=>S.tai&&nam({tu:S.from},{tu:S.tai.tu})&&(!S.tai.den||(S.to&&S.to<=S.tai.den));
@@ -332,15 +332,33 @@ const ICON={
   miss:svg('<path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12Z"/><path d="m9.5 9.5 5 5M14.5 9.5l-5 5"/>'),
   inbox:svg('<path d="M4 5h16v10H13l-4 4v-4H4V5Z"/><path d="m9 10 2 2 4-4"/>'),
   muon:svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2.5h6"/>'),
+  tiem:svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3"/>'),
+  chot:svg('<path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="m9.5 14 2 2 3.5-3.5"/>'),
+  chuadu:svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>'),
 };
-// Chấm quy trình áp từ lúc anh Hải gửi bộ quy tắc (06/10/2026 14h53, lúc đẩy luật) — lượt chấm trước đó không xét, không tính vào tỉ lệ
-const QT_TU='2026-10-06T07:53:00Z';
-const daXetQT=r=>r.reviewed_at&&r.reviewed_at>=QT_TU&&(r.conv_at||'')>=QT_TU&&['dung','thieu','sai'].includes(r.verdict);
+// KHÁCH TIỀM NĂNG (anh Hải 19–20/11, thay thẻ "Sai quy trình" đã bỏ): đánh giá theo NGÀY tin nhắn, 2 lần/ngày (qc_khach_tiem_nang).
+// Lọc theo NGÀY ĐÁNH GIÁ trong khoảng đang xem — không theo conv_date (= ngày nhắn cuối, có thể muộn hơn). Mỗi hội thoại lấy lần đánh giá mới nhất trong khoảng.
+const TN_L={tiem_nang:'Khách tiềm năng',da_chot:'Đã chốt',tu_choi:'Từ chối',chua_du:'Chưa đủ điều kiện'};
+const tnTrong=x=>(!S.from||x.ngay>=S.from)&&(!S.to||x.ngay<=S.to);
+function tnTrongKhoang(){
+  const m=new Map();
+  for(const x of S.tn||[]){
+    if(!tnTrong(x))continue;
+    const k=x.conv_id||('#'+x.review_id),c=m.get(k);
+    if(!c||x.ngay>c.ngay||(x.ngay===c.ngay&&(x.danh_gia_luc||'')>(c.danh_gia_luc||'')))m.set(k,x);
+  }
+  return m;
+}
+const tnOf=r=>r._tn||(S._tnMap&&S._tnMap.get(r.conv_id||('#'+r.id)));
+function tnBox(r){
+  const ds=(S.tn||[]).filter(x=>(r.conv_id?x.conv_id===r.conv_id:x.review_id===r.id)&&tnTrong(x));
+  if(!ds.length)return'';
+  return`<div class="box" style="background:var(--info-bg)"><div class="h" style="color:var(--info)">Đánh giá khách tiềm năng</div>${ds.map(x=>`<div style="margin-top:3px"><b>${esc(x.ngay.slice(8,10)+'/'+x.ngay.slice(5,7))} · ${esc(TN_L[x.ket]||x.ket)}:</b> ${esc(x.ly_do||'')}</div>`).join('')}</div>`;
+}
 function verdictMatch(r,v){
   if(v==='all')return true;
   if(v==='muon')return!!lateOf(r);
   if(v==='qua_inbox')return inboxOf(r);
-  if(v==='quy_trinh')return!!r.sai_quy_trinh;
   if(v==='cham_gio')return r.tg_phan_hoi_max>DUNG_GIO&&r.verdict!=='khong_lien_quan';
   if(v==='ngoai_gio')return ngoaiGio(r);   // anh Hải 6/10: thẻ thay "Tư vấn qua tin nhắn"
   if(v==='miss')return r.verdict==='chi_bot'||r.verdict==='khong_tra_loi';
@@ -376,10 +394,9 @@ function gopHoiThoai(list){
     if(ts.length===1)return ts[0];
     ts.sort((a,b)=>(a.conv_at||a.conv_date).localeCompare(b.conv_at||b.conv_date));
     const chinh=ts.reduce((a,b)=>(NANG[b.verdict]||0)>(NANG[a.verdict]||0)?b:a),cuoi=ts[ts.length-1];
-    const qt=[...new Set(ts.map(t=>t.sai_quy_trinh).filter(Boolean))].join(' · ')||null;
     return{...chinh,turns:ts,_threadId:cuoi.id,conv_at:cuoi.conv_at,conv_date:cuoi.conv_date,
       sale_name:ts.map(t=>t.sale_name).filter(Boolean).pop()||null,phone:ts.map(t=>t.phone).find(Boolean)||null,
-      reviewed_at:ts.reduce((a,t)=>t.reviewed_at&&t.reviewed_at>a?t.reviewed_at:a,''),sai_quy_trinh:qt,
+      reviewed_at:ts.reduce((a,t)=>t.reviewed_at&&t.reviewed_at>a?t.reviewed_at:a,''),
       tg_phan_hoi_tb:(()=>{const v=ts.map(t=>t.tg_phan_hoi_tb).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;})(),
       tg_phan_hoi_max:ts.reduce((a,t)=>t.tg_phan_hoi_max!=null&&(a==null||t.tg_phan_hoi_max>a)?t.tg_phan_hoi_max:a,null)};
   });
@@ -412,7 +429,15 @@ function render(keepFocus){
     if(q&&!noDau((r.turns||[r]).flatMap(t=>[t.customer_name,t.phone,t.sale_name,t.customer_ask,t.sale_reply,t.issue]).join(' ')).includes(q))return false;
     return true;
   });
-  const rows=base.filter(r=>verdictMatch(r,S.verdict));
+  S._tnMap=tnTrongKhoang();
+  const tnBase=[...S._tnMap.values()].filter(x=>platOf(x)===S.plat&&(S.brand==='all'||brandOf(x)===S.brand)&&(S.sale==='all'||saleOf(x)===S.sale)
+      &&(!q||noDau([x.customer_name,x.phone,x.sale_name,x.ly_do].join(' ')).includes(q)))
+    .map(x=>({id:x.review_id,conv_date:x.ngay,conv_at:null,page_id:x.page_id,page_name:x.page_name,conv_id:x.conv_id,customer_name:x.customer_name,
+      phone:x.phone,sale_name:x.sale_name,verdict:x.verdict,pancake_url:x.pancake_url,_tn:x}));
+  const tnDem=k=>tnBase.filter(r=>r._tn.ket===k).length;
+  const laTN=S.verdict.startsWith('tn_');
+  const rows=laTN?tnBase.filter(r=>r._tn.ket===S.verdict.slice(3)).sort((a,b)=>b._tn.ngay.localeCompare(a._tn.ngay)||b.id-a.id)
+    :base.filter(r=>verdictMatch(r,S.verdict));
   const T=tally(base);
 
   // badge cập nhật
@@ -466,7 +491,7 @@ function render(keepFocus){
       <td>${esc(r.page_name||'')}</td>
       <td><div style="font-weight:700">${esc(r.customer_name||'—')}${r.turns?` <span class="badge" title="Số lượt hỏi–đáp trong hội thoại">${r.turns.length} lượt</span>`:''}</div>${r.phone?`<div class="muted" style="font-size:11px">${esc(r.phone)}</div>`:''}</td>
       <td>${saleOf(r)==='(chưa rõ)'?'<span class="muted">—</span>':esc(saleOf(r))}</td>
-      <td>${vb(r.verdict)}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
+      <td>${vb(r.verdict)}${tnOf(r)?.ket==='tiem_nang'?'<span class="late" style="background:var(--info-bg);color:var(--info)" title="Khách tiềm năng — lần đánh giá mới nhất trong khoảng ngày đang xem">tiềm năng</span>':''}${sevOf(r.severity)&&['thieu','sai'].includes(r.verdict)?` <span class="muted" style="font-size:11px">${esc(SEV_L[sevOf(r.severity)]||r.severity)}</span>`:''}${lateOf(r)?`<span class="late" title="Lượt chờ lâu nhất trong hội thoại (phút trong giờ làm 8h–17h30)">trả lời muộn nhất ${esc(lateOf(r))}</span>`:''}${inboxOf(r)&&r.verdict!=='tra_loi_inbox'?`<span class="late" style="background:var(--info-bg);color:var(--info)" title="Bình luận — Sale nhắn riêng cho khách, chấm theo đoạn tin nhắn">qua tin nhắn${inboxDelay(r)?' · sau '+esc(inboxDelay(r)):''}</span>`:''}</td>
       <td class="c" onclick="event.stopPropagation()">${r.pancake_url?`<a href="${esc(r.pancake_url)}" target="_blank" rel="noopener">Mở</a>`:'<span class="muted">—</span>'}</td>
       <td class="c" onclick="event.stopPropagation()"><button class="btn" style="padding:3px 9px;${rep?'color:var(--bad);border-color:var(--bad)':''}" title="Báo lượt này chấm sai" onclick="openReport(${r.id})">${rep?'Đã báo':'Báo sai'}</button></td>
     </tr>${open?detailRow(r):''}`;
@@ -502,16 +527,22 @@ function render(keepFocus){
       ${kpi('sai','Sai kiến thức',num(T.sai),pct(T.sai,T.den),'bad','sai')}
       ${kpi('miss','Miss',num(T.miss),T.loi?`<span style="text-decoration:underline;cursor:pointer" onclick="event.stopPropagation();toggleVerdict('loi_nen_tang')">+ ${num(T.loi)} lỗi nền tảng</span>`:'','miss','miss')}
     </div>
-    <div class="kpi-row kpi4">
-      ${kpi('quy_trinh','Sai quy trình',num(base.filter(r=>r.sai_quy_trinh).length),(()=>{const xet=base.filter(daXetQT).length;return xet?pct(base.filter(r=>r.sai_quy_trinh).length,xet):'';})(),'bad','sai')}
+    <div class="kpi-row">
       ${kpi('dung_gio','Trả lời đúng giờ',pct(T.dungGio,T.coTg),`${num(T.dungGio)} / ${num(T.coTg)}`,'ok','dung')}
       ${kpi('tb_tg','Phản hồi trung bình',fmtPhut(T.tbTg),'','info','muon')}
       ${kpi('muon','Phản hồi chậm',num(base.filter(lateOf).length),'','warn','muon')}
     </div>
+    <div class="sec" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Khách tiềm năng <span class="badge">${num(tnBase.length)} hội thoại đã đánh giá</span><span class="badge">Tự đánh giá 12h · 20h</span></div>
+    <div class="kpi-row kpi4">
+      ${kpi('tn_tiem_nang','Khách tiềm năng',num(tnDem('tiem_nang')),pct(tnDem('tiem_nang'),tnBase.length),'info','tiem')}
+      ${kpi('tn_da_chot','Đã chốt',num(tnDem('da_chot')),pct(tnDem('da_chot'),tnBase.length),'ok','chot')}
+      ${kpi('tn_tu_choi','Từ chối',num(tnDem('tu_choi')),pct(tnDem('tu_choi'),tnBase.length),'bad','sai')}
+      ${kpi('tn_chua_du','Chưa đủ điều kiện',num(tnDem('chua_du')),pct(tnDem('chua_du'),tnBase.length),'grey','chuadu')}
+    </div>
     <div class="sec">Theo thương hiệu</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Thương hiệu')}<tbody>${byBrand||''}</tbody></table></div>
     <div class="sec">Theo Sale</div><div class="card scroll" style="margin-bottom:14px"><table>${sumHead('Sale')}<tbody>${bySale||''}</tbody></table></div>
     <div class="sec" id="chiTiet" style="display:flex;align-items:center;gap:8px;scroll-margin-top:12px">Chi tiết <span class="badge">${num(rows.length)} hội thoại</span>
-      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Phản hồi chậm':S.verdict==='ngoai_gio'?'Ngoài giờ làm':S.verdict==='cham_gio'?'Phản hồi chậm':S.verdict==='quy_trinh'?'Sai quy trình':S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
+      ${S.verdict!=='all'?`<span class="badge">${esc(S.verdict==='miss'?'Miss':S.verdict==='muon'?'Phản hồi chậm':S.verdict==='ngoai_gio'?'Ngoài giờ làm':S.verdict==='cham_gio'?'Phản hồi chậm':laTN?TN_L[S.verdict.slice(3)]:S.verdict==='qua_inbox'?'Tư vấn qua tin nhắn':S.verdict==='da_cham'?'Đã chấm':(VERDICT[S.verdict]||{}).l||S.verdict)} <span style="cursor:pointer" onclick="toggleVerdict('${S.verdict}')">✕</span></span>`:''}</div>
     <div class="card scroll"><table style="min-width:860px">
       <thead><tr><th>Ngày</th><th>Page</th><th>Khách</th><th>Sale</th><th>Kết quả</th><th class="c">Pancake</th><th class="c">Báo sai</th></tr></thead>
       <tbody>${body}</tbody></table>
@@ -554,14 +585,13 @@ function detailRow(r){
       return`<div class="box" style="background:var(--surface);border-left:3px solid var(--${c})"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="muted">${esc(fmtDT(t.conv_at,t.conv_date))}</span>${vb(t.verdict)}${lateOf1(t)?`<span class="late">muộn ${esc(lateOf1(t))}</span>`:''}</div>
         <div style="margin-top:4px"><b>Khách:</b> ${esc((t.customer_ask||'').slice(0,240))}</div>
-        ${t.sai_quy_trinh?`<div style="margin-top:4px;color:var(--bad)"><b>Sai quy trình:</b> ${esc(t.sai_quy_trinh)}</div>`:''}
         ${t.issue&&!['dung'].includes(t.verdict)?`<div style="margin-top:4px"><b>Vấn đề:</b> ${esc(t.issue)}</div>`:''}
         ${t.suggestion?`<div style="margin-top:4px;color:var(--sale-fg)"><b>Nên trả lời:</b> ${esc(t.suggestion)}</div>`:''}
         <div style="margin-top:6px"><button class="btn" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();openReport(${t.id})">Báo sai lượt này</button></div></div>`;}).join(''):'';
-  if(r.turns)return`<tr class="detail"><td colspan="7">${thread}${luot}</td></tr>`;
+  if(r.turns)return`<tr class="detail"><td colspan="7">${thread}${tnBox(r)}${luot}</td></tr>`;
   return`<tr class="detail"><td colspan="7">
     ${thread}
-    ${r.sai_quy_trinh?`<div class="box" style="background:var(--bad-bg)"><div class="h" style="color:var(--bad)">Sai quy trình</div>${esc(r.sai_quy_trinh)}</div>`:''}
+    ${tnBox(r)}
     ${r.issue?`<div class="box" style="background:var(--${x.c}-bg)"><div class="h" style="color:var(--${x.c})">Vấn đề</div>${esc(r.issue)}</div>`:''}
     ${r.suggestion?`<div class="box" style="background:var(--sale-bg)"><div class="h" style="color:var(--sale-fg)">Nên trả lời</div>${esc(r.suggestion)}
       ${r.source_faq?`<div class="muted" style="font-size:11px;margin-top:6px">Căn cứ: ${esc(r.source_faq)}</div>`:''}</div>`:''}
@@ -669,7 +699,7 @@ async function taiNhanSu(ma){
 async function moNhanSu(){const v=(document.getElementById('maNs')||{}).value||'';await taiNhanSu(v.trim());render();}
 const NS_CS=[
   ['QUY MÔ','var(--info)',[['hoi_thoai','Hội thoại','n']]],
-  ['CHẤT LƯỢNG','var(--ok)',[['ty_le_dung','Tỉ lệ đúng','pct'],['thieu','Thiếu ý','n',1],['sai','Sai kiến thức','n',1],['miss','Miss','n',1],['ty_le_sai_quy_trinh','Sai quy trình','pct',1]]],
+  ['CHẤT LƯỢNG','var(--ok)',[['ty_le_dung','Tỉ lệ đúng','pct'],['thieu','Thiếu ý','n',1],['sai','Sai kiến thức','n',1],['miss','Miss','n',1]]],
   ['TỐC ĐỘ PHẢN HỒI','var(--warn)',[['ty_le_dung_gio','Trả lời đúng giờ','pct'],['tb_phan_hoi','Phản hồi trung bình','phut',1],['phan_hoi_cham','Phản hồi chậm','n',1]]]];
 const XH={tien_bo:['Tiến bộ','ok'],giu:['Giữ nguyên','grey'],di_xuong:['Đi xuống','bad']};
 function nsKyCuaThang(th){   // các tuần (đã đánh giá + tuần đang chạy) của 1 tháng
@@ -839,7 +869,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 19/11/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 20/11/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -876,7 +906,7 @@ function logicPage(){
       <li><b>Báo sai tự xử lý mỗi tối</b> (15/10): từ 17h, lịch chấm cloud đọc các báo sai đang mở (ghi chú + ảnh chụp Pancake + cả hội thoại), xét theo luật chấm: sửa kết quả và đóng · giữ nguyên và ghi căn cứ · hoặc để mở "CHỜ ANH" khi cần anh quyết nghiệp vụ. Kiểu lỗi chấm chung rút ra được áp ngay ở các lượt chấm sau.</li>
       <li><b>Tin nhắn riêng nối vào bình luận</b> (13/10): Sale nhắn riêng cho khách bình luận mà khách chưa nhắn lại → job kéo nối phần tin nhắn riêng vào dòng bình luận (khớp mã khách Pancake, cùng page, trong 7 ngày) rồi chấm lại cả đoạn. Khách đã nhắn trong tin nhắn riêng → tin nhắn có dòng chấm riêng, dòng bình luận chỉ xét Sale có dẫn về không — không chấm nội dung 2 lần.</li>
       <li><b>Lượt cuối chỉ là "ok / cảm ơn / sticker"</b> (13/10): không đè kết quả hội thoại thật — chỉ nối thêm vào thread. Sticker / nút like ghi là "(sticker)", không phải ảnh mẫu.</li>
-      <li><b>AI chấm cả đoạn hội thoại</b>, tra <code>product_faq</code> khi là câu hỏi kiến thức, đối chiếu <b>giá KiotViet hiện tại của từng mã</b> khi Sale báo giá (cập nhật hằng ngày; bảng khoảng giá chỉ dùng cho quy trình báo khoảng).</li>
+      <li><b>AI chấm cả đoạn hội thoại</b>, tra <code>product_faq</code> khi là câu hỏi kiến thức, đối chiếu <b>giá KiotViet hiện tại của từng mã</b> khi Sale báo giá (cập nhật hằng ngày).</li>
       <li>Đang khai thác nhu cầu (hỏi lại 1 lần cho rõ mẫu / kích thước / ngân sách) mà khách chưa đáp → đúng. Khách đã chỉ rõ món mà Sale hỏi chung chung nhiều ngày không báo giá → thiếu.</li>
       <li>Sale đã tiếp khách, tin cuối của khách khó hiểu (gõ sai / đọc giọng nói) → không phải miss; Sale không hỏi lại → thiếu mức thấp.</li>
       <li>FAQ nhận diện tượng là lý thuyết: dòng tượng Đài Loan A Di Đà / Bổn Sư <b>chung khuôn</b> (áo trễ, chữ Vạn, khác pháp khí) — Sale nói vậy là đúng. Giá chỉ tính sai khi lệch > 20% so với giá Kiot của đúng mẫu (nhiều mẫu khớp thì ngoài hẳn dải các mẫu đó); Bộ Tam Thánh tra giá bộ trên Kiot. Báo thấp hơn Kiot mà Sale nói rõ "giá đã giảm" / khuyến mãi → không tính sai (13/10).</li>
@@ -903,17 +933,13 @@ function logicPage(){
       <li><b>Đúng giờ</b>: mọi lượt trong hội thoại được trả lời trong 1 giờ làm việc. <b>Phản hồi chậm</b>: có lượt chờ quá 1 giờ làm việc; nhãn trên dòng ghi <b>trả lời muộn nhất</b> = lượt chờ lâu nhất trong hội thoại.</li>
       <li>Ảnh page tự gửi khi khách bấm quảng cáo không tính là Sale trả lời. Chỉ đo lượt khách nhắn từ 01/10/2026.</li>
     </ul>
-    <h3>7. Chấm quy trình (từ 06/10/2026 14h53)</h3>
-    <p>Theo <b>Quy trình tư vấn Sales Onl</b> và <b>Bảng khoảng giá báo khách</b>; chấm riêng với đúng / thiếu / sai (một hội thoại có thể tư vấn đúng mà vẫn sai quy trình). Hội thoại trước mốc không xét.</p>
-    <p>Tài liệu gốc (SOP tư vấn Sales Onl, Bảng khoảng giá) được lưu trong hệ thống và <b>tự kiểm mỗi sáng</b> (lượt quét 6h20): anh sửa file thì Nhật ký chạy báo đỏ "Tài liệu quy trình thay đổi" — bảng giá tự nạp lại, luật chấm được cập nhật theo SOP mới.</p>
+    <h3>7. Khách tiềm năng (thay chấm quy trình — anh chốt 20/11/2026)</h3>
+    <p><b>Bỏ chấm quy trình</b> (20/11): không chấm "sai quy trình" nữa, dữ liệu cũ đã xoá (165 hội thoại, có sao lưu). Thay bằng phần <b>Khách tiềm năng</b> trên trang Chất lượng phản hồi để anh check chéo.</p>
     <ul>
-      <li><b>Tư vấn công khai dưới bình luận</b> — dưới bình luận chỉ dẫn về tin nhắn / chào / tri ân; báo giá, tư vấn phải ở tin nhắn riêng.</li>
-      <li><b>Né giá</b> — khách hỏi giá món đã chỉ rõ mà không báo khoảng giá (chỉ hỏi lại, xin số). Khách hỏi chung chưa rõ món thì hỏi lại là đúng.</li>
-      <li><b>Báo giá sai cách</b> — chỉ khi đưa khoảng rộng quá mức (đầu–cuối chênh hơn 5 lần, vd "từ 1 tới 20 triệu"). Báo "từ X trở lên", "hơn X" hay một con số tham khảo đều chấp nhận (anh nới 12/10).</li>
-      <li><b>Báo giá không khai thác tiếp</b> — báo giá xong dừng, không hỏi thêm nhu cầu (nguyên tắc: vừa trả lời vừa khai thác).</li>
-      <li><b>Page Sỉ gặp khách lẻ</b> — từ 12/10/2026 <b>được tư vấn trực tiếp</b> như page lẻ (báo giá, gửi mẫu); chỉ sai khi từ chối thẳng "không bán lẻ, chỉ bán sỉ" hoặc lộ nội bộ.</li>
-      <li><b>Gửi dồn quá nhiều mẫu</b> (hơn 5 ảnh một lúc khi chưa rõ nhu cầu; khách tự xin xem mẫu thì không tính) · <b>Không chốt bước tiếp theo</b> khi khách hẹn cân nhắc · <b>Giảm giá ngay / nói xấu đối thủ</b>.</li>
-      <li>Page <b>Nến Bơ - Tự Tại Viên</b> chưa chấm quy trình (chờ kịch bản riêng).</li>
+      <li><b>Tiềm năng</b>: Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở. Khác: <b>đã chốt</b> (cọc / chuyển khoản / gửi địa chỉ / lên đơn), <b>từ chối</b>, <b>chưa đủ điều kiện</b> (chưa báo giá thật, khách không hỏi thêm, chỉ ok / cảm ơn).</li>
+      <li>Đánh giá <b>2 lần mỗi ngày</b> (khung 12h–13h59 và 20h–21h59) trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>
+      <li>Thẻ số theo <b>ngày đánh giá</b> trong khoảng đang xem (không theo ngày nhắn cuối), cùng bộ lọc kênh / thương hiệu / Sale / tìm kiếm; mỗi hội thoại tính theo lần đánh giá mới nhất trong khoảng. Bấm thẻ → danh sách; mở dòng → lý do từng ngày.</li>
+      <li>Tháng 11/2026 chạy bù 1–19/11 bằng máy (20/11). Dữ liệu mở cho app MKT (view qc_khach_tiem_nang_ngay) để giao việc hằng ngày và gắn thẻ Pancake.</li>
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>
     <ul>

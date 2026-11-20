@@ -89,3 +89,20 @@ create policy "doc qc_khach_tiem_nang" on public.qc_khach_tiem_nang for select t
 grant select on public.qc_khach_tiem_nang to authenticated;
 grant select on public.qc_khach_tiem_nang_ngay to authenticated;
 revoke all on public.qc_khach_tiem_nang_ngay from anon;
+
+-- 20/11: trang QC đọc kết quả đánh giá để anh check chéo (thẻ "Khách tiềm năng" theo bộ lọc ngày / page / Sale).
+create or replace function qc_ds_tiem_nang(p_ma text) returns jsonb
+language plpgsql security definer set search_path to 'public', 'extensions' set statement_timeout to '20s' as $$
+begin
+  perform qc_chan(p_ma);
+  return coalesce((select jsonb_agg(jsonb_build_object('review_id', k.review_id, 'ngay', k.ngay, 'ket', k.ket, 'ly_do', k.ly_do,
+      'danh_gia_luc', k.danh_gia_luc,
+      -- kèm thông tin hội thoại: ngày đánh giá có thể sớm hơn conv_date (= ngày nhắn cuối) nên trang không dựa vào danh sách chấm đang tải
+      'conv_date', s.conv_date, 'conv_at', s.conv_at, 'page_id', s.page_id, 'page_name', s.page_name, 'conv_id', s.conv_id,
+      'customer_name', s.customer_name, 'phone', s.phone, 'sale_name', s.sale_name, 'verdict', s.verdict, 'pancake_url', s.pancake_url)
+      order by k.ngay, k.review_id)
+    from qc_khach_tiem_nang k join sale_response_review s on s.id = k.review_id
+    where k.ngay >= date '2026-11-01' and s.verdict <> 'khong_lien_quan'), '[]'::jsonb);
+end $$;
+revoke all on function qc_ds_tiem_nang(text) from public;
+grant execute on function qc_ds_tiem_nang(text) to anon, authenticated;
