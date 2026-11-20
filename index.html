@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.59';
-const APP_VERSION='20/11/2026 16:10';
+const APP_SO='1.60';
+const APP_VERSION='20/11/2026 16:18';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -311,8 +311,10 @@ async function setRange(days){
   S.pg=0;await ensureRange();render();
 }
 function toggleVerdict(v){S.verdict=S.verdict===v?'all':v;S.pg=0;render();}
-function setPlat(p){if(p!==S.plat){S.plat=p;S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';}render();}
-function setTab(t){if(t!==S.tab){S.tab=t;ls.set('qc_tab',t);S.pg=0;S.verdict='all';S.open.clear();}render();}
+// Tab Social | Zalo | Tiềm năng (anh Hải 20/11): Tiềm năng là tab thứ 3, CHỈ dữ liệu Social (Zalo không đánh giá tiềm năng).
+function chuyenTab(p,t){if(p!==S.plat||t!==S.tab){S.plat=p;S.tab=t;ls.set('qc_tab',t);S.pg=0;S.brand=S.sale=S.verdict='all';S.q='';S.open.clear();}render();}
+function setPlat(p){chuyenTab(p,'cl');}
+function setTab(t){chuyenTab('social',t);}
 // "Trả lời muộn N giờ" do tools/soat-miss-pancake.js ghi vào issue khi soát lại Pancake
 // Trả lời muộn (anh Hải 7/10): CHỈ lượt khách nhắn trong giờ làm 8h–17h30 mà chờ > 60 phút làm việc. Khách nhắn ngoài giờ → thẻ
 // "ngoài giờ", không tính muộn. Dòng cũ chưa có số đo (trước tháng 10) dùng nhãn "Trả lời muộn" cũ trong issue.
@@ -530,8 +532,7 @@ function render(keepFocus){
   app.innerHTML=shell(`
     <div class="top">
       <div class="title" style="margin-right:6px">${tabTN?'Khách Tiềm Năng':'Chất Lượng Phản Hồi Sale'}</div>
-      <span class="seg"><button class="${!tabTN?'on':''}" onclick="setTab('cl')">Chất lượng</button><button class="${tabTN?'on':''}" onclick="setTab('tn')">Tiềm năng</button></span>
-      <span class="seg"><button class="${S.plat==='social'?'on':''}" onclick="setPlat('social')">Social</button><button class="${S.plat==='zalo'?'on':''}" onclick="setPlat('zalo')">Zalo</button></span>
+      <span class="seg"><button class="${!tabTN&&S.plat==='social'?'on':''}" onclick="setPlat('social')">Social</button><button class="${!tabTN&&S.plat==='zalo'?'on':''}" onclick="setPlat('zalo')">Zalo</button><button class="${tabTN?'on':''}" onclick="setTab('tn')">Tiềm năng</button></span>
       <div class="right">
         ${upd}
         ${openRep?`<button class="sel" style="color:var(--bad);border-color:var(--bad)" onclick="go('history')">${num(openRep)} báo chấm sai</button>`:''}
@@ -967,7 +968,8 @@ function logicPage(){
       <li>Ảnh page tự gửi khi khách bấm quảng cáo không tính là Sale trả lời. Chỉ đo lượt khách nhắn từ 01/10/2026.</li>
     </ul>
     <h3>7. Khách tiềm năng (thay chấm quy trình — anh chốt 20/11/2026)</h3>
-    <p><b>Bỏ chấm quy trình</b> (20/11): không chấm "sai quy trình" nữa, dữ liệu cũ đã xoá (165 hội thoại, có sao lưu). Thay bằng phần <b>Khách tiềm năng</b> trên trang Chất lượng phản hồi để anh check chéo — từ 20/11 là <b>tab riêng "Tiềm năng"</b> (nút Chất lượng | Tiềm năng cạnh Social | Zalo): thẻ số, bảng theo thương hiệu / Sale (đã đánh giá, tiềm năng, đã chốt, từ chối, chưa đủ, chưa khai thác hết, tỉ lệ tiềm năng, tỉ lệ chốt) và danh sách kèm lý do; tab Chất lượng chỉ còn số chấm phản hồi.</p>
+    <p><b>Bỏ chấm quy trình</b> (20/11): không chấm "sai quy trình" nữa, dữ liệu cũ đã xoá (165 hội thoại, có sao lưu). Thay bằng phần <b>Khách tiềm năng</b> trên trang Chất lượng phản hồi để anh check chéo — từ 20/11 là <b>tab thứ 3 "Tiềm năng"</b> cạnh Social | Zalo: thẻ số, bảng theo thương hiệu / Sale (đã đánh giá, tiềm năng, đã chốt, từ chối, chưa đủ, chưa khai thác hết, tỉ lệ tiềm năng, tỉ lệ chốt) và danh sách kèm lý do; tab Social / Zalo chỉ còn số chấm phản hồi.</p>
+    <p><b>Chỉ đánh giá Social</b> (anh chốt 20/11): Facebook (tin nhắn + bình luận) và TikTok. Zalo không đánh giá tiềm năng, không rà "chưa khai thác hết". Đã xoá 261 lượt tiềm năng Zalo + 48 lượt rà chưa khai thác hết Zalo (có sao lưu); 1 hội thoại Zalo (#3479) từng bị chuyển Thiếu ý vì chưa khai thác hết đã trả về Đúng như trước.</p>
     <ul>
       <li><b>Tiềm năng</b>: Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở. Khác: <b>đã chốt</b> (cọc / chuyển khoản / gửi địa chỉ / lên đơn), <b>từ chối</b>, <b>chưa đủ điều kiện</b> (chưa báo giá thật, khách không hỏi thêm, chỉ ok / cảm ơn).</li>
       <li>Đánh giá <b>2 lần mỗi ngày</b> (khung 12h–13h59 và 20h–21h59) trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>

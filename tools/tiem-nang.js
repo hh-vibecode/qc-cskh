@@ -27,7 +27,7 @@ const lit = s => "'" + String(s).replace(/'/g, "''") + "'";
     const rows = await sql(`select s.id, s.page_name, s.customer_name, s.sale_name,
         not qc_la_inbox(s.conv_id, s.page_id) la_binh_luan, s.full_thread
       from sale_response_review s
-      where s.verdict <> 'khong_lien_quan' and not coalesce(s.noi_bo, false) and s.conv_id not like 'pzl\\_g\\_%'
+      where s.verdict <> 'khong_lien_quan' and not coalesce(s.noi_bo, false) and s.conv_id not like 'pzl\\_%'   -- chỉ Social, bỏ Zalo (anh Hải 20/11)
         and s.conv_date >= ${lit(ngay)}::date - 1
         and s.full_thread ~ ('\\[' || ${lit(ngay)} || ' \\d\\d:\\d\\d\\] Khách:')
         and qc_co_bao_gia(s.full_thread)
