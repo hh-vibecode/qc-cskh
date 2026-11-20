@@ -69,7 +69,7 @@ end $$;
 revoke execute on function public.qc_lo_tiem_nang(text, date, int), public.qc_ghi_tiem_nang(text, date, jsonb) from public;
 grant execute on function public.qc_lo_tiem_nang(text, date, int), public.qc_ghi_tiem_nang(text, date, jsonb) to anon, authenticated;
 
--- VIEW CHO APP MKT/SALE (CHỈ ĐỌC; đổi cột về sau CHỈ THÊM). Từ 20/11: chỉ TIỀM NĂNG THẬT — 1 dòng / hội thoại (lần đánh giá mới nhất là tiem_nang).
+-- VIEW CHO APP MKT/SALE (CHỈ ĐỌC; đổi cột về sau CHỈ THÊM). Từ 20/11: chỉ TIỀM NĂNG THẬT — 1 dòng / hội thoại (lần đánh giá mới nhất là tiem_nang, hoặc chua_du mà Sale đang bỏ lửng).
 -- page_id + pancake_conversation_id để app MKT gắn thẻ trạng thái trên Pancake.
 create or replace view public.qc_khach_tiem_nang_ngay with (security_invoker = true) as
 select k.ngay, k.ket, k.ly_do, k.danh_gia_luc,
@@ -86,11 +86,14 @@ join public.sale_response_review s on s.id = k.review_id
 left join public.qc_sale_ten t on t.ten_pancake = s.sale_name
 left join lateral (select c.review_id, c.ly_do from public.qc_chua_khai_thac c
                    where c.review_id = s.id and c.ket
-                     and c.tin_cuoi_luc = (regexp_match(right(s.full_thread, 400), '\[(\d{4}-\d\d-\d\d \d\d:\d\d)\][^\n]*$'))[1]::timestamp
+                     -- còn hiệu lực: không có tin Khách / Sale nào (bỏ Bot) sau tin bỏ lửng
+                     and not exists (select 1 from regexp_matches(right(s.full_thread, 3000), '\[(\d{4}-\d\d-\d\d \d\d:\d\d)\] (?!Bot:)', 'g') m
+                                     where m[1]::timestamp > c.tin_cuoi_luc)
                    order by c.tin_cuoi_luc desc limit 1) c on true
 -- 20/11 anh Hải: "lọc hết ra tiềm năng thật mới đưa cho app mkt xử lý" + "lọc các khách trong tệp từ chối ra".
--- Chỉ giữ hội thoại mà LẦN ĐÁNH GIÁ MỚI NHẤT là tiem_nang (sau đó đã chốt / từ chối / chưa đủ → tự rơi khỏi tệp). 1 dòng / hội thoại.
-where k.ket = 'tiem_nang'
+-- Chỉ giữ hội thoại mà LẦN ĐÁNH GIÁ MỚI NHẤT là tiem_nang (sau đó đã chốt / từ chối → tự rơi khỏi tệp). 1 dòng / hội thoại.
+-- Ngoại lệ: mới nhất là chua_du nhưng Sale đang bỏ lửng lời hứa (chưa khai thác hết) → vẫn vào tệp (Sale nợ khách, ca Thiện Minh).
+where (k.ket = 'tiem_nang' or (k.ket = 'chua_du' and c.review_id is not null))
   and not exists (select 1 from public.qc_khach_tiem_nang k2 where k2.review_id = k.review_id
                     and (k2.ngay > k.ngay or (k2.ngay = k.ngay and k2.danh_gia_luc > k.danh_gia_luc)));
 grant select on public.qc_chua_khai_thac to authenticated;
