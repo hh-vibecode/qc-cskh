@@ -66,7 +66,9 @@ with k as (
 )
 select y.ngay,
        y.ket,
-       y.ly_do,
+       case when y.verdict = 'loi_nen_tang'   -- 23/11: lý do theo kết quả chấm / báo sai, không giữ lý do tiềm năng cũ ("chưa được đáp")
+            then 'Lỗi nền tảng (không do Sale): ' || coalesce(nullif(y.issue, ''), 'không gửi được tin cho khách')
+            else y.ly_do end ly_do,
        y.danh_gia_luc,
        case when y.page_id like 'pzl\_%' then 'zalo' when y.page_id like 'ttm\_%' then 'tiktok' else 'facebook' end nen_tang,
        y.page_name kenh,
