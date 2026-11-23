@@ -9,7 +9,8 @@
 --   khách nhắn cuối (đang chờ Sale) → mở, bất kể bao lâu (để lâu là lỗi Sale, không phải khách dừng);
 --   Sale nhắn cuối → vẫn 'tiem_nang'; quá 7 ngày lịch thì chỉ đổi nhãn ly_do_nhom thành "Khách dừng: im N ngày sau tin Sale".
 --   Khách từ chối hẳn: vẫn 'dat' (app MKT không hiện nhóm này).
--- Chỉ THÊM cột ở cuối (nhom, ly_do_nhom, tin_cuoi_luc, ngay_im) — cột cũ giữ nguyên tên / thứ tự (X10, app MKT đọc).
+-- Chỉ THÊM cột ở cuối (nhom, ly_do_nhom, tin_cuoi_luc, ngay_im; 23/11 chiều thêm loai_khach 'si' | 'le' — xem
+-- supabase-schema-qc-tiem-nang-si-le.sql) — cột cũ giữ nguyên tên / thứ tự (X10, app MKT đọc).
 -- Monsieur Claude
 create or replace view public.qc_khach_tiem_nang_ngay with (security_invoker = true) as
 with k as (
@@ -19,7 +20,7 @@ with k as (
                     where k2.review_id = k.review_id
                       and (k2.ngay > k.ngay or k2.ngay = k.ngay and k2.danh_gia_luc > k.danh_gia_luc))
 ), x as (
-  select k.ngay, k.ket, k.ly_do, k.danh_gia_luc, s.*, c.review_id ckt_id, c.ly_do ckt_ly_do,
+  select k.ngay, k.ket, k.ly_do, k.danh_gia_luc, k.loai_khach k_loai_khach, s.*, c.review_id ckt_id, c.ly_do ckt_ly_do,
          tc.m[1]::timestamp tin_cuoi, tc.m[2] ai_cuoi
   from k
   join sale_response_review s on s.id = k.review_id
@@ -70,7 +71,8 @@ select y.ngay,
          else 'Đang mở: Sale đã đáp, chờ khách'
        end ly_do_nhom,
        y.tin_cuoi tin_cuoi_luc,
-       y.ngay_im
+       y.ngay_im,
+       coalesce(y.k_loai_khach, case when not qc_page_si(y.page_name) then 'le' end) loai_khach
 from y
 left join qc_sale_ten t on t.ten_pancake = y.sale_name
 where y.verdict <> 'khong_lien_quan' or y.verdict is null;
