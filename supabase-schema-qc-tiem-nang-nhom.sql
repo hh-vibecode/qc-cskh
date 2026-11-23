@@ -75,7 +75,8 @@ select y.ngay,
        coalesce(y.k_loai_khach, case when not qc_page_si(y.page_name) then 'le' end) loai_khach
 from y
 left join qc_sale_ten t on t.ten_pancake = y.sale_name
-where y.verdict <> 'khong_lien_quan' or y.verdict is null;
+where (y.verdict <> 'khong_lien_quan' or y.verdict is null)
+  and not coalesce(y.noi_bo, false);   -- 23/11: app MKT tự tạo đơn Pancake theo view → chặn cả hội thoại bị đánh dấu nội bộ sau này
 
 -- ĐƯỜNG LÙI (bản trước 23/11 — chỉ tiem_nang + chua_du có chưa khai thác hết, 16 cột). Muốn trả bản cũ phải DROP VIEW rồi tạo lại
 -- vì bản cũ ít cột hơn:
