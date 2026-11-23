@@ -21,7 +21,8 @@ with k as (
                       and (k2.ngay > k.ngay or k2.ngay = k.ngay and k2.danh_gia_luc > k.danh_gia_luc))
 ), x as (
   select k.ngay, k.ket, k.ly_do, k.danh_gia_luc, k.loai_khach k_loai_khach, s.*, c.review_id ckt_id, c.ly_do ckt_ly_do,
-         tc.m[1]::timestamp tin_cuoi, tc.m[2] ai_cuoi
+         tc.m[1]::timestamp tin_cuoi, tc.m[2] ai_cuoi,
+         bg.bao_gia_n is not null and coalesce(bg.khach_n, 0) < bg.bao_gia_n im_sau_bao_gia
   from k
   join sale_response_review s on s.id = k.review_id
   left join lateral (
@@ -32,6 +33,14 @@ with k as (
                       where m.m[1]::timestamp > c_1.tin_cuoi_luc)
     order by c_1.tin_cuoi_luc desc limit 1) c on true
   left join lateral (select regexp_match(right(s.full_thread, 4000), '.*\[(\d{4}-\d\d-\d\d \d\d:\d\d)\] (Khách|Sale)', 's') m) tc on true
+  -- 23/11 ~10h40 anh: "báo giá xong không nói gì không được tính là tiềm năng nữa, là ĐẠT thôi" → vị trí tin BÁO GIÁ CUỐI của Sale
+  -- (cùng mẫu con số giá với qc_co_bao_gia) và tin KHÁCH CÓ NỘI DUNG cuối; "ok / dạ / cảm ơn / (sticker)" ngắn không tính là phản hồi.
+  left join lateral (
+    select max(t.n) filter (where t.l ~ '^\[[^]]+\] Sale[^:]*:[^\n]*(\d+([.,]\d+)?\s*(tr\M|triệu|k\M|nghìn|ngàn)|\d{1,3}([.,]\d{3}){1,2}\s*(đ|vnđ|vnd|\M))') bao_gia_n,
+           max(t.n) filter (where t.l ~ '^\[[^]]+\] Khách: '
+                              and not (length(t.l) <= 50 and t.l !~ '\?'
+                                       and substr(t.l, 27) ~* '^\W*(dạ|vâng|ok|oke|okie|ừ|uk|vang|da|à|e|em|mình|cảm ơn|cám ơn|thank|thanks|tks|\(sticker\)|\s|,|\.|!|ạ|nhé|nha|shop|bạn|c|chị|anh)*\W*$')) khach_n
+    from regexp_split_to_table(right(s.full_thread, 6000), '\n') with ordinality t(l, n)) bg on true
   where k.ket in ('tiem_nang', 'tu_choi') or (k.ket = 'chua_du' and c.review_id is not null)
 ), y as (
   select x.*,
@@ -39,6 +48,7 @@ with k as (
          case
            when ckt_id is not null then 'tiem_nang'
            when ket = 'tu_choi' then 'dat'
+           when im_sau_bao_gia then 'dat'      -- 23/11 ~10h40: báo giá (cuối) xong khách không nói gì → đạt
            else 'tiem_nang'
          end nhom
   from x
@@ -66,6 +76,7 @@ select y.ngay,
          when y.ket = 'tu_choi' and y.ly_do ~* 'đắt|cao quá|cao vậy|giá cao|so (chỗ|giá)|rẻ hơn|đủ tiền|đủ kinh tế' then 'Chê giá / chưa đủ tiền'
          when y.ket = 'tu_choi' and y.ly_do ~* 'không có|chỉ có|chỉ còn|khác mẫu|chưa ưng|không ưng' then 'Không có đúng hàng / chưa ưng mẫu'
          when y.ket = 'tu_choi' then 'Khách từ chối'
+         when y.im_sau_bao_gia then 'Báo giá xong khách chưa phản hồi'
          when y.ai_cuoi = 'Sale' and y.tin_cuoi < (now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 days' then 'Khách dừng: im ' || y.ngay_im || ' ngày sau tin Sale'
          when y.ai_cuoi = 'Khách' then 'Đang mở: khách hỏi, chờ Sale'
          else 'Đang mở: Sale đã đáp, chờ khách'
