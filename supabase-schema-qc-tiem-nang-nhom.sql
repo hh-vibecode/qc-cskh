@@ -22,7 +22,12 @@ with k as (
 ), x as (
   select k.ngay, k.ket, k.ly_do, k.danh_gia_luc, k.loai_khach k_loai_khach, s.*, c.review_id ckt_id, c.ly_do ckt_ly_do,
          tc.m[1]::timestamp tin_cuoi, tc.m[2] ai_cuoi,
-         bg.bao_gia_n is not null and coalesce(bg.khach_n, 0) < bg.bao_gia_n im_sau_bao_gia
+         bg.bao_gia_n is not null and coalesce(bg.khach_n, 0) < bg.bao_gia_n im_sau_bao_gia,
+         -- 23/11 trưa anh "qc khớp app": Sale nhắn cuối (sau đó khách im / chỉ đáp lễ) quá 7 ngày → khách dừng = ĐẠT (như app MKT)
+         bg.sale_n is not null and coalesce(bg.khach_n, 0) < bg.sale_n
+           and bg.sale_ts::timestamp < (now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 days' khach_dung,
+         (now() at time zone 'Asia/Ho_Chi_Minh')::date - bg.sale_ts::timestamp::date ngay_im_sale,
+         coalesce(bg.khach_n, 0) > coalesce(bg.sale_n, 0) khach_cho
   from k
   join sale_response_review s on s.id = k.review_id
   left join lateral (
@@ -39,7 +44,9 @@ with k as (
     select max(t.n) filter (where t.l ~ '^\[[^]]+\] Sale[^:]*:[^\n]*(\d+([.,]\d+)?\s*(tr\M|triệu|k\M|nghìn|ngàn)|\d{1,3}([.,]\d{3}){1,2}\s*(đ|vnđ|vnd|\M))') bao_gia_n,
            max(t.n) filter (where t.l ~ '^\[[^]]+\] Khách: '
                               and not (length(t.l) <= 50 and t.l !~ '\?'
-                                       and substr(t.l, 27) ~* '^\W*(dạ|vâng|ok|oke|okie|ừ|uk|vang|da|à|e|em|mình|cảm ơn|cám ơn|thank|thanks|tks|\(sticker\)|\s|,|\.|!|ạ|nhé|nha|shop|bạn|c|chị|anh)*\W*$')) khach_n
+                                       and substr(t.l, 27) ~* '^\W*(dạ|vâng|ok|oke|okie|ừ|uk|vang|da|à|e|em|mình|cảm ơn|cám ơn|thank|thanks|tks|\(sticker\)|\s|,|\.|!|ạ|nhé|nha|shop|bạn|c|chị|anh)*\W*$')) khach_n,
+           max(t.n) filter (where t.l ~ '^\[[^]]+\] Sale') sale_n,
+           (array_agg(substr(t.l, 2, 16) order by t.n desc) filter (where t.l ~ '^\[[^]]+\] Sale'))[1] sale_ts
     from regexp_split_to_table(right(s.full_thread, 6000), '\n') with ordinality t(l, n)) bg on true
   where k.ket in ('tiem_nang', 'tu_choi') or (k.ket = 'chua_du' and c.review_id is not null)
 ), y as (
@@ -49,6 +56,7 @@ with k as (
            when ckt_id is not null then 'tiem_nang'
            when ket = 'tu_choi' then 'dat'
            when im_sau_bao_gia then 'dat'      -- 23/11 ~10h40: báo giá (cuối) xong khách không nói gì → đạt
+           when khach_dung then 'dat'          -- 23/11 trưa: khớp app MKT — Sale nhắn cuối quá 7 ngày, khách im / chỉ đáp lễ
            else 'tiem_nang'
          end nhom
   from x
@@ -77,8 +85,8 @@ select y.ngay,
          when y.ket = 'tu_choi' and y.ly_do ~* 'không có|chỉ có|chỉ còn|khác mẫu|chưa ưng|không ưng' then 'Không có đúng hàng / chưa ưng mẫu'
          when y.ket = 'tu_choi' then 'Khách từ chối'
          when y.im_sau_bao_gia then 'Báo giá xong khách chưa phản hồi'
-         when y.ai_cuoi = 'Sale' and y.tin_cuoi < (now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 days' then 'Khách dừng: im ' || y.ngay_im || ' ngày sau tin Sale'
-         when y.ai_cuoi = 'Khách' then 'Đang mở: khách hỏi, chờ Sale'
+         when y.khach_dung then 'Khách dừng: im ' || y.ngay_im_sale || ' ngày sau tin Sale'
+         when y.khach_cho then 'Đang mở: khách hỏi, chờ Sale'   -- 23/11: tin khách CÓ NỘI DUNG sau tin Sale cuối (đáp lễ không tính)
          else 'Đang mở: Sale đã đáp, chờ khách'
        end ly_do_nhom,
        y.tin_cuoi tin_cuoi_luc,
