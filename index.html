@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.60';
-const APP_VERSION='20/11/2026 16:18';
+const APP_SO='1.61';
+const APP_VERSION='23/11/2026 08:36';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -903,7 +903,7 @@ function nhatKyPage(){
 
 // ── Cài đặt › Logic xử lý dữ liệu (tài liệu cho người xem biết số liệu từ đâu ra) ────────────
 function logicPage(){
-  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 20/11/2026</span></div></div>
+  return`<div class="top"><div class="title">Logic xử lý dữ liệu</div><div class="right"><span class="badge">Cập nhật 23/11/2026</span></div></div>
   <div class="card doc" style="padding:6px 20px 18px">
     <h3>1. Kéo dữ liệu</h3>
     <ul>
@@ -977,7 +977,7 @@ function logicPage(){
       <li><b>Từ chối (siết 20/11)</b>: khách chê đắt / không ưng / không lấy / so giá chỗ khác, hoặc Sale báo không có đúng thứ khách cần, mà sau đó khách không hỏi phương án khác → từ chối (không còn là tiềm năng). Vẫn tiềm năng khi sau lời chê khách hỏi tiếp phương án (mẫu rẻ hơn, mẫu khác) hoặc mặc cả cụ thể. Hỏi cửa hàng ở đâu / cách mua sau báo giá vẫn là hỏi tiếp.</li>
       <li><b>Chống trùng</b>: bình luận và tin nhắn riêng của cùng 1 khách (cùng page) chỉ tính 1 — giữ hội thoại tin nhắn riêng, lấy kết quả mạnh nhất (đã chốt › tiềm năng › từ chối › chưa đủ). TikTok: bình luận có mã đuôi số, tin nhắn riêng đuôi mã hoá.</li>
       <li><b>Chưa khai thác hết = lỗi Sale (20/11, ca Thiện Minh)</b>: hội thoại đã báo giá mà tin cuối là Sale hứa quay lại (kiểm kho, hỏi xưởng, gửi ảnh / giá sau…) hoặc khách hỏi phương án mà Sale chỉ "dạ để em xem", rồi quá 1 ngày làm việc không quay lại → gắn thẻ "chưa khai thác hết" và dòng chấm chuyển <b>Thiếu ý</b> (mức trung bình). Máy lọc ứng viên, AI đọc đoạn cuối xác nhận; lịch cloud rà mỗi ngày cùng lượt tiềm năng.</li>
-      <li><b>App MKT chỉ nhận tiềm năng thật</b> (20/11): view qc_khach_tiem_nang_ngay chỉ giữ hội thoại mà lần đánh giá mới nhất là tiềm năng — đã chốt / từ chối / chưa đủ tự rơi khỏi tệp; kèm cột chưa khai thác hết.</li>
+      <li><b>App MKT nhận 2 nhóm (23/11, anh chốt)</b>: view qc_khach_tiem_nang_ngay lấy lần đánh giá mới nhất của mỗi hội thoại là tiềm năng hoặc từ chối (+ chưa đủ có chưa khai thác hết), cột <b>nhom</b>: <b>tiềm năng thực sự</b> = có chưa khai thác hết (lỗi Sale), hoặc tiềm năng còn mở — khách nhắn cuối (chờ Sale, bao lâu cũng vậy), hoặc Sale nhắn cuối trong 7 ngày; <b>khách đạt</b> = từ chối (chê giá / không có đúng hàng / từ chối hẳn) hoặc khách dừng — Sale nhắn cuối, khách im quá 7 ngày (tin cuối bỏ Bot, giờ VN). Cột ly_do_nhom, tin_cuoi_luc, ngay_im. Đã chốt / chưa đủ không vào view. App MKT giao việc nhóm tiềm năng, nhóm đạt chỉ thống kê.</li>
       <li>Tháng 11/2026 chạy bù 1–19/11 bằng máy (20/11). Dữ liệu mở cho app MKT (view qc_khach_tiem_nang_ngay) để giao việc hằng ngày và gắn thẻ Pancake.</li>
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>
