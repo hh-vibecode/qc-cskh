@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.64';
-const APP_VERSION='23/11/2026 09:23';
+const APP_SO='1.65';
+const APP_VERSION='23/11/2026 09:34';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -917,7 +917,7 @@ function logicPage(){
     <h3>2. Mỗi dòng là cả một hội thoại</h3>
     <ul>
       <li>Từ 01/10/2026: mỗi khách trên mỗi kênh (Messenger / Zalo / TikTok / bình luận) là <b>1 dòng</b>; cùng người khác kênh thì tách riêng. Gộp theo mã hội thoại Pancake — không gộp theo tên nên 2 khách trùng tên không bị gộp nhầm.</li>
-      <li>Đoạn hội thoại luôn được <b>nối thêm</b>, không ghi đè; lượt kéo tự vá đoạn bị thiếu (giữ kết quả chấm).</li>
+      <li>Đoạn hội thoại luôn được <b>nối thêm</b>, không ghi đè; lượt kéo tự vá đoạn bị thiếu (giữ kết quả chấm). Giữ tối đa 6.000 ký tự cuối, <b>cắt theo dòng</b> — không để mẩu dòng cụt; khi nối chỉ giữ dòng có dạng "[giờ] Ai: …" (23/11, app MKT báo 110 hội thoại có đuôi mẩu cụt, đã dọn).</li>
       <li>Khách nhắn thêm (kể cả ngày sau) hoặc Sale nói thêm → nối vào hội thoại và <b>chấm lại cả đoạn</b>: hôm qua đúng mà hôm nay trả lời sai thì cả hội thoại thành sai. Hội thoại không có gì mới thì giữ kết quả đã chấm.</li>
     </ul>
     <h3>3. Lọc (xem đối chiếu kéo về / lọc ra ở Nhật ký chạy)</h3>

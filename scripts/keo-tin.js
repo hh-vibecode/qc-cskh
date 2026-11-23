@@ -134,7 +134,7 @@ function tachLuot(page, c, msgs, userMap) {
     if (turns.length && turns[turns.length - 1].side === x.k) turns[turns.length - 1].ms.push(x);
     else turns.push({ side: x.k, ms: [x] });
   }
-  const thread = ms.map(x => dong(x.m, x.k)).join('\n').slice(-4000);
+  const thread = catDuoi(ms.map(x => dong(x.m, x.k)).join('\n'), 4000);
   const out = [];
   const cuoiKhach = turns.map((t, i) => t.side === 'cust' ? i : -1).filter(i => i >= 0).pop();
   turns.forEach((t, i) => {
@@ -189,10 +189,17 @@ function gopLuot(got) {
   return { ...cuoi, customer_ask: ds.map(x => x.customer_ask).join(' · ').slice(-700),
     sale_reply: cuoi.sale_reply || traLoi?.sale_reply || null, sale_name: cuoi.sale_name || traLoi?.sale_name || null };
 }
+// 23/11 (app MKT báo 62 hội thoại có đuôi "026-11-22 10:12] Sale…", "ảnh/tệp)"): cắt theo SỐ KÝ TỰ làm dòng đầu cụt giữa chừng;
+// ghép lại thì mẩu cụt (không bắt đầu bằng "[giờ]") bị xếp xuống cuối và tích dần. Cắt luôn theo DÒNG, ghép thì bỏ mẩu cụt.
+const LA_DONG = l => /^\[\d{4}-\d\d-\d\d \d\d:\d\d\] /.test(l);
+function catDuoi(s, n) {   // giữ ≤ n ký tự CUỐI, bỏ dòng đầu bị cụt
+  s = s || ''; if (s.length <= n) return s;
+  const t = s.slice(-n), i = t.indexOf('\n'); return i < 0 ? '' : t.slice(i + 1);
+}
 // Nối thread cũ (đã lưu) + mới (lượt này): lượt mỗi giờ chỉ đọc phần mới → không được làm mất đoạn trước
 function ghepThread(a, b) {
-  const l = [...new Set([...(a || '').split('\n'), ...(b || '').split('\n')].filter(Boolean))];
-  return l.sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n').slice(-6000);
+  const l = [...new Set([...(a || '').split('\n'), ...(b || '').split('\n')].filter(LA_DONG))];
+  return catDuoi(l.sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n'), 6000);
 }
 
 // ── NHẬT KÝ CHẠY (anh Hải 30/9: "ghi lại lịch xử lý m kéo, cái nào kéo lỗi t còn biết để hỏi") ──────────────
@@ -328,7 +335,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
         if (sm.length) rieng.push({ page_id: String(p.id), khach_id: String(custId), conv_id: c.id, sale_at: sm[0].at.toISOString(),
           sale_name: sm.find(x => x.m.from?.admin_name)?.m.from.admin_name || null,
           reply: sm.map(x => clean(x.m.message)).filter(Boolean).join(' | ').slice(0, 1000) || '(gửi ảnh/tệp)',
-          thread: ms.map(x => dong(x.m, x.k)).join('\n').slice(-4000) });
+          thread: catDuoi(ms.map(x => dong(x.m, x.k)).join('\n'), 4000) });
       }
       await sleep(150);
     }

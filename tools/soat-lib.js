@@ -100,13 +100,15 @@ function taoSoat(pk, sleep) {
   }
   const fmtH = h => h < 1 ? Math.round(h * 60) + ' phút' : h.toFixed(1).replace('.', ',') + ' giờ';
   // Các cột cần cập nhật khi hết miss (cùng quy ước với soat-miss-pancake.js)
+  // 23/11: cắt theo DÒNG (không để dòng cuối cụt giữa chừng — mẩu cụt bị ghép xuống đuôi thread, app MKT báo)
+  const catDau = (s, n) => { s = s || ''; if (s.length <= n) return s; const t = s.slice(0, n), i = t.lastIndexOf('\n'); return i < 0 ? '' : t.slice(0, i); };
   const capNhat = k => k.ket === 'qua_inbox'
     ? { verdict: 'chua_cham', sale_reply: k.text.slice(0, 1000), severity: null, suggestion: null, source_faq: null, cham_boi: null,
         issue: `Bình luận → tư vấn qua tin nhắn (Sale nhắn sau ${fmtH(k.muon)}).`, pancake_url: k.url,
-        full_thread: k.them.join('\n').slice(0, 6000), ...(k.sale ? { sale_name: k.sale } : {}) }
+        full_thread: catDau(k.them.join('\n'), 6000), ...(k.sale ? { sale_name: k.sale } : {}) }
     : { verdict: 'chua_cham', sale_reply: k.text.slice(0, 1000), severity: null, suggestion: null, source_faq: null, cham_boi: null,
         issue: null,   // 7/10: độ chậm đo trong CSDL theo giờ làm (qc_tinh_tg), không ghi nhãn giờ thực nữa
-        full_thread: k.them.join('\n').slice(0, 6000), ...(k.sale ? { sale_name: k.sale } : {}) };
+        full_thread: catDau(k.them.join('\n'), 6000), ...(k.sale ? { sale_name: k.sale } : {}) };
   return { soat, fmtH, capNhat };
 }
 module.exports = { taoSoat };

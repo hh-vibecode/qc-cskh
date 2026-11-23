@@ -152,7 +152,13 @@ async function soat(r) {
   const tag = 'sm' + Date.now(), q = s => `$${tag}$${s}$${tag}$`;
   for (const { r, k } of ghi) {
     await sleep(700);
-    const thread = k.ket === 'qua_inbox' ? k.them.join('\n').slice(0, 6000) : ((r.full_thread || '') + '\n' + k.them.join('\n')).slice(-4000);
+    // 23/11: cắt theo DÒNG + nối như ghepThread của keo-tin (bỏ mẩu dòng cụt, không trùng, xếp theo giờ, giữ 6000 ký tự cuối)
+    const laDong = l => /^\[\d{4}-\d\d-\d\d \d\d:\d\d\] /.test(l);
+    const catDuoi = (s, n) => { if (s.length <= n) return s; const t = s.slice(-n), i = t.indexOf('\n'); return i < 0 ? '' : t.slice(i + 1); };
+    const catDau = (s, n) => { if (s.length <= n) return s; const t = s.slice(0, n), i = t.lastIndexOf('\n'); return i < 0 ? '' : t.slice(0, i); };
+    const thread = k.ket === 'qua_inbox' ? catDau(k.them.join('\n'), 6000)
+      : catDuoi([...new Set([...(r.full_thread || '').split('\n'), ...k.them])].filter(laDong)
+          .sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n'), 6000);
     if (k.ket === 'qua_inbox') {
       await sql(`update sale_response_review set verdict='chua_cham', sale_reply=${q(k.text.slice(0, 1000))},
         sale_name=coalesce(${k.sale ? q(k.sale) : 'null'}, sale_name), severity=null, suggestion=null, source_faq=null, cham_boi=null,

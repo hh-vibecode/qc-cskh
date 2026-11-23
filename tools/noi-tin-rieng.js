@@ -36,9 +36,11 @@ function dong(m, pageId) {
   const who = !sale ? 'Khách' : auto ? 'Bot' : m.from?.admin_name ? `Sale (${m.from.admin_name})` : 'Sale';
   return { who, auto, sale, at: utc(m.inserted_at), line: `[${gio(utc(m.inserted_at))}] ${who}: ${t || (stk ? '(sticker)' : '(gửi ảnh/tệp)')}` };
 }
+const LA_DONG = l => /^\[\d{4}-\d\d-\d\d \d\d:\d\d\] /.test(l);   // 23/11: bỏ mẩu dòng cụt, cắt theo dòng — giống keo-tin
+function catDuoi(s, n) { s = s || ''; if (s.length <= n) return s; const t = s.slice(-n), i = t.indexOf('\n'); return i < 0 ? '' : t.slice(i + 1); }
 function ghepThread(a, b) {   // giống scripts/keo-tin.js
-  const l = [...new Set([...(a || '').split('\n'), ...(b || '').split('\n')].filter(Boolean))];
-  return l.sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n').slice(-6000);
+  const l = [...new Set([...(a || '').split('\n'), ...(b || '').split('\n')].filter(LA_DONG))];
+  return catDuoi(l.sort((x, y) => x.slice(0, 18).localeCompare(y.slice(0, 18))).join('\n'), 6000);
 }
 (async () => {
   const rows = await (await fetch(`${REST}/sale_response_review?select=id,page_id,conv_id,conv_at,customer_name,verdict,cham_boi,full_thread,sale_reply,sale_name,khach_id`
