@@ -24,27 +24,16 @@ H=(-H "apikey: $A" -H "Authorization: Bearer $A" -H "Content-Type: application/j
 
 - **Khách tiềm năng (các lượt từ 12h đến 13h59 và từ 20h đến 21h59 giờ VN — lịch chính lẫn dự phòng)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_tiem_nang -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > tn.json` (mỗi dòng: id, page_name, customer_name, sale_name, ngay, la_binh_luan, thread). Ghi: `{"p_ma":..,"p_ngay":"<ngay của lô>","p_rows":[{"id":..,"ket":"tiem_nang"|"da_chot"|"tu_choi"|"chua_du","ly_do":"1 câu"}]}` → `$U/rpc/qc_ghi_tiem_nang`. Lặp tới khi lô rỗng.
 - **Chưa khai thác hết (cùng các lượt khách tiềm năng)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_chua_khai_thac -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > ckt.json` (mỗi dòng: id, page_name, customer_name, sale_name, verdict, tin_cuoi_luc, phut_cho, doan_cuoi = 10 tin cuối). Ghi: `{"p_ma":..,"p_rows":[{"id":..,"tin_cuoi_luc":"<giữ nguyên từ lô>","ket":true|false,"ly_do":"1 câu"}]}` → `$U/rpc/qc_ghi_chua_khai_thac` (trả `{"ghi":n,"loi_sale":m}`). Lặp tới khi lô rỗng.
-- **Tóm tắt hội thoại (mọi lượt, sau chấm + soát miss)** — lấy lô: `curl -s "${H[@]}" -X POST $U/rpc/qc_lo_tom_tat -d "{\"p_ma\":\"$MA_CHAM\",\"p_so\":40}" > tt.json` (mỗi dòng: id, page_id, conversation_id, page_name, customer_name, sale_name, tin_cuoi_luc, tom_tat_cu, thread). Ghi: `{"p_ma":..,"p_rows":[{"id":..,"tom_tat":"1–2 câu","tin_cuoi_luc":"<giữ nguyên từ lô>"}]}` → `$U/rpc/qc_ghi_tom_tat` (trả `{"ghi":n}`; tom_tat > 300 ký tự bị từ chối cả lô). Lặp tới khi lô rỗng, tối đa 120 hội thoại / lượt.
-
 ## Quy trình
 0. **Lịch chạy 7h50–20h50 giờ VN** (cron `50 0-13 * * *` UTC, anh chốt 19/10). Lời gọi của lịch có câu "lô chờ chấm và lô miss đều rỗng thì dừng" — từ 17h VẪN phải làm bước 4b (báo sai), lượt 12h–13h59 và 20h–21h59 VẪN phải làm bước 4a (khách tiềm năng), và ghi nhật ký rồi mới dừng.
    **Mọi lượt, trước khi chấm:** gọi `qc_lo_bao_sai`, đọc `luat_cho_ghi` — đó là luật rút từ báo sai đã xử lý nhưng chưa chép vào file này → ÁP DỤNG như luật chấm bên dưới (mâu thuẫn thì luật mới hơn thắng).
 1. Lặp: lấy lô chờ chấm → chấm từng dòng (đọc cả `thread`, không chỉ cặp hỏi–đáp) → ghi → lấy lô tiếp, tới khi lô rỗng hoặc đã chấm 200 dòng.
 2. Lặp tương tự cho lô miss chưa soát (tối đa 120 dòng).
 3. Ghi nhật ký lượt chạy (lệnh ở trên) — **mọi lượt**, kể cả khi lô rỗng (0 dòng) hoặc bị lỗi; đúng 1 lần.
-2a. **Tóm tắt hội thoại** (mục TÓM TẮT HỘI THOẠI) — mọi lượt, sau bước 2; ghi số vào `p_ghi_chu` ("tóm tắt: 14").
 4. Đánh giá nhân sự nếu có kỳ đến hạn (mục ĐÁNH GIÁ NHÂN SỰ).
 4a. **Các lượt từ 12h–13h59 và 20h–21h59 giờ VN: đánh giá khách tiềm năng** (mục ĐÁNH GIÁ KHÁCH TIỀM NĂNG) rồi rà **chưa khai thác hết** (mục CHƯA KHAI THÁC HẾT) — sau khi chấm xong, trước báo sai. Ghi số vào `p_ghi_chu` của nhật ký ("tiềm năng: 12 · đã chốt 3 · …").
 4b. **Từ 17h giờ VN: tự xử lý báo sai** (mục TỰ XỬ LÝ BÁO SAI) — mỗi lượt sau 17h đều làm, hết báo mở thì thôi. Số báo đã xử lý ghi thêm vào `p_ghi_chu` của nhật ký ("báo sai: 2 sửa · 1 giữ · 1 chờ anh") — nếu đã gọi nhật ký ở bước 3 thì gộp: làm bước 4b TRƯỚC bước 3.
 5. Tóm tắt cuối: số dòng theo verdict; mọi dòng `thieu`/`sai` mức `cao` (id, page, khách, Sale, 1 dòng lý do); miss thật đáng chú ý; dòng để lại vì phân vân.
-
-## TÓM TẮT HỘI THOẠI (anh Hải 23/11/2026, cho app MKT — cột "Trao đổi gần nhất" ở danh sách khách / CRM)
-Phạm vi (anh chốt): hội thoại Social (không Zalo) đã qua bộ lọc QC, có tin từ 1/11/2026; lô chỉ trả hội thoại chưa có tóm tắt hoặc có tin mới sau lần tóm tắt trước. App MKT chỉ ĐỌC (view `qc_tom_tat_hoi_thoai`).
-Viết `tom_tat` **1–2 câu, khoảng ≤ 200 ký tự** (tối đa 300), tiếng Việt, câu ngắn kiểu ghi chú, theo thứ tự: **khách cần gì** (sản phẩm, kích thước / chất liệu / số lượng, mục đích nếu có) → **Sale đã báo / gửi gì** (giá chính, mẫu, ảnh) → **đang dừng ở đâu, ai đang chờ ai** (theo tin cuối không phải Bot). Ví dụ: "Khách hỏi tượng Di Lặc gỗ 40cm; Sale báo 16,8tr + gửi ảnh. Khách hỏi bớt, Sale chưa trả lời — đang chờ Sale." · "Khách cần bát hương sứ 18cm; Sale báo 2,01tr, khách chê khác mẫu, Sale gợi ý mẫu tương tự — chờ khách."
-- Đọc cả `thread` (4000 ký tự cuối). Có `tom_tat_cu` thì viết LẠI cả câu cho hiện tại, dùng `tom_tat_cu` để giữ nhu cầu ban đầu nếu đoạn đầu đã bị cắt khỏi thread.
-- Bỏ qua tin Bot / chào tự động. Đã chốt đơn thì ghi rõ ("Đã chốt: chuyển khoản / gửi địa chỉ"); khách từ chối thì ghi lý do ngắn.
-- KHÔNG chép số điện thoại, địa chỉ, số tài khoản, mã chấm vào tóm tắt. Không nhận xét Sale đúng / sai (đó là việc của chấm).
-- `tin_cuoi_luc` giữ NGUYÊN giá trị của lô (để biết tóm tắt đã đọc tới đâu).
 
 ## ĐÁNH GIÁ KHÁCH TIỀM NĂNG (anh Hải chốt 19/11/2026)
 **CHỈ SOCIAL (anh Hải 20/11: "vào zalo thì đánh giá làm gì, đánh giá trên social thôi")** — Facebook (tin nhắn + bình luận) và TikTok; KHÔNG đánh giá Zalo, kể cả "chưa khai thác hết". Lô `qc_lo_tiem_nang` / `qc_lo_chua_khai_thac` đã bỏ Zalo; nếu lỡ thấy dòng Zalo (conv_id `pzl_`) thì bỏ qua, không ghi.
