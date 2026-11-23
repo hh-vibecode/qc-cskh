@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.72';
-const APP_VERSION='23/11/2026 12:58';
+const APP_SO='1.73';
+const APP_VERSION='23/11/2026 13:19';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -972,7 +972,7 @@ function logicPage(){
     <p><b>Chỉ đánh giá Social</b> (anh chốt 20/11): Facebook (tin nhắn + bình luận) và TikTok. Zalo không đánh giá tiềm năng, không rà "chưa khai thác hết". Đã xoá 261 lượt tiềm năng Zalo + 48 lượt rà chưa khai thác hết Zalo (có sao lưu); 1 hội thoại Zalo (#3479) từng bị chuyển Thiếu ý vì chưa khai thác hết đã trả về Đúng như trước.</p>
     <ul>
       <li><b>Tiềm năng</b>: Sale đã báo giá, sau đó khách vẫn hỏi tiếp về sản phẩm và phản hồi cuối còn mở. Khác: <b>đã chốt</b> (cọc / chuyển khoản / gửi địa chỉ / lên đơn), <b>từ chối</b>, <b>chưa đủ điều kiện</b> (chưa báo giá thật, khách không hỏi thêm, chỉ ok / cảm ơn).</li>
-      <li>Đánh giá <b>mỗi giờ</b> (23/11, anh: khách tiềm năng lên app MKT chậm nhất 1–2 giờ; trước đó 2 lần / ngày 12h50, 20h50) cùng lượt chấm cloud 7h50–20h50, chỉ hội thoại chưa đánh giá hôm đó hoặc có tin mới; lượt đầu sáng lấy nốt tin tối hôm trước. Chưa khai thác hết vẫn rà 2 lần / ngày (khung 12h và 20h). Trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>
+      <li>Đánh giá <b>mỗi giờ</b> (23/11, anh: khách tiềm năng lên app MKT chậm nhất 1–2 giờ; trước đó 2 lần / ngày 12h50, 20h50) cùng lượt chấm cloud 7h50–22h50 (23/11 kéo dài từ 20h50), chỉ hội thoại chưa đánh giá hôm đó hoặc có tin mới; lượt đầu sáng lấy nốt tin tối hôm trước. Chưa khai thác hết vẫn rà 2 lần / ngày (khung 12h và 20h). Trên tin nhắn trong ngày, chỉ hội thoại đã qua bộ lọc và có tin Sale chứa con số giá. Mỗi ngày xét tình trạng tính tới hết ngày đó; một hội thoại có thể đổi loại qua các ngày.</li>
       <li>Thẻ số theo <b>ngày đánh giá</b> trong khoảng đang xem (không theo ngày nhắn cuối), cùng bộ lọc kênh / thương hiệu / Sale / tìm kiếm; mỗi hội thoại tính theo lần đánh giá mới nhất trong khoảng. Bấm thẻ → danh sách; mở dòng → lý do từng ngày.</li>
       <li><b>Từ chối (siết 20/11)</b>: khách chê đắt / không ưng / không lấy / so giá chỗ khác, hoặc Sale báo không có đúng thứ khách cần, mà sau đó khách không hỏi phương án khác → từ chối (không còn là tiềm năng). Vẫn tiềm năng khi sau lời chê khách hỏi tiếp phương án (mẫu rẻ hơn, mẫu khác) hoặc mặc cả cụ thể. Hỏi cửa hàng ở đâu / cách mua sau báo giá vẫn là hỏi tiếp.</li>
       <li><b>Chống trùng</b>: bình luận và tin nhắn riêng của cùng 1 khách (cùng page) chỉ tính 1 — giữ hội thoại tin nhắn riêng, lấy kết quả mạnh nhất (đã chốt › tiềm năng › từ chối › chưa đủ). TikTok: bình luận có mã đuôi số, tin nhắn riêng đuôi mã hoá.</li>
