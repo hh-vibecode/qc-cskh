@@ -2,11 +2,13 @@
 --   TIỀM NĂNG THỰC SỰ (nhom = 'tiem_nang') = khách VẪN ĐỂ MỞ (chưa kết thúc, chưa từ chối), không chê đắt;
 --                                            HOẶC Sale quên / chưa khai thác hết (chua_khai_thac = true — luôn 'tiem_nang').
 --   KHÁCH ĐẠT (nhom = 'dat')               = phần còn lại của tệp: khách từ chối mềm/cứng (chê đắt, so giá, Sale báo không có
---                                            đúng hàng, đã mua chỗ khác…) + khách DỪNG LẠI (Sale nhắn cuối, khách im > 7 ngày).
+--                                            đúng hàng, đã mua chỗ khác…). (Bản đầu 23/11 sáng tính cả khách dừng > 7 ngày là đạt — anh sửa
+--                                            cùng ngày: "khách im vẫn ok, có nhu cầu là được" → khách dừng VẪN là tiềm năng, để Sale chăm lại.)
 -- Trước 23/11 khách tu_choi rơi khỏi view; nay VẪN ở trong view, gắn nhom = 'dat'. Đã chốt / chưa đủ vẫn không vào view.
 -- "Vẫn để mở" đo bằng tin cuối (bỏ Bot) trong thread — giờ trong thread là giờ VN:
 --   khách nhắn cuối (đang chờ Sale) → mở, bất kể bao lâu (để lâu là lỗi Sale, không phải khách dừng);
---   Sale nhắn cuối → mở nếu tin cuối trong 7 ngày lịch, quá 7 ngày → khách dừng = 'dat'.
+--   Sale nhắn cuối → vẫn 'tiem_nang'; quá 7 ngày lịch thì chỉ đổi nhãn ly_do_nhom thành "Khách dừng: im N ngày sau tin Sale".
+--   Khách từ chối hẳn: vẫn 'dat' (app MKT không hiện nhóm này).
 -- Chỉ THÊM cột ở cuối (nhom, ly_do_nhom, tin_cuoi_luc, ngay_im) — cột cũ giữ nguyên tên / thứ tự (X10, app MKT đọc).
 -- Monsieur Claude
 create or replace view public.qc_khach_tiem_nang_ngay with (security_invoker = true) as
@@ -36,7 +38,6 @@ with k as (
          case
            when ckt_id is not null then 'tiem_nang'
            when ket = 'tu_choi' then 'dat'
-           when ai_cuoi = 'Sale' and tin_cuoi < (now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 days' then 'dat'
            else 'tiem_nang'
          end nhom
   from x
@@ -64,7 +65,7 @@ select y.ngay,
          when y.ket = 'tu_choi' and y.ly_do ~* 'đắt|cao quá|cao vậy|giá cao|so (chỗ|giá)|rẻ hơn|đủ tiền|đủ kinh tế' then 'Chê giá / chưa đủ tiền'
          when y.ket = 'tu_choi' and y.ly_do ~* 'không có|chỉ có|chỉ còn|khác mẫu|chưa ưng|không ưng' then 'Không có đúng hàng / chưa ưng mẫu'
          when y.ket = 'tu_choi' then 'Khách từ chối'
-         when y.nhom = 'dat' then 'Khách dừng: im ' || y.ngay_im || ' ngày sau tin Sale'
+         when y.ai_cuoi = 'Sale' and y.tin_cuoi < (now() at time zone 'Asia/Ho_Chi_Minh') - interval '7 days' then 'Khách dừng: im ' || y.ngay_im || ' ngày sau tin Sale'
          when y.ai_cuoi = 'Khách' then 'Đang mở: khách hỏi, chờ Sale'
          else 'Đang mở: Sale đã đáp, chờ khách'
        end ly_do_nhom,
