@@ -53,6 +53,9 @@ with k as (
   select x.*,
          (now() at time zone 'Asia/Ho_Chi_Minh')::date - tin_cuoi::date ngay_im,
          case
+           -- 23/11 (anh, ca Trần Vân Tuấn Tuấn #20987 — khách chặn page, báo sai #94/#96 đã chấm loi_nen_tang): lỗi nền tảng
+           -- (không gửi được tin cho khách) KHÔNG tiềm năng, không "chờ Sale" — view tôn trọng kết quả chấm / báo sai
+           when verdict = 'loi_nen_tang' then 'dat'
            when ckt_id is not null then 'tiem_nang'
            when ket = 'tu_choi' then 'dat'
            when im_sau_bao_gia then 'dat'      -- 23/11 ~10h40: báo giá (cuối) xong khách không nói gì → đạt
@@ -79,6 +82,7 @@ select y.ngay,
        y.ckt_ly_do ly_do_chua_khai_thac,
        y.nhom,
        case
+         when y.verdict = 'loi_nen_tang' then 'Lỗi nền tảng: không gửi được tin cho khách'
          when y.ckt_id is not null then 'Chưa khai thác hết (lỗi Sale)'
          when y.ket = 'tu_choi' and y.ly_do ~* 'đã mua|không mua|thôi không|cũng không có tiền' then 'Khách từ chối hẳn'
          when y.ket = 'tu_choi' and y.ly_do ~* 'đắt|cao quá|cao vậy|giá cao|so (chỗ|giá)|rẻ hơn|đủ tiền|đủ kinh tế' then 'Chê giá / chưa đủ tiền'
