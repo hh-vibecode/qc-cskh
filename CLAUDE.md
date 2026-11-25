@@ -26,6 +26,7 @@
 - Anh đã chốt thì LÀM, đừng hỏi lại. Việc định kỳ tự làm không hỏi (anh cấp quyền lâu dài 28/9).
 - Tồn > ~50 dòng cần Sonnet chấm → **chia 2–3 agent `cham-qc` song song ngay từ đầu** (theo khoảng ngày, hoặc 1 đi cũ→mới + 1 đi mới→cũ), lô 40.
 - Thao tác chạm tới khách (gửi tin, sửa đơn hàng loạt): chạy thử trước, báo số cho anh trước. QC chỉ ĐỌC Pancake.
+- **Dọn ảnh / hồ sơ trình duyệt tạm ngay khi xong việc (anh chốt 25/11/2026):** chụp màn hình, mở Chrome/Edge bằng `--user-data-dir` trong Temp → làm xong việc nào xoá luôn ảnh + hồ sơ tạm của việc đó. 25/11 ổ C máy anh còn 9,8 GB vì ~219 hồ sơ tạm + 512 ảnh của các phiên Claude dồn lại.
 
 ## Chạy công cụ
 - **Trên máy anh (Windows, không có node/gh):** `ELECTRON_RUN_AS_NODE=1 "D:/Microsoft VS Code/Code.exe" C:/Users/HP/Desktop/qc-cskh/tools/<file>.js …`
