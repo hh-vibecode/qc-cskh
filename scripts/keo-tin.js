@@ -256,7 +256,14 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     console.log(`Chế độ MỐC: kéo hội thoại khách nhắn từ ${tuUtc.toISOString()} (mốc lượt trước ${moc.toISOString()})${DRY ? ' · THỬ (không ghi)' : ''}`);
   } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
   await nkMo(CHE_DO === 'moc' ? `từ ${gioVN(tuUtc)}` : (FROM === TO ? FROM.split('-').reverse().slice(0, 2).join('/') : `${FROM} → ${TO}`));
-  const pj = await pk('/pages');
+  // 26/11: lượt 10h25 Pancake trả danh sách page RỖNG 1 lần (token vẫn tốt, 11h25 chạy bình thường) → báo nhầm "token hết hạn"
+  // + đỏ mọi kênh. Rỗng thì thử lại tối đa 3 lần, cách 20 giây, rồi mới kết luận.
+  let pj = await pk('/pages');
+  for (let lan = 1; lan <= 3 && !(pj?.categorized?.activated || []).length; lan++) {
+    console.log(`Pancake trả danh sách page rỗng (${pj ? JSON.stringify(pj).slice(0, 200) : 'không đọc được'}) — thử lại lần ${lan} sau 20 giây`);
+    await sleep(20000);
+    pj = await pk('/pages');
+  }
   // PAGE_IDS (7/10): chạy bù song song theo nhóm page — khi đó KHÔNG ghi trạng thái kênh, KHÔNG soát miss (lượt thường lo)
   const CHI_PAGE = (process.env.PAGE_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
   // 13/11 anh Hải: Zalo "Kế Toán Tht" (kế toán, không phải kênh bán hàng) — không đưa vào QC
@@ -273,8 +280,8 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   if (!pages.length && CHI_PAGE.length && (pj?.categorized?.activated || []).length)
     throw new Error(`PAGE_IDS không khớp page nào đang kích hoạt: ${CHI_PAGE.join(',')}`);
   if (!pages.length) {
-    await kenhDoTatCa('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn');
-    throw new Error('Pancake không trả danh sách page — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (dự kiến ~1/11/2026)');
+    await kenhDoTatCa('Pancake không trả danh sách page (đã thử 4 lần) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn hoặc Pancake đang lỗi');
+    throw new Error('Pancake không trả danh sách page sau 4 lần thử (cách 20 giây) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (token hiện tại hạn 11/02/2027) hoặc Pancake đang lỗi');
   }
   const KENH = new Map();   // trạng thái từng kênh lượt này → qc_kenh (Cài đặt › Nhật ký chạy)
   // 7/10 anh Hải: chỉ theo dõi các page ĐANG GẮN (kích hoạt) — kênh Pancake đang tắt không đưa vào bảng
