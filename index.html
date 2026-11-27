@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.80';
-const APP_VERSION='27/11/2026 15:56';
+const APP_SO='1.81';
+const APP_VERSION='27/11/2026 16:12';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -921,7 +921,7 @@ function logicPage(){
       <li>Lượt mỗi giờ lấy cả hội thoại <b>chỉ có Sale nhắn thêm</b> (khách không nhắn) để cập nhật kịp khi Sale trả lời sau lúc chấm.</li>
       <li><b>Kéo hết rồi mới lọc</b> — không bỏ tin khách nào ở bước kéo (trước 7/10 bộ lọc cũ bỏ sót ~36% tin: câu mẫu quảng cáo, câu gõ không dấu, câu không có dấu hỏi).</li>
       <li>Kênh: các page <b>đang gắn</b> trên Pancake (15 page tại 07/10: Facebook tin nhắn + bình luận, TikTok, Zalo cá nhân); kênh Pancake đang tắt không theo dõi. Bỏ nhóm Zalo. Trạng thái từng kênh cập nhật mỗi lượt kéo (xanh đọc được / đỏ không đọc được) ở <b>Nhật ký chạy</b>.</li>
-      <li>Giờ trong hội thoại là <b>giờ Việt Nam</b>; job tự kiểm, lệch là dừng và báo lỗi.</li>
+      <li>Giờ trong hội thoại là <b>giờ Việt Nam</b>; job tự kiểm, lệch là dừng và báo lỗi. <b>Thống nhất giờ với app MKT (27/11, anh chốt)</b>: mọi mốc giờ hiểu là giờ VN; cột giờ trên bảng / view dùng chung đều có múi giờ (đã đổi 4 cột của QC: tin xác nhận, mốc chưa khai thác hết, tin cuối + giờ xác nhận trong danh sách tiềm năng app MKT đọc — cùng thời điểm, chỉ thêm múi).</li>
       <li><b>Chuẩn từ tháng 10/2026</b> — dữ liệu trước đó giữ như cũ, không kéo / chấm bù.</li>
       <li><b>Gắn quảng cáo (Ad ID Meta) cho hội thoại</b> (27/11/2026, app MKT nhờ, anh duyệt): mỗi lượt kéo đọc hội thoại nào thì ghi luôn quảng cáo của hội thoại đó, từ 01/11/2026. Nguồn trong Pancake: <b>ad_clicks</b> (lịch sử khách bấm quảng cáo vào hội thoại), <b>activities</b> nguồn ADS (khách mở hội thoại từ quảng cáo), <b>thẻ quảng cáo trong chat</b>. Cùng 1 lần bấm hiện ở nhiều nguồn (cùng Ad ID, cách nhau dưới 5 phút) thì gộp làm 1. Mỗi hội thoại lấy <b>quảng cáo gần nhất</b> và vẫn lưu danh sách tất cả; lượt sau <b>gộp</b> với danh sách đã lưu, không đè mất. Bình luận chỉ có mã bài viết; TikTok, Zalo không có dấu vết quảng cáo. Không có dấu vết vẫn ghi 1 dòng, Ad ID để trống. App MKT đọc view <b>qc_hoi_thoai_ads</b> (cột qua_loc = đã qua bộ lọc QC).</li>
     </ul>
