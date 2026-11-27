@@ -25,6 +25,7 @@ const fs = require('fs');
 const K = require('../tools/keys.js');
 const { taoSoat } = require('../tools/soat-lib.js');
 const { laLoiKhan, laKetBan } = require('../tools/loc-khan.js');
+const { dongAds, ghiAds } = require('../tools/ads-lib.js');
 const TOK = K.pancake, SBK = K.qc, SB = K.url;
 if (!TOK || !SBK) { console.error('Thiếu PANCAKE_SESSION_TOKEN hoặc QC_SUPABASE_KEY'); process.exit(1); }
 
@@ -287,6 +288,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   // 7/10 anh Hải: chỉ theo dõi các page ĐANG GẮN (kích hoạt) — kênh Pancake đang tắt không đưa vào bảng
   NK.s.so_page = pages.length;
   const pairs = [], dem = {}, rieng = [];   // rieng: tin nhắn riêng CHỈ có Sale nhắn (trả lời bình luận) → nối vào dòng bình luận
+  const adsRows = [];   // 27/11: quảng cáo của từng hội thoại đã đọc → qc_ads_hoi_thoai (qc_ghi_ads gộp lịch sử, không đè)
   for (const p of pages) {
     const userMap = {};
     ((await pk(`/pages/${p.id}/users`))?.users || []).forEach(u => userMap[u.id] = u.name);
@@ -322,7 +324,8 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
       // Pancake chỉ trả ~25–30 tin mới nhất mỗi lần → hội thoại dài (vd chat nội bộ Zalo) mất tin của ngày cần kéo.
       // Đọc lùi bằng current_count tới khi chạm đầu ngày FROM (tối đa 10 trang). Thấy 29/9 ở 3 lượt Shidai.
       const base = `/pages/${p.id}/conversations/${encodeURIComponent(c.id)}/messages?customer_id=${custId}`;
-      let msgs = (await pk(base))?.messages || [];
+      const d0 = await pk(base);
+      let msgs = d0?.messages || [];
       for (let t = 0; t < 10 && msgs.length; t++) {
         const cuNhat = Math.min(...msgs.map(x => utc(x.inserted_at).getTime()));
         if (cuNhat < tuUtc.getTime() || (c.message_count && msgs.length >= c.message_count)) break;
@@ -332,6 +335,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
         if (!moi.length) break;
         msgs = msgs.concat(moi);
       }
+      if (d0) adsRows.push(dongAds(p, c, d0, msgs));   // 27/11: gắn quảng cáo cho hội thoại (app MKT đọc view qc_hoi_thoai_ads)
       const hoi = gopLuot(tachLuot(p, c, msgs, userMap));
       if (hoi) { pairs.push(hoi); n++; }
       else if ((c.type || '').toUpperCase() === 'INBOX') {
@@ -364,7 +368,10 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   console.log(`Tổng ${pairs.length} hội thoại:`, theoV);
   NK.s.luot_tim = pairs.length;
   if (process.env.OUT) fs.writeFileSync(process.env.OUT, JSON.stringify(pairs, null, 1));
+  console.log(`Quảng cáo: ${adsRows.length} hội thoại đã đọc, ${adsRows.filter(r => r.ads?.length).length} có Ad ID`);
   if (DRY) return;
+  // 27/11 (app MKT nhờ, anh duyệt): ghi quảng cáo TRƯỚC phần ghi chấm — lỗi ở đây chỉ in ra, không làm hỏng lượt kéo
+  try { await ghiAds(adsRows, { url: SB, key: SBK }); } catch (e) { console.log('(ghi quảng cáo lỗi:', e.message + ')'); }
 
   // Ghi theo HỘI THOẠI: mỗi conv_id (từ 1/10/2026) đúng 1 dòng. Có rồi thì cập nhật khi: khách nhắn thêm (lượt khách mới hơn),
   // Sale nói thêm sau lần chấm trước, hoặc dòng đang miss nay Sale đã trả lời → nối thread, về chờ chấm LẠI CẢ ĐOẠN.
