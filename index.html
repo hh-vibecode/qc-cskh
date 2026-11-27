@@ -146,8 +146,8 @@ input.sel{font-weight:600;cursor:text}
 // (xem supabase-schema-qc.sql). Không đọc thẳng bảng.
 // Phiên bản (anh Hải 19/10/2026: "set version ngày giờ update như 2 app khác") — tools/dong-dau.js tự điền trước mỗi commit:
 // APP_SO = 1.<số lần index.html đã commit + 1> · APP_VERSION = giờ VN lúc đóng dấu. KHÔNG sửa tay.
-const APP_SO='1.79';
-const APP_VERSION='27/11/2026 15:49';
+const APP_SO='1.80';
+const APP_VERSION='27/11/2026 15:56';
 const SB_URL='https://bcrpxfvvjsjpvbksqzls.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjcnB4ZnZ2anNqcHZia3NxemxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyNzE0OTgsImV4cCI6MjEwMjg0NzQ5OH0.XGEUvHP1YBhxYKD9Xq1yH2gl95-V9VgaY5HfsAnFb2c';
 const LS_MA='qc_ma', LS_TEN='qc_ten';
@@ -994,6 +994,7 @@ function logicPage(){
       <li><b>Khách sỉ / lẻ (23/11, anh chốt)</b>: chỉ xếp cho tệp tiềm năng (đã qua lọc rác + lọc tiềm năng, kết quả tiềm năng / từ chối). Page không phải Shidai tự là lẻ (không tốn AI). Page Shidai (tên có Sỉ / Thời Đại / Shidai): AI xếp trong cùng lượt đánh giá tiềm năng — sỉ chỉ khi chính khách có dấu hiệu nhập / bán lại (hỏi giá sỉ / chính sách nhập sỉ — kể cả mua cho chùa, anh chốt 23/11, lấy về bán, phân phối, có cửa hàng để bán); tự dùng, tại gia, cá nhân, thỉnh về chùa, không nói gì → lẻ. Câu Sale hỏi "gia đình hay nhập sỉ" không tính. View app MKT cột loai_khach.</li>
       <li>Tháng 11/2026 chạy bù 1–19/11 bằng máy (20/11). Dữ liệu mở cho app MKT (view qc_khach_tiem_nang_ngay) để giao việc hằng ngày và gắn thẻ Pancake.</li>
       <li><b>Thẻ trên trang QC theo NHÓM CUỐI (27/11, anh: "gắn thẻ cho chuẩn")</b>: tab Tiềm năng, danh sách, mở dòng và nhãn "tiềm năng" ở tab Social hiện theo cột <b>nhom</b> của view app MKT đọc — cùng nguồn với thẻ LEAD TIỀM NĂNG / LEAD ĐẠT app MKT gắn trên Pancake. Nhóm tiềm năng (gồm chưa khai thác hết) = <b>Khách tiềm năng</b>; AI đánh giá tiềm năng mà nhóm đạt (báo giá xong khách chưa phản hồi, khách dừng, lỗi nền tảng) = <b>Khách đạt</b>, hiện kèm lý do nhóm; từ chối / đã chốt / chưa đủ giữ như cũ. Lần đánh giá cũ hơn (không còn trong view) hiện theo kết quả AI. Thẻ số: Tiềm năng · Khách đạt · Đã chốt / Từ chối · Chưa đủ · Chưa khai thác hết.</li>
+      <li><b>Tin xác nhận của Sale (27/11, anh chốt)</b>: khách đang tiềm năng mà Sale nhắn hỏi lại có mua không — mỗi giờ lịch chấm xét tin Sale cuối có phải tin xác nhận (lô qc_lo_xac_nhan, bảng qc_xac_nhan). Đủ <b>48 giờ</b> khách không nhắn gì sau tin đó → <b>đạt</b>, lý do "Sale xác nhận lại, khách không phản hồi sau 2 ngày"; khách trả lời từ chối → lượt đánh giá lại ra từ chối → đạt. View app MKT có thêm cột xac_nhan_luc để app MKT đổi trạng thái app + thẻ Pancake (kể cả khi Sale đã chăm sóc).</li>
     </ul>
     <h3>8. Sale & loại trừ đặc biệt</h3>
     <ul>
