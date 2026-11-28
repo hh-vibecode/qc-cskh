@@ -305,7 +305,7 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   }
   if (!pages.length) {
     await kenhDoTatCa('Pancake không trả danh sách page (đã thử 4 lần) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn hoặc Pancake đang lỗi');
-    throw new Error('Pancake không trả danh sách page sau 4 lần thử (cách 20 giây) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (token hiện tại hạn 11/02/2027) hoặc Pancake đang lỗi');
+    throw new Error('Pancake không trả danh sách page sau 4 lần thử (cách 20 giây) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (token hiện tại hạn 26/02/2027) hoặc Pancake đang lỗi');
   }
   const KENH = new Map();   // trạng thái từng kênh lượt này → qc_kenh (Cài đặt › Nhật ký chạy)
   // 7/10 anh Hải: chỉ theo dõi các page ĐANG GẮN (kích hoạt) — kênh Pancake đang tắt không đưa vào bảng
