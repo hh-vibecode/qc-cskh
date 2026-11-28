@@ -257,10 +257,17 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
     console.log(`Chế độ MỐC: kéo hội thoại khách nhắn từ ${tuUtc.toISOString()} (mốc lượt trước ${moc.toISOString()})${DRY ? ' · THỬ (không ghi)' : ''}`);
   } else console.log(`Khoảng ngày (giờ VN): ${FROM} → ${TO}${DRY ? ' · THỬ (không ghi)' : ''}`);
   await nkMo(CHE_DO === 'moc' ? `từ ${gioVN(tuUtc)}` : (FROM === TO ? FROM.split('-').reverse().slice(0, 2).join('/') : `${FROM} → ${TO}`));
+  // 28/11 anh Hải: "cứ báo lỗi kéo qc từ pancake … báo về gmail t" — token Pancake bị Pancake huỷ phiên ("Login session expired",
+  // error_code 103) từ 17h25 27/11 → lượt nào cũng đỏ = mỗi giờ 1 mail. Nay (giống app MKT kiem-token-pancake.js 27/11): hỏng LẦN ĐẦU
+  // → ghi dấu qc_cau_hinh 'pancake_token_hong' + lượt ĐỎ (1 mail). Lượt sau thấy dấu → vẫn ghi Lỗi ở Nhật ký chạy nhưng thoát XANH
+  // (không mail), không thử lại 3×20 giây. Token chạy lại → xoá dấu. Lỗi mạng / page rỗng không kèm lỗi phiên KHÔNG tính là hỏng token.
+  const KHOA_TOKEN_HONG = 'pancake_token_hong';
+  const laTokenHong = j => !!j && j.success === false && (j.error_code === 103 || /session expired|access[_ ]?token|token.*(expired|invalid)|invalid.*token/i.test(String(j.message || '')));
+  const dauHong = DRY ? null : (await rest('GET', `qc_cau_hinh?select=gia_tri&khoa=eq.${KHOA_TOKEN_HONG}`).catch(() => null))?.[0]?.gia_tri || null;
   // 26/11: lượt 10h25 Pancake trả danh sách page RỖNG 1 lần (token vẫn tốt, 11h25 chạy bình thường) → báo nhầm "token hết hạn"
   // + đỏ mọi kênh. Rỗng thì thử lại tối đa 3 lần, cách 20 giây, rồi mới kết luận.
   let pj = await pk('/pages');
-  for (let lan = 1; lan <= 3 && !(pj?.categorized?.activated || []).length; lan++) {
+  for (let lan = 1; lan <= 3 && !(pj?.categorized?.activated || []).length && !(dauHong && laTokenHong(pj)); lan++) {
     console.log(`Pancake trả danh sách page rỗng (${pj ? JSON.stringify(pj).slice(0, 200) : 'không đọc được'}) — thử lại lần ${lan} sau 20 giây`);
     await sleep(20000);
     pj = await pk('/pages');
@@ -280,6 +287,22 @@ async function kenhDoTatCa(ly_do) {   // không lấy được danh sách page �
   // 19/10: PAGE_IDS gõ nhầm → 0 page nhưng token vẫn tốt — KHÔNG được báo token hết hạn / chuyển đỏ mọi kênh
   if (!pages.length && CHI_PAGE.length && (pj?.categorized?.activated || []).length)
     throw new Error(`PAGE_IDS không khớp page nào đang kích hoạt: ${CHI_PAGE.join(',')}`);
+  if (!pages.length && laTokenHong(pj)) {
+    const loi = `Token Pancake hỏng (Pancake báo: ${String(pj.message || pj.error_code).slice(0, 80)}) — cần anh đăng nhập Pancake lấy token mới, thay secret PANCAKE_SESSION_TOKEN ở GitHub CẢ 2 repo (qc-cskh + mkt-sale-app)`;
+    await kenhDoTatCa(loi);
+    if (dauHong) {   // đã báo mail 1 lần rồi — ghi Nhật ký chạy đỏ, thoát xanh để GitHub không gửi mail nữa
+      console.log(`${loi}. Đã báo lần đầu lúc ${dauHong} — lượt này không báo mail lại.`);
+      await nkDong('loi', loi + ` (báo mail lần đầu ${gioVN(new Date(dauHong))}, các lượt sau không gửi mail)`);
+      process.exit(0);
+    }
+    if (!DRY) await rest('POST', 'qc_cau_hinh?on_conflict=khoa', { khoa: KHOA_TOKEN_HONG, gia_tri: new Date().toISOString() })
+      .catch(e => console.log('(không ghi được dấu token hỏng:', e.message + ')'));
+    throw new Error(loi + '. Chỉ gửi mail lần này; các lượt sau vẫn ghi đỏ ở Nhật ký chạy nhưng không gửi mail cho tới khi token chạy lại.');
+  }
+  if (pages.length && dauHong && !CHI_PAGE.length) {
+    await rest('DELETE', `qc_cau_hinh?khoa=eq.${KHOA_TOKEN_HONG}`).catch(e => console.log('(không xoá được dấu token hỏng:', e.message + ')'));
+    console.log(`Token Pancake đã chạy lại (hỏng từ ${dauHong}) — xoá dấu. CẦN kéo bù khoảng ngày token hỏng (FROM/TO) vì lượt mốc chỉ quét tối đa 60 trang / page.`);
+  }
   if (!pages.length) {
     await kenhDoTatCa('Pancake không trả danh sách page (đã thử 4 lần) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn hoặc Pancake đang lỗi');
     throw new Error('Pancake không trả danh sách page sau 4 lần thử (cách 20 giây) — token PANCAKE_SESSION_TOKEN có thể đã hết hạn (token hiện tại hạn 11/02/2027) hoặc Pancake đang lỗi');
